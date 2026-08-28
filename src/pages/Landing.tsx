@@ -61,12 +61,12 @@ export default function Landing() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col" dir="rtl">
+    <div className="min-h-screen flex flex-col thimmar-pattern" dir="rtl">
       {/* Header */}
-      <header className="border-b border-border/60 bg-card/50 backdrop-blur-sm">
+      <header className="border-b border-border/50 bg-card/60 backdrop-blur-md">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center size-10 rounded-xl bg-primary/10">
+            <div className="flex items-center justify-center size-10 rounded-xl bg-primary/10 border border-primary/15">
               <FolderGit2 className="size-5 text-primary" />
             </div>
             <div>
@@ -83,7 +83,7 @@ export default function Landing() {
 
       {/* Hero Section */}
       <main className="flex-1 flex flex-col">
-        <section className="flex-1 flex flex-col items-center justify-center px-6 py-16 md:py-24">
+        <section className="flex-1 flex flex-col items-center justify-center px-6 py-16 md:py-24 thimmar-hero-bg">
           <div className="w-full max-w-2xl">
             {/* Logo / Icon */}
             <motion.div
@@ -93,10 +93,10 @@ export default function Landing() {
               className="flex justify-center mb-8"
             >
               <div className="relative">
-                <div className="flex items-center justify-center size-20 rounded-2xl bg-primary/10 border border-primary/20">
+                <div className="flex items-center justify-center size-20 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20 shadow-sm">
                   <FolderGit2 className="size-10 text-primary" />
                 </div>
-                <div className="absolute -bottom-1 -left-1 flex items-center justify-center size-7 rounded-lg bg-secondary border border-border">
+                <div className="absolute -bottom-1.5 -left-1.5 flex items-center justify-center size-7 rounded-lg bg-card border border-border shadow-sm">
                   <GitBranch className="size-3.5 text-primary" />
                 </div>
               </div>
@@ -138,14 +138,14 @@ export default function Landing() {
                         setError("");
                       }}
                       placeholder="الصق رابط المستودع هنا... (مثال: facebook/react)"
-                      className="pl-4 pr-10 h-14 text-base bg-card border-border/70 shadow-sm rounded-xl"
+                      className="pl-4 pr-10 h-14 text-base bg-card border-border/70 shadow-sm rounded-xl focus-visible:ring-primary/30 focus-visible:border-primary/40"
                       dir="ltr"
                     />
                   </div>
                   <Button
                     type="submit"
                     size="lg"
-                    className="h-14 px-8 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+                    className="h-14 px-8 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-sm"
                   >
                     <ArrowLeft className="size-4 ml-2" />
                     استكشف
@@ -181,7 +181,7 @@ export default function Landing() {
                     setUrl(ex);
                     setError("");
                   }}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-secondary/80 text-secondary-foreground hover:bg-secondary border border-border/50 transition-colors cursor-pointer font-mono"
+                  className="text-xs px-3 py-1.5 rounded-lg bg-secondary/80 text-secondary-foreground hover:bg-secondary border border-border/40 transition-all cursor-pointer font-mono hover:shadow-sm"
                   dir="ltr"
                 >
                   {ex}
@@ -192,7 +192,7 @@ export default function Landing() {
         </section>
 
         {/* Features Section */}
-        <section className="border-t border-border/60 bg-card/30">
+        <section className="border-t border-border/50 bg-card/40">
           <div className="mx-auto max-w-4xl px-6 py-16">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -217,9 +217,9 @@ export default function Landing() {
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: i * 0.1 }}
                   viewport={{ once: true }}
-                  className="flex flex-col items-center text-center p-6 rounded-2xl bg-card border border-border/60 shadow-sm"
+                  className="thimmar-card flex flex-col items-center text-center p-6 rounded-2xl bg-card border border-border/50 shadow-sm"
                 >
-                  <div className="flex items-center justify-center size-12 rounded-xl bg-primary/10 mb-4">
+                  <div className="flex items-center justify-center size-12 rounded-xl bg-primary/10 mb-4 border border-primary/10">
                     <feature.icon className="size-6 text-primary" />
                   </div>
                   <h4 className="font-semibold text-foreground mb-2">
@@ -235,7 +235,7 @@ export default function Landing() {
         </section>
 
         {/* How it works */}
-        <section className="border-t border-border/60">
+        <section className="border-t border-border/50">
           <div className="mx-auto max-w-3xl px-6 py-16">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -252,7 +252,7 @@ export default function Landing() {
               </p>
             </motion.div>
 
-            <div className="flex flex-col md:flex-row items-start gap-8">
+            <div className="flex flex-col md:flex-row items-start gap-6">
               {[
                 {
                   step: "١",
@@ -281,12 +281,12 @@ export default function Landing() {
                   viewport={{ once: true }}
                   className="flex-1 w-full"
                 >
-                  <div className="relative p-6 rounded-2xl bg-card border border-border/60">
+                  <div className="thimmar-card relative p-6 rounded-2xl bg-card border border-border/50 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="flex items-center justify-center size-9 rounded-lg bg-primary text-primary-foreground text-sm font-bold">
+                      <div className="flex items-center justify-center size-9 rounded-lg bg-primary text-primary-foreground text-sm font-bold shadow-sm">
                         {item.step}
                       </div>
-                      <item.icon className="size-5 text-primary/70" />
+                      <item.icon className="size-5 text-primary/60" />
                     </div>
                     <h4 className="font-semibold text-foreground mb-1">
                       {item.title}
@@ -303,7 +303,7 @@ export default function Landing() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border/60 bg-card/30">
+      <footer className="border-t border-border/50 bg-card/40">
         <div className="mx-auto max-w-6xl px-6 py-6 flex items-center justify-center">
           <p className="text-xs text-muted-foreground">
             المستودع — أداة مجانية لتصفح ملفات GitHub

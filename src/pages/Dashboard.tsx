@@ -243,7 +243,7 @@ function FileViewer({
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* File info bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border/60 bg-card/30 shrink-0">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-card/40 shrink-0">
         <div className="flex items-center gap-3">
           <Badge variant="secondary" className="text-xs font-mono">
             {language}
@@ -293,9 +293,8 @@ function FileViewer({
 
 function EmptyState({ repoFullName }: { repoFullName: string }) {
   return (
-    <div className="flex-1 flex items-center justify-center p-12">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <div className="flex items-center justify-center size-16 rounded-2xl bg-primary/10">
+    <div className="flex-1 flex items-center justify-center p-12">        <div className="flex flex-col items-center gap-4 text-center">
+        <div className="flex items-center justify-center size-16 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/15">
           <FolderOpen className="size-8 text-primary/50" />
         </div>
         <div>
@@ -472,18 +471,18 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background" dir="rtl">
+    <div className="min-h-screen flex flex-col bg-background thimmar-pattern" dir="rtl">
       {/* Header */}
-      <header className="border-b border-border/60 bg-card/50 backdrop-blur-sm shrink-0">
+      <header className="border-b border-border/50 bg-card/60 backdrop-blur-md shrink-0">
         <div className="flex items-center justify-between px-4 py-3 gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate("/")}
-              className="shrink-0 h-8 px-2"
+              className="shrink-0 h-8 px-2 hover:bg-primary/10"
             >
-              <ArrowRight className="size-4" />
+              <ArrowRight className="size-4 text-primary" />
             </Button>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -539,7 +538,7 @@ export default function Dashboard() {
         {/* Sidebar */}
         <aside
           className={cn(
-            "border-l border-border/60 bg-card/30 flex flex-col shrink-0 transition-all duration-200",
+            "border-l border-border/50 bg-card/40 flex flex-col shrink-0 transition-all duration-200",
             sidebarOpen ? "w-72" : "w-0 overflow-hidden",
           )}
         >
@@ -571,7 +570,7 @@ export default function Dashboard() {
           </div>
 
           {/* File tree */}
-          <div className="flex-1 overflow-y-auto p-2">
+          <div className="flex-1 overflow-y-auto p-2 thimmar-scrollbar">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="size-5 animate-spin text-primary" />
@@ -610,7 +609,7 @@ export default function Dashboard() {
         <button
           type="button"
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="self-center -mr-px z-10 flex items-center justify-center size-6 rounded-l-lg bg-card border border-r-0 border-border/60 hover:bg-accent transition-colors cursor-pointer"
+          className="self-center -mr-px z-10 flex items-center justify-center size-6 rounded-l-lg bg-card border border-r-0 border-border/50 hover:bg-primary/10 transition-colors cursor-pointer shadow-sm"
         >
           {sidebarOpen ? (
             <ChevronRight className="size-3 text-muted-foreground" />
