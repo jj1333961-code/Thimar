@@ -1,4 +1,7 @@
 import { getReferenceContext, normalizeQuranText } from "@/lib/quran-reference"
+import { checkQuestionSimilarity, saveQuestion, getRecentFingerprints } from "@/lib/question-similarity"
+import { generateDiversityPlan } from "@/lib/question-diversity"
+import { validateQuranQuestion, getSurahInfo } from "@/lib/quran-validator"
 
 export const runtime = "nodejs"
 export const maxDuration = 300
