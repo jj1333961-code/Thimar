@@ -1,272 +1,125 @@
-## Overview
+# نظام إدارة الطلاب واختبارات القرآن الكريم (Student System AI)
 
-This project uses the following tech stack:
-- Vite
-- Typescript
-- React Router v7 (all imports from `react-router` instead of `react-router-dom`)
-- React 19 (for frontend components)
-- Tailwind v4 (for styling)
-- Shadcn UI (for UI components library)
-- Lucide Icons (for icons)
-- Convex (for backend & database)
-- Convex Auth (for authentication)
-- Framer Motion (for animations)
-- Three js (for 3d models)
+منصة عربية متكاملة (RTL) لإدارة طلاب التحفيظ، وتوليد اختبارات القرآن الكريم بالذكاء الاصطناعي،
+مع مساعد تطوير للموقع يعمل من داخل لوحة المسؤول ويزامن التعديلات تلقائياً مع GitHub.
 
-All relevant files live in the 'src' directory.
+- الواجهة: تطبيق صفحة واحدة (SPA) عربي في `public/index.html`.
+- الخادم: نقطة نهاية آمنة واحدة `app/api/ai/route.ts` مبنية على Next.js تتولى كل نداءات الذكاء الاصطناعي وGitHub.
+- **جميع المفاتيح والأسرار تبقى على الخادم فقط** ولا تصل أبداً إلى المتصفح أو إلى GitHub أو إلى ملف ZIP.
 
-Use bun for the package manager.
+---
 
-## Setup
+## 1) طريقة تشغيل المشروع محلياً
 
-This project is set up already and running on a cloud environment, as well as a convex development in the sandbox.
+المتطلبات: Node.js 18+ و pnpm.
 
-## Environment Variables
-
-The project is set up with project specific CONVEX_DEPLOYMENT and VITE_CONVEX_URL environment variables on the client side.
-
-The convex server has a separate set of environment variables that are accessible by the convex backend.
-
-Currently, these variables include auth-specific keys: JWKS, JWT_PRIVATE_KEY, and SITE_URL.
-
-
-# Using Authentication (Important!)
-
-You must follow these conventions when using authentication.
-
-## Auth is already set up.
-
-All convex authentication functions are already set up. The auth currently uses email OTP and anonymous users, but can support more.
-
-The email OTP configuration is defined in `src/convex/auth/emailOtp.ts`. DO NOT MODIFY THIS FILE.
-
-Also, DO NOT MODIFY THESE AUTH FILES: `src/convex/auth.config.ts` and `src/convex/auth.ts`.
-
-## Using Convex Auth on the backend
-
-On the `src/convex/users.ts` file, you can use the `getCurrentUser` function to get the current user's data.
-
-## Using Convex Auth on the frontend
-
-The `/auth` page is already set up to use auth. Navigate to `/auth` for all log in / sign up sequences.
-
-You MUST use this hook to get user data. Never do this yourself without the hook:
-```typescript
-import { useAuth } from "@/hooks/use-auth";
-
-const { isLoading, isAuthenticated, user, signIn, signOut } = useAuth();
+```bash
+pnpm install
+cp .env.example .env.local   # ثم املأ القيم المطلوبة
+pnpm dev
 ```
 
-## Protected Routes
+ثم افتح: http://localhost:3000
 
-The starter `/dashboard` route is protected with `RequireAuth`, which sends
-signed-out users to `/auth?returnTo=<current route>`. Extend that page for the
-product's authenticated experience, and reuse `RequireAuth` when adding another
-protected route.
+سكربتات مفيدة:
 
-## Auth Page
-
-The auth page is defined in `src/pages/Auth.tsx`. Send sign-in and sign-up actions
-to `/auth`.
-
-## Authorization
-
-You can perform authorization checks on the frontend and backend.
-
-On the frontend, you can use the `useAuth` hook to get the current user's data and authentication state.
-
-You should also be protecting queries, mutations, and actions at the base level, checking for authorization securely.
-
-## Adding a redirect after auth
-
-The `/auth` route in `src/main.tsx` redirects to `/dashboard` by default. If the
-product's main authenticated route is different, update `redirectAfterAuth` to
-that route. A validated same-origin `returnTo` query parameter takes priority so
-users can resume the protected page they originally requested. Never leave an
-authenticated product redirecting back to the public landing page.
-
-## Complete authenticated products
-
-When the requested product implies accounts, a workspace, a dashboard, or other
-signed-in functionality, the task is not complete with only a landing page and
-auth form. Build the main authenticated experience, protect its route, and verify
-that signing in reaches it.
-
-# Frontend Conventions
-
-You will be using the Vite frontend with React 19, Tailwind v4, and Shadcn UI.
-
-Generally, pages should be in the `src/pages` folder, and components should be in the `src/components` folder.
-
-Shadcn primitives are located in the `src/components/ui` folder and should be used by default.
-
-## Page routing
-
-Your page component should go under the `src/pages` folder.
-
-When adding a page, update the react router configuration in `src/main.tsx` to include the new route you just added.
-
-## Shad CN conventions
-
-Follow these conventions when using Shad CN components, which you should use by default.
-- Remember to use "cursor-pointer" to make the element clickable
-- For title text, use the "tracking-tight font-bold" class to make the text more readable
-- Always make apps MOBILE RESPONSIVE. This is important
-- AVOID NESTED CARDS. Try and not to nest cards, borders, components, etc. Nested cards add clutter and make the app look messy.
-- AVOID SHADOWS. Avoid adding any shadows to components. stick with a thin border without the shadow.
-- Avoid skeletons; instead, use the loader2 component to show a spinning loading state when loading data.
-
-
-## Landing Pages
-
-You must always create good-looking designer-level styles to your application. 
-- Make it well animated and fit a certain "theme", ie neo brutalist, retro, neumorphism, glass morphism, etc
-
-Use known images and emojis from online.
-
-If the user is logged in already, show the get started button to say "Dashboard" or "Profile" instead to take them there.
-
-## Responsiveness and formatting
-
-Make sure pages are wrapped in a container to prevent the width stretching out on wide screens. Always make sure they are centered aligned and not off-center.
-
-Always make sure that your designs are mobile responsive. Verify the formatting to ensure it has correct max and min widths as well as mobile responsiveness.
-
-- Always create sidebars for protected dashboard pages and navigate between pages
-- Always create navbars for landing pages
-- On these bars, the created logo should be clickable and redirect to the index page
-
-## Animating with Framer Motion
-
-You must add animations to components using Framer Motion. It is already installed and configured in the project.
-
-To use it, import the `motion` component from `framer-motion` and use it to wrap the component you want to animate.
-
-
-### Other Items to animate
-- Fade in and Fade Out
-- Slide in and Slide Out animations
-- Rendering animations
-- Button clicks and UI elements
-
-Animate for all components, including on landing page and app pages.
-
-## Three JS Graphics
-
-Your app comes with three js by default. You can use it to create 3D graphics for landing pages, games, etc.
-
-
-## Colors
-
-You can override colors in: `src/index.css`
-
-This uses the oklch color format for tailwind v4.
-
-Always use these color variable names.
-
-Make sure all ui components are set up to be mobile responsive and compatible with both light and dark mode.
-
-Set theme using `dark` or `light` variables at the parent className.
-
-## Styling and Theming
-
-When changing the theme, always change the underlying theme of the shad cn components app-wide under `src/components/ui` and the colors in the index.css file.
-
-Avoid hardcoding in colors unless necessary for a use case, and properly implement themes through the underlying shad cn ui components.
-
-When styling, ensure buttons and clickable items have pointer-click on them (don't by default).
-
-Always follow a set theme style and ensure it is tuned to the user's liking.
-
-## Toasts
-
-You should always use toasts to display results to the user, such as confirmations, results, errors, etc.
-
-Use the shad cn Sonner component as the toaster. For example:
-
-```
-import { toast } from "sonner"
-
-import { Button } from "@/components/ui/button"
-export function SonnerDemo() {
-  return (
-    <Button
-      variant="outline"
-      onClick={() =>
-        toast("Event has been created", {
-          description: "Sunday, December 03, 2023 at 9:00 AM",
-          action: {
-            label: "Undo",
-            onClick: () => console.log("Undo"),
-          },
-        })
-      }
-    >
-      Show Toast
-    </Button>
-  )
-}
+```bash
+pnpm build      # بناء الإنتاج
+pnpm start      # تشغيل نسخة الإنتاج
+pnpm lint       # فحص الأخطاء (اختياري)
 ```
 
-Remember to import { toast } from "sonner". Usage: `toast("Event has been created.")`
+---
 
-## Dialogs
+## 2) متغيرات البيئة المطلوبة
 
-Always ensure your larger dialogs have a scroll in its content to ensure that its content fits the screen size. Make sure that the content is not cut off from the screen.
+انسخ `.env.example` إلى `.env.local` (محلياً) أو أضِفها في إعدادات المشروع على Vercel.
+**لا تكتب أي مفتاح حقيقي داخل الكود أو ترفعه إلى GitHub.**
 
-Ideally, instead of using a new page, use a Dialog instead. 
+| المتغير | مطلوب؟ | الوصف |
+|---|---|---|
+| `GEMINI_API_KEY` | نعم | مفتاح Google Gemini — المزوّد الأساسي للنص والصوت (خادمي فقط). |
+| `GROQ_API_KEY` | موصى به | مفتاح Groq — البديل التلقائي للنص والصوت عند تعذر Gemini (خادمي فقط). |
+| `GITHUB_TOKEN` | للمزامنة | رمز GitHub بصلاحية `Contents: Read and write` (خادمي فقط، لا يُعرض أبداً). |
+| `GITHUB_OWNER` | للمزامنة | اسم المالك فقط، مثال: `jj1333961-code`. |
+| `GITHUB_REPO` | للمزامنة | **اسم المستودع فقط** بدون `https://github.com/` وبدون `.git`، مثال: `teacher`. |
+| `GITHUB_BRANCH` | اختياري | الفرع، مثال `main`. إن تُرك فارغاً يُستخدم الفرع الافتراضي للمستودع. |
+| `DEV_ASSISTANT_AUTO_APPLY` | اختياري | `true` لتفعيل التطبيق والدفع التلقائي بعد كل تعديل من مساعد التطوير. |
+| `VERCEL_DEPLOY_HOOK_URL` | اختياري | Deploy Hook لتشغيل النشر على Vercel بعد التعديل الناجح. |
+| `SPEAKER_VERIFICATION_API_KEY` | اختياري | نقطة توسعة للتحقق من هوية المتحدث (SpeechBrain / ECAPA-TDNN). |
+| `SPEAKER_VERIFICATION_URL` | اختياري | نقطة نهاية خدمة التحقق من المتحدث. |
 
-# Using the Convex backend
+> ملاحظة أمان: لا تستخدم البادئة `NEXT_PUBLIC_` مع أي من هذه القيم، لأن ذلك يكشفها في المتصفح.
 
-You will be implementing the convex backend. Follow your knowledge of convex and the documentation to implement the backend.
+---
 
-## The Convex Schema
+## 3) طريقة ربط GitHub
 
-You must correctly follow the convex schema implementation.
+1. أنشئ Personal Access Token من GitHub بصلاحية **Contents: Read and write** على المستودع.
+2. أضِف المتغيرات على الخادم (Vercel → Settings → Environment Variables):
+   - `GITHUB_TOKEN` = الرمز.
+   - `GITHUB_OWNER` = اسم المالك فقط.
+   - `GITHUB_REPO` = اسم المستودع فقط (بدون رابط وبدون `.git`).
+   - `GITHUB_BRANCH` = الفرع (مثل `main`).
+3. من لوحة المسؤول افتح **🔗 مزامنة المشروع مع GitHub** ثم اضغط «تحقق من حالة المزامنة»
+   للتأكد من الاتصال، صلاحية الكتابة، والفرع المستخدم، وعرض آخر Commit.
 
-The schema is defined in `src/convex/schema.ts`.
+الرمز `GITHUB_TOKEN` لا يظهر أبداً في الواجهة أو السجلات أو رسائل الخطأ.
 
-Do not include the `_id` and `_creationTime` fields in your queries (it is included by default for each table).
-Do not index `_creationTime` as it is indexed for you. Never have duplicate indexes.
+---
 
+## 4) طريقة إعداد Gemini وGroq
 
-## Convex Actions: Using CRUD operations
+1. أنشئ مفتاح Gemini واضبط `GEMINI_API_KEY` على الخادم؛ وهو المزوّد الأساسي لكل الطلبات.
+2. أنشئ مفتاح Groq واضبط `GROQ_API_KEY` على الخادم؛ ويُستخدم تلقائياً عند غياب Gemini أو فشل طلبه.
+3. النماذج ثابتة داخل `app/api/ai/route.ts`: `gemini-2.5-flash` أساسياً، و`llama-3.3-70b-versatile` للنص و`whisper-large-v3-turbo` للصوت احتياطياً.
+4. لا يمكن لتفريغ Whisper إجراء تحقق بيومتري حقيقي؛ لذلك يعيد المسار الاحتياطي نتيجة آمنة منخفضة الثقة في وظائف البصمة الصوتية.
+5. عند غياب المفاتيح أو بطلانها تظهر رسالة عربية واضحة للمسؤول **دون كشف أي مفتاح**.
 
-When running anything that involves external connections, you must use a convex action with "use node" at the top of the file.
+---
 
-You cannot have queries or mutations in the same file as a "use node" action file. Thus, you must use pre-built queries and mutations in other files.
+## 5) طريقة إعداد التخزين
 
-You can also use the pre-installed internal crud functions for the database:
+- بيانات التطبيق (الطلاب، المسؤولون، الرسائل، الملفات، التسجيلات، سجل التدقيق) تُحفظ حالياً في
+  `localStorage` داخل المتصفح عبر `getData()` / `setData()`.
+- **تاريخ الكود والإصدارات** يُحفظ في GitHub عبر مساعد التطوير (كل تعديل = Commit).
+- نقاط توسعة جاهزة لربط تخزين صوتي/قاعدة بيانات خارجية لاحقاً دون إعادة بناء النظام.
 
-```ts
-// in convex/users.ts
-import { crud } from "convex-helpers/server/crud";
-import schema from "./schema.ts";
+---
 
-export const { create, read, update, destroy } = crud(schema, "users");
+## 6) طريقة تشغيل مساعد تطوير الموقع
 
-// in some file, in an action:
-const user = await ctx.runQuery(internal.users.read, { id: userId });
+1. سجّل الدخول كمسؤول ثم افتح **🛠️ مساعد تطوير الموقع**.
+2. اكتب طلبك بالعربية، مثل: «أضف خانة البحث في صفحة الطلاب» أو «أصلح الخطأ في صفحة الاختبارات».
+3. المسار: طلب المسؤول → تحليل الذكاء الاصطناعي → تحديد الملفات → توليد الكود → فحص وتطبيق →
+   إنشاء Commit → Push إلى الفرع → إعادة النشر إذا كانت المنصة مربوطة بالمستودع.
+4. **بوابة الحماية**: العمليات الحسّاسة (حذف قاعدة البيانات، حذف المستخدمين/الطلاب، تغيير المصادقة/الصلاحيات/مفاتيح البيئة)
+   تتطلب تأكيداً صريحاً قبل التنفيذ، والملفات الأساسية محمية من الحذف التلقائي.
+5. **سجل التدقيق (Audit Log)**: كل عملية تُسجَّل (الوقت، المسؤول، الطلب، الحالة، الملفات وروابط الـCommit)
+   وتظهر أسفل صفحة المساعد.
 
-await ctx.runMutation(internal.users.update, {
-  id: userId,
-  patch: {
-    status: "inactive",
-  },
-});
-```
+لتفعيل التطبيق التلقائي اضبط `DEV_ASSISTANT_AUTO_APPLY=true` مع اكتمال متغيرات GitHub.
 
+---
 
-## Common Convex Mistakes To Avoid
+## 7) طريقة النشر
 
-When using convex, make sure:
-- Document IDs are referenced as `_id` field, not `id`.
-- Document ID types are referenced as `Id<"TableName">`, not `string`.
-- Document object types are referenced as `Doc<"TableName">`.
-- Keep schemaValidation to false in the schema file.
-- You must correctly type your code so that it passes the type checker.
-- You must handle null / undefined cases of your convex queries for both frontend and backend, or else it will throw an error that your data could be null or undefined.
-- Always use the `@/folder` path, with `@/convex/folder/file.ts` syntax for importing convex files.
-- This includes importing generated files like `@/convex/_generated/server`, `@/convex/_generated/api`
-- Remember to import functions like useQuery, useMutation, useAction, etc. from `convex/react`
-- NEVER have return type validators.
+1. ارفع المشروع إلى مستودع GitHub الخاص بك.
+2. اربط المستودع بمشروع على Vercel.
+3. أضِف متغيرات البيئة في إعدادات مشروع Vercel (`GEMINI_API_KEY` أساسياً و`GROQ_API_KEY` للبديل، ثم متغيرات GitHub للمزامنة).
+4. نفّذ Deploy. بعد ذلك كل Commit من مساعد التطوير سيؤدي إلى إعادة نشر تلقائية
+   (أو استخدم `VERCEL_DEPLOY_HOOK_URL`).
+
+---
+
+## 8) الحفظ والاستعادة والنقل
+
+المشروع مكتفٍ ذاتياً داخل ملفاته، فيمكنك:
+
+- تحميله كملف ZIP.
+- رفعه إلى حساب آخر أو استعادته من GitHub.
+- نقله إلى Vercel أو منصة أخرى.
+- متابعة تطويره دون إعادة بناء وظائف الذكاء الاصطناعي من الصفر.
+
+كل ما يلزم بعد النقل هو إعادة ضبط متغيرات البيئة على المنصة الجديدة.
+**لا يُحفظ أي سرّ حقيقي داخل المشروع أو ZIP أو GitHub.**
