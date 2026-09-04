@@ -68,6 +68,19 @@ export async function PUT(request: Request) {
       return response({ error: 'صيغة البيانات غير صالحة' }, 400)
     }
     const sanitizedData = Object.fromEntries(Object.entries(body.data).filter(([key]) => ALLOWED_DATA_KEYS.has(key)))
+    const audit = body.audit && typeof body.audit === 'object' && !Array.isArray(body.audit) ? body.audit as Record<string, unknown> : null
+    const existingForAudit = Array.isArray(sanitizedData.devAuditLog) ? sanitizedData.devAuditLog : []
+    if (audit) {
+      sanitizedData.devAuditLog = [...existingForAudit, {
+        id: `visit_${Date.now()}`,
+        action: 'admin_visit_update',
+        actorId: auth.user?.id ?? null,
+        actorEmail: auth.user?.email ?? null,
+        targetUserId: String(audit.targetUserId ?? ''),
+        targetRole: audit.targetRole === 'parent' ? 'parent' : 'student',
+        at: new Date().toISOString(),
+      }].slice(-500)
+    }
     const serialized = JSON.stringify(sanitizedData)
     if (serialized.length > 5_000_000) {
       return response({ error: 'حجم البيانات أكبر من الحد المسموح' }, 413)
