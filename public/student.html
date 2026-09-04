@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#1f5845">
 <meta name="description" content="ثمار — منصة قرآنية هادئة للتسميع والاختبارات والمهام والنمو العلمي.">
 <meta name="referrer" content="no-referrer-when-downgrade">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script src="/capacitor-runtime.js" defer></script>
+  <script src="/offline-runtime.js" defer></script>
   <link rel="preload" href="/quran/quran.pdf" as="fetch" type="application/pdf" crossorigin fetchpriority="high">
   <script src="/islamic-data.js" defer></script>
   <script src="/country-data.js" defer></script>
@@ -904,7 +907,7 @@ tr:hover { background: var(--table-hover); }
     <div class="form-group"><button class="btn btn-outline" id="signupMethodGoogleBtn" onclick="setSignupMethod('google')" style="width:100%">🔵 التسجيل بحساب جول</button></div>
     <div class="form-group"><button class="btn btn-outline" id="signupMethodPhoneBtn" onclick="setSignupMethod('phone')" style="width:100%">🟢 التسجيل برقم الهاتف (واتساب)</button></div>
   </div>
-  <!-- منطقة التسجيل بحساب جوجل: ظر حسابات جوجل الموجود على الجهاز للاختيار مباشرةً بدون تحقق واتساب -->
+  <!-- منطقة التسجيل بحساب جوجل: ظر حسابات جوجل الموجود ��لى الجهاز للاختيار مباشرةً بدون تحقق واتساب -->
   <div class="form-group" id="signupGoogleBox" style="display:none;">
     <label>اختر حساب جوجل لإكمال التسجيل *</label>
     <div id="googleBtnContainer" style="display:flex; justify-content:center; margin:10px 0;"></div>

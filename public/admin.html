@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#1f5845">
 <meta name="description" content="ثمار — منصة قرآنية هادئة للتسميع والاختبارات والمهام والنمو العلمي.">
 <meta name="referrer" content="no-referrer-when-downgrade">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script src="/capacitor-runtime.js" defer></script>
+  <script src="/offline-runtime.js" defer></script>
   <link rel="preload" href="/quran/quran.pdf" as="fetch" type="application/pdf" crossorigin fetchpriority="high">
   <script src="/islamic-data.js" defer></script>
   <script src="/country-data.js" defer></script>
@@ -855,7 +858,7 @@ tr:hover { background: var(--table-hover); }
 
     <div id="unifiedLoginAlert"></div>
 
-    <!-- شاشة تسجيل الدخول (نفس الحقول والوظائف السابقة) -->
+    <!-- شاشة ��سجيل الدخول (نفس الحقول والوظائف السابقة) -->
     <div class="thimar-actions" id="thimarLoginForm">
       <div>
         <div class="thimar-field">
@@ -1334,7 +1337,7 @@ tr:hover { background: var(--table-hover); }
 <!-- قائمة الطلاب -->
 <div id="studentsList" class="page hidden">
   <div class="page-header"><h2>👥 قائمة الطلاب المسجلين (<span id="studentsCount">0</span>)</h2></div>
-  <div class="search-box"><input type="text" id="searchStudent" placeholder="🔍 ابحث باسم الطالب أو اسم المستخدم أو الرقم القومي..." onkeyup="renderStudents()"></div>
+  <div class="search-box"><input type="text" id="searchStudent" placeholder="🔍 ابحث باسم الطالب أو ا��م المستخدم أو الرقم القومي..." onkeyup="renderStudents()"></div>
   <div id="studentsTable"></div>
 </div>
 

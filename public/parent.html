@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#1f5845">
 <meta name="description" content="ثمار — منصة قرآنية هادئة للتسميع والاختبارات والمهام والنمو العلمي.">
 <meta name="referrer" content="no-referrer-when-downgrade">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script src="/capacitor-runtime.js" defer></script>
+  <script src="/offline-runtime.js" defer></script>
   <link rel="preload" href="/quran/quran.pdf" as="fetch" type="application/pdf" crossorigin fetchpriority="high">
   <script src="/islamic-data.js" defer></script>
   <script src="/country-data.js" defer></script>
@@ -929,7 +932,7 @@ tr:hover { background: var(--table-hover); }
   <div class="alert alert-success" id="signupVerifiedNote">✅ تم التحقق من هويتك بنجاح.</div>
   <div class="form-row">
     <div class="form-group"><label>نوع الحساب *</label><select id="signupRole" onchange="syncSignupRelationshipField()"><option value="student">طالب</option><option value="parent">ولي أمر</option></select></div>
-    <div class="form-group"><label>الاسم ب��لكامل *</label><input type="text" id="signupName" placeholder="الاسم كما في البطاقة"></div>
+    <div class="form-group"><label>الاسم ب����لكامل *</label><input type="text" id="signupName" placeholder="الاسم كما في البطاقة"></div>
   </div>
   <div class="form-group" id="signupRelationshipGroup">
     <label id="signupRelationshipLabel">اسم ولي الأمر *</label>
@@ -1014,7 +1017,7 @@ tr:hover { background: var(--table-hover); }
     <label>طلب التطوير</label>
     <textarea id="devAssistantInput" rows="4" placeholder="اكتب ما ترد إضافته أو تعديله ف الموقع..."></textarea>
   </div>
-  <button class="btn btn-primary" id="devAssistantBtn" onclick="runDevAssistant()" style="width:100%">تنفيذ التعديل بالذكاء الاصطنعي</button>
+  <button class="btn btn-primary" id="devAssistantBtn" onclick="runDevAssistant()" style="width:100%">تنفيذ التعديل بالذكاء الاصط��عي</button>
   <div id="devProgressPanel" style="display:none;margin-top:14px;border:1px solid var(--border);border-radius:10px;padding:12px;">
     <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;"><strong id="devProgressLabel">تحليل الطلب</strong><span id="devEta">الءءقت المتبقي: 02:00</span></div>
     <div style="height:9px;background:var(--border);border-radius:999px;overflow:hidden;"><div id="devProgressBar" style="height:100%;width:8%;background:var(--primary);transition:width .5s;"></div></div>
@@ -1070,7 +1073,7 @@ tr:hover { background: var(--table-hover); }
   <div class="form-row" style="margin-bottom:20px; border:2px solid var(--primary); border-radius:12px; padding:15px; background:var(--table-header);">
     <div class="form-group" style="margin-bottom:0;">
       <label>رقم واتساب المسؤول لاستلام طلبات الامام</label>
-      <div class="country-input-row"><select id="adminWhatsappCountry" data-country-selector data-phone-id="adminWhatsInput" aria-label="دولة رقم الواتساب"><option value="EG">مصر (+20)</option></select><input type="tel" id="adminWhatsInput" data-phone-input class="phone-input" placeholder="الرقم المحلي بدون رمز الدولة" autocomplete="tel"></div>
+      <div class="country-input-row"><select id="adminWhatsappCountry" data-country-selector data-phone-id="adminWhatsInput" aria-label="دولة رقم الواتساب"><option value="EG">مصر (+20)</option></select><input type="tel" id="adminWhatsInput" data-phone-input class="phone-input" placeholder="الرقم ال��حلي بدون رمز الدولة" autocomplete="tel"></div>
       <small style="color:var(--text-light)">يُستخدم لإرسال طلبات الحساات الجديدة على واتساب (بصغة الدولة، مثال: 201554542019)</small>
     </div>
     <div class="form-group" style="display:flex; align-items:flex-end; margin-bottom:0;">
@@ -1255,7 +1258,7 @@ tr:hover { background: var(--table-hover); }
   <div id="recordElementsContainer"></div>
   <div class="page" style="margin:15px 0;border:2px dashed var(--info);">
     <h4 style="color:var(--info)">🖼️ تعديل اللوح/الصورة يدوياً</h4>
-    <p style="color:var(--text-light)">الاختيار التلقائي للسورة والآيات يظل كما هو، ويمكن للمسؤول تعديل اللوح والصورة يدوياً دون تعطيل الاختيار التلقائي.</p>
+    <p style="color:var(--text-light)">الاختيار التلقائي للسورة والآيات يظل كما هو�� ويمكن للمسؤول تعديل اللوح والصورة يدوياً دون تعطيل الاختيار التلقائي.</p>
     <div class="form-row">
       <div class="form-group"><label>نص اللوح/التعديل اليدوي</label><textarea id="manualBoardText" rows="3" placeholder="اكتب التعديل المطلوب..."></textarea></div>
       <div class="form-group"><label>رابط صورة اللوح (اختياري)</label><input id="manualBoardImage" type="url" placeholder="https://..."></div>
