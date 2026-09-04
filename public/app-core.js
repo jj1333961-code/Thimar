@@ -529,7 +529,8 @@ async function saveAllDataToNeon(){
   if(neonSaveInFlight) return neonSaveInFlight;
   neonSaveInFlight=(async function(){
     try{
-      const res=await fetch('/api/data',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:collectCloudData()})});
+      const visitAudit = adminVisitState ? { targetUserId: adminVisitState.targetId, targetRole: adminVisitState.targetRole } : null;
+      const res=await fetch('/api/data',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:collectCloudData(), audit:visitAudit})});
       const body=await res.json().catch(function(){ return {}; });
       if(!res.ok || body.saved !== true) throw new Error(body.error || 'cloud-save-failed');
       if(status)status.textContent='محفوظ في Neon';
@@ -640,6 +641,8 @@ if(!runtimeData.initialized_v7) {
   }());
   
   let currentUser = null, currentType = null, currentAdminId = null;
+  // يحتفظ المسؤول بجلسة الدخول الأصلية أثناء زيارة حساب طالب أو ولي أمر.
+  let adminVisitState = null;
  let voiceBlob = null, voiceChunks = [], mediaRecorder = null;
 let voiceFingerprint = null, voiceDataUrl = null, voiceProfileGemini = null;
 let recordElements = [], homeworkItems = [], readingItems = [];
@@ -693,7 +696,7 @@ function finishGoogleLogin(user){
 }
 function restorePendingGoogleSignup(){try{const raw=sessionStorage.getItem('thimar_pending_google_signup');if(!raw)return false;const pending=JSON.parse(raw);if(!pending?.email)return false;signupState.method='google';signupState.email=String(pending.email).trim().toLowerCase();signupState.name=String(pending.name||'');signupState.whats='';signupState.verified=true;const note=document.getElementById('signupVerifiedNote');if(note)note.innerHTML='تم التحقق من هويتك عبر Google — '+escapeHtml(signupState.email);const name=document.getElementById('signupName');if(name&&!name.value)name.value=signupState.name;initSignupJuzSelect();showPage('signupStep2');return true}catch(e){try{sessionStorage.removeItem('thimar_pending_google_signup')}catch(ignore){}return false}}
 
-function initializeThimarApp(){if(window.__thimarAppInitialized)return;window.__thimarAppInitialized=true;loadCountryRules();loadGlobalProctorSettings();setupProctorHold(document.getElementById('proctorGateHold'),true);const params=new URLSearchParams(location.search);if(!navigator.onLine && window.ThimarOfflineSession){window.ThimarOfflineSession.read().then(function(record){if(record&&record.session&&record.session.expiresAt>Date.now()){currentUser=record.session.user;currentType=record.session.type;currentAdminId=record.session.adminId||null;pageHistory=[];const expectedRole=/\/(?:admin|admin\.html)$/.test(location.pathname)?'admin':/(?:student|student\.html)$/.test(location.pathname)?'student':/(?:parent|parent\.html)$/.test(location.pathname)?'parent':null;if(expectedRole&&expectedRole!==currentType){history.replaceState({page:defaultPageForRole(currentType)},'',roleShellPath(currentType));}showPage(defaultPageForRole(currentType),{fromBrowser:true});}}).catch(function(){});}if(params.get('google')==='success'){fetch('/api/auth/google/session',{cache:'no-store',credentials:'same-origin'}).then(r=>r.json()).then(data=>{if(!data.authenticated||!data.user?.email)throw new Error('عذر قراءة جلسة Google');finishGoogleLogin(data.user);history.replaceState({},'',pageUrl(document.querySelector('.page:not(.hidden)')?.id))}).catch(()=>{history.replaceState({},'',location.pathname);const box=document.getElementById('signupStep1Alert');if(box)box.innerHTML='<div class="alert alert-danger">تعذر استكمال تسجيل الدخول عبر Google.</div>'})}else if(restoreSession()){
+function initializeThimarApp(){if(window.__thimarAppInitialized)return;window.__thimarAppInitialized=true;loadCountryRules();loadGlobalProctorSettings();setupProctorHold(document.getElementById('proctorGateHold'),true);const params=new URLSearchParams(location.search);const continueSession=function(){if(params.get('google')==='success'){fetch('/api/auth/google/session',{cache:'no-store',credentials:'same-origin'}).then(r=>r.json()).then(data=>{if(!data.authenticated||!data.user?.email)throw new Error('عذر قراءة جلسة Google');finishGoogleLogin(data.user);history.replaceState({},'',pageUrl(document.querySelector('.page:not(.hidden)')?.id))}).catch(()=>{history.replaceState({},'',location.pathname);const box=document.getElementById('signupStep1Alert');if(box)box.innerHTML='<div class="alert alert-danger">تعذر استكمال تسجيل الدخول عبر Google.</div>'})}else if(restoreSession()){
   const expectedRole = /\/(?:admin|admin\.html)$/.test(location.pathname) ? 'admin' : /\/(?:student|student\.html)$/.test(location.pathname) ? 'student' : /\/(?:parent|parent\.html)$/.test(location.pathname) ? 'parent' : null;
   if(expectedRole && expectedRole !== currentType){
     history.replaceState({ page: defaultPageForRole(currentType) }, '', roleShellPath(currentType));
@@ -701,7 +704,7 @@ function initializeThimarApp(){if(window.__thimarAppInitialized)return;window.__
   const routed=pageFromUrl();
   if(routed && pageAllowedForUser(routed)) showPage(routed,{fromBrowser:true});
   else showPage(defaultPageForRole(currentType),{fromBrowser:true});
-}else restorePendingGoogleSignup()}
+}else restorePendingGoogleSignup()}; restoreDeviceSession().then(function(restored){ if(!restored) continueSession(); else { const expectedRole=/\/(?:admin|admin\.html)$/.test(location.pathname)?'admin':/(?:student|student\.html)$/.test(location.pathname)?'student':/(?:parent|parent\.html)$/.test(location.pathname)?'parent':null; if(expectedRole&&expectedRole!==currentType) history.replaceState({page:defaultPageForRole(currentType)},'',roleShellPath(currentType)); const routed=pageFromUrl(); const renderRestored=function(){ if(routed&&pageAllowedForUser(routed)) showPage(routed,{fromBrowser:true}); else showPage(defaultPageForRole(currentType),{fromBrowser:true}); }; hydrateDataFromNeon().catch(function(){}).finally(renderRestored); } });}
 
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeThimarApp, {once:true});
 else initializeThimarApp();
@@ -712,28 +715,37 @@ window.addEventListener('popstate',()=>{const id=pageFromUrl();if(!id||!pageAllo
 function saveSessionState() {
   try {
     if(currentUser && currentType) {
+      const session = { user: currentUser, type: currentType, adminId: currentAdminId || null, adminVisitState: adminVisitState || null, page: document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)')?.id || defaultPageForRole(currentType), savedAt: Date.now(), expiresAt: Date.now() + 8 * 60 * 60 * 1000 };
       sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
       sessionStorage.setItem('currentType', currentType);
       sessionStorage.setItem('currentAdminId', currentAdminId || '');
       sessionStorage.setItem('pageHistory', JSON.stringify(pageHistory));
-      if (window.ThimarOfflineSession) window.ThimarOfflineSession.save({ user: currentUser, type: currentType, adminId: currentAdminId || null, savedAt: Date.now(), expiresAt: Date.now() + 8 * 60 * 60 * 1000 });
+      if (window.ThimarOfflineSession) window.ThimarOfflineSession.save(session);
     }
   } catch(e) { console.error('saveSessionState error:', e); }
+}
+function applySavedSession(saved) {
+  if(!saved || !saved.user || !saved.type || (saved.expiresAt && saved.expiresAt <= Date.now())) return false;
+  currentUser = saved.user; currentType = saved.type; currentAdminId = saved.adminId || null; adminVisitState = saved.adminVisitState || null;
+  return true;
 }
 function restoreSession() {
   try {
     const savedUser = sessionStorage.getItem('currentUser');
     const savedType = sessionStorage.getItem('currentType');
     const savedHistory = sessionStorage.getItem('pageHistory');
-    if(savedUser && savedType) {
-      currentUser = JSON.parse(savedUser);
-      currentType = savedType;
-      currentAdminId = sessionStorage.getItem('currentAdminId') || null;
+    if(savedUser && savedType && applySavedSession({ user: JSON.parse(savedUser), type: savedType, adminId: sessionStorage.getItem('currentAdminId') || null })) {
       if(savedHistory) pageHistory = JSON.parse(savedHistory);
       return true;
     }
   } catch(e) { console.error('restoreSession error:', e); }
   return false;
+}
+function restoreDeviceSession() {
+  if(!window.ThimarOfflineSession) return Promise.resolve(false);
+  return window.ThimarOfflineSession.read().then(function(record) {
+    return applySavedSession(record && record.session) || false;
+  }).catch(function() { return false; });
 }
 function clearSession() {
   try {
@@ -812,6 +824,7 @@ function showPage(id, options = {}) {
 
   checkAndFinalizeDrafts();
   updateBackButton();
+  renderAdminVisitBanner();
 
   if(id === 'adminDashboard') { renderAdminStats(); updateMsgBadge(); renderActiveDrafts(); }
   if(id === 'studentsList') renderStudents();
@@ -872,7 +885,8 @@ function updateBackButton() {
   if(!currentVisible) return;
   const currentId = currentVisible.id;
 
-  // Don't show on home page or login pages
+  // لا يظهر زر الرجوع العام في صفحات الطالب وولي الأمر؛ خروج وضع المسؤول عبر الشريط العلوي فقط.
+  if(currentType === 'student' || currentType === 'parent') return;
   if(currentId === 'lockScreen' || currentId === 'homePage' || currentId === 'adminLogin' || currentId === 'studentLogin' || currentId === 'parentLogin') return;
 
   // Don't show if no history
@@ -1620,7 +1634,7 @@ async function toggleStudentIntakeRecord(){
         preview.src=URL.createObjectURL(blob);preview.style.display='block';status.textContent='جاري فهم بيانات الطالب...';result.innerHTML='';
         const audio=await voiceAudioPayload(blob),data=await callStudentAI('student_voice_intake',{role:'admin',audioBase64:audio.audioBase64,mimeType:audio.mimeType},0.05),filled=applyStudentVoiceFields(data.fields||{});
         if(!filled.length)throw new Error('لم أتعرف على بيانات واضحة. اذكر اسم كل خانة ثم قيمتها ببطء.');
-        result.innerHTML='<div class="alert alert-success">تم ملء '+filled.length+' خانة. راجع جميع البيانات قبل الحفظ.<br><small>النص المسموع: '+escapeHtml(data.transcript||'لم يُرجع تفريغاً')+'</small></div>';status.textContent='اكتمل التحل��ل';
+        result.innerHTML='<div class="alert alert-success">تم ملء '+filled.length+' خانة. راجع جميع البيانات قبل الحفظ.<br><small>ا��نص المسموع: '+escapeHtml(data.transcript||'لم يُرجع تفريغاً')+'</small></div>';status.textContent='اكتمل التحل��ل';
       }catch(e){result.innerHTML='<div class="alert alert-danger">تعذر تحليل التسجيل: '+escapeHtml(e.message||'خطأ غير معروف')+'<br><button type="button" class="btn btn-sm btn-primary" onclick="retryStudentIntakeAnalysis()">إعادة تحليل نفس التسجيل</button><button type="button" class="btn btn-sm btn-secondary" onclick="toggleStudentIntakeRecord()">تسجيل جديد</button></div>';status.textContent='فشل التحليل';}
       finally{btn.disabled=false;btn.textContent='إعادة التسجيل';studentIntakeRecorder=null;}
     };
@@ -2069,7 +2083,7 @@ async function saveStudent() {
   if(students.find(s => normalizeIdentityInput(s.national || s.nationalId || '') === national)) return fail('هذا الرقم القومي مسجل مسبقاً');
   if(students.find(s => s.username === username)) return fail('اسم المستخدم مسجل مسبقاً');
   if(students.find(s => s.username === username)) return fail('اسم المستخدم مسجل مسبقاً');
-  // ✅ مسموح الآن أن يكون الرقم السري للطالب مطابقاً للرقم السري لولي الأمر
+  // ✅ مسموح الآن أن يكون ا��رقم السري للطالب مطابقاً للرقم السري لولي الأمر
 
   const subjects = getData('subjects');
   const selectedSubData = selectedSubjects.map(id => subjects.find(s => s.id === id)).filter(Boolean);
@@ -2230,6 +2244,35 @@ function updateStudent() {
   setTimeout(() => showPage('studentsList'), 1200);
 }
 
+function visitStudentAccount(id) { startAdminVisit(id, 'student'); }
+function visitParentAccount(id) { startAdminVisit(id, 'parent'); }
+function startAdminVisit(id, role) {
+  if(currentType !== 'admin' || !currentUser) { showToast('يجب تسجيل الدخول كمسؤول أولاً','error'); return; }
+  const target = getData('students', []).find(function(student) { return String(student.id) === String(id); });
+  if(!target) { showToast('لم يتم العثور على الطالب','error'); return; }
+  adminVisitState = { adminUser: currentUser, adminId: currentAdminId || currentUser.id, fromPage: 'studentsList', targetId: target.id, targetRole: role };
+  currentAdminId = adminVisitState.adminId;
+  currentUser = role === 'parent' ? [target] : target;
+  currentType = role;
+  pageHistory = [];
+  showPage(role === 'parent' ? 'parentDashboard' : 'studentDashboard');
+  showToast(role === 'parent' ? 'تم فتح صفحة ولي الأمر للتعديل' : 'تم فتح صفحة الطالب للتعديل','success');
+}
+function exitAdminVisit() {
+  if(!adminVisitState) return;
+  const state = adminVisitState;
+  adminVisitState = null; currentUser = state.adminUser; currentType = 'admin'; currentAdminId = state.adminId; pageHistory = [];
+  showPage('studentsList');
+  showToast('تمت العودة إلى قائمة الطلاب','success');
+}
+function renderAdminVisitBanner() {
+  const old = document.getElementById('adminVisitBanner'); if(old) old.remove();
+  if(!adminVisitState || !currentUser) return;
+  const banner = document.createElement('div'); banner.id='adminVisitBanner'; banner.setAttribute('role','status'); banner.style.cssText='position:sticky;top:0;z-index:9000;margin:0 auto;padding:12px 18px;background:var(--primary);color:#fff;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.18);font-weight:600;';
+  banner.innerHTML='<strong>وضع المسؤول:</strong> أنت تعدل صفحة '+(adminVisitState.targetRole === 'parent' ? 'ولي الأمر' : 'الطالب')+' نيابةً عن المسؤول. <button type="button" class="btn btn-sm btn-warning" onclick="exitAdminVisit()">العودة لقائمة الطلاب</button>';
+  document.body.prepend(banner);
+}
+
 function renderStudents() {
   const search = document.getElementById('searchStudent').value.trim().toLowerCase();
   let students = getData('students');
@@ -2258,7 +2301,9 @@ function renderStudents() {
     html += '<div class="student-card-actions">';
     html += '<button class="btn btn-sm btn-info" onclick="openEdit('+s.id+')">✏️ تعديل</button>';
     html += '<button class="btn btn-sm btn-success" onclick="openRecord('+s.id+')">'+(hasDraft ? '📝 تعديل تسميع' : '🎙️ تسميع')+'</button>';
-    html += '<button class="btn btn-sm btn-warning" onclick="openHistory('+s.id+')">📋 السجل ('+sessionCount+' تسميع، '+examCount+' اختبار)</button>';
+    html += '<button class="btn btn-sm btn-warning" onclick="openHistory('+JSON.stringify(s.id)+')">📋 السجل ('+sessionCount+' تسميع، '+examCount+' اختبار)</button>';
+    html += '<button class="btn btn-sm btn-primary" onclick="visitStudentAccount('+JSON.stringify(s.id)+')">زيارة الطالب</button>';
+    html += '<button class="btn btn-sm btn-outline" onclick="visitParentAccount('+JSON.stringify(s.id)+')">زيارة ولي الأمر</button>';
     html += '<button class="btn btn-sm btn-danger" onclick="deleteStudent('+s.id+')">🗑️ حذف</button>';
     html += '</div></div>';
   });
@@ -3745,7 +3790,7 @@ async function runDevAssistant(){
   if(dangers.length){
     const confirmed = confirm(
       '⚠️ تحذير: قد يتضمن هذا الطلب عملية ح��ّاسة:\n\n- '+dangers.join('\n- ')+
-      '\n\nهذه المليات قد تؤثر على البيانات أئ الأمان أو المستخدمين. لن يُنفَذ الطلب إلا بعد تأكيدك الصريح.\n\nهل تريد المتابعة والتنفيذ التلقائي؟'
+      '\n\nهذه المليات قد تؤثر ��لى البيانات أئ الأمان أو المستخدمين. لن يُنفَذ الطلب إلا بعد تأكيدك الصريح.\n\nهل تريد المتابعة والتنفيذ التلقائي؟'
     );
     if(!confirmed){
       recordDevAudit({ status:'blocked', request, summary:'أُلغي بواسطة ءءلمسؤول قبل التنفيذ.', flagged:dangers });
@@ -4541,7 +4586,7 @@ function uploadTaskFile(taskIdx, input, type) {
     }
 
     // Show success and re-render
-    alert('✅ تم إرسال الملف للمؤو ��نجاح! انتظر الموافقة.');
+    alert('✅ تم إرسال الملف للمؤو ����جاح! انتظر الموافقة.');
     renderStudentTasks();
   };
   reader.readAsDataURL(file);
@@ -4934,7 +4979,7 @@ async function voiceAudioPayload(blob){
   let audioBlob=blob;
   if(!supported){audioBlob=await blobToWav(blob);}
   if(!audioBlob) throw new Error('تعذر تجهز التسجيل بصيغة يدعمها Gemini');
-  if(audioBlob.size>2800000) throw new Error('حجم التسجيل كبير جداً للتحليل الصوتي. سجّل مقطعاً أقصر من دقيقة ونصف.');
+  if(audioBlob.size>2800000) throw new Error('حجم التسجيل كبير جداً للتحليل الصوتي. سجّل مقطعاً أق��ر من دقيقة ونصف.');
   return {audioBase64:await audioBlobToBase64(audioBlob),mimeType:audioBlob.type.split(';')[0]||'audio/wav'};
 }
 async function geminiVoiceProfile(blob){
@@ -5434,7 +5479,7 @@ function uploadFile(input) {
   const targetSel = document.getElementById('fileTarget');
   const targetId = targetSel ? targetSel.value : 'all';
   const progressDiv = document.getElementById('fileUploadProgress');
-  progressDiv.innerHTML = '<div class="alert alert-info">⏳ جاري رفع الملف...</div>';
+  progressDiv.innerHTML = '<div class="alert alert-info">⏳ جاري رف�� الملف...</div>';
 
   const reader = new FileReader();
   reader.onprogress = function(e) {
@@ -5474,7 +5519,7 @@ function uploadFile(input) {
 
 function renderFiles() {
   let files = getData('uploadedFiles', []);
-  const categoryLabels = {student:'👨‍🎓 الطالب', parent:'👨‍👩‍👧 ولي ءءلأمر', general:'عام', quran:'قرآن', lessons:'دروس', exams:'اختبار��ت', reports:'تقارير'};
+  const categoryLabels = {student:'👨‍🎓 الطالب', parent:'👨‍👩‍��� ولي ءءلأمر', general:'عام', quran:'قرآن', lessons:'دروس', exams:'اختبار��ت', reports:'تقارير'};
 
   if(files.length === 0) {
     document.getElementById('filesList').innerHTML = '<div class="alert alert-info">لا توجد لفات مرفوعة عد</div>';
@@ -5773,8 +5818,9 @@ function generateAIResponse(text, student) {
 }
 
 async function logout() {
+  if(adminVisitState) { exitAdminVisit(); return; }
   if(navigator.onLine) { try { await fetch('/api/auth/supabase', { method:'DELETE', credentials:'same-origin' }); } catch(error) { console.error('[v0] Supabase logout failed', error); } }
-  currentUser = null; currentType = null; currentAdminId = null;
+  currentUser = null; currentType = null; currentAdminId = null; adminVisitState = null;
   clearSession();
   const uu = document.getElementById('unifiedUser'); if(uu) uu.value = '';
   const up = document.getElementById('unifiedPass'); if(up) up.value = '';
