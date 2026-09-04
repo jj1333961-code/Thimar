@@ -69,10 +69,6 @@ export async function POST(request: Request) {
   if (auth.response) return auth.response
   try {
     const body = await request.json()
-    const device = body?.device
-    if (!device || typeof device !== 'object' || Array.isArray(device) || typeof device.deviceId !== 'string') {
-      return response({ error: 'بيانات الجهاز غير صالحة' }, 400)
-    }
     const existing = await db.select({ data: appSnapshots.data })
       .from(appSnapshots)
       .where(eq(appSnapshots.id, SNAPSHOT_ID))
@@ -80,6 +76,63 @@ export async function POST(request: Request) {
     const existingData = existing[0]?.data && typeof existing[0].data === 'object' && !Array.isArray(existing[0].data)
       ? existing[0].data as Record<string, unknown>
       : {}
+
+    if (body?.action === 'request_logout') {
+      const role = String(auth.user?.role || '').toLowerCase()
+      if (role !== 'student' && role !== 'parent') return response({ error: 'هذا الطلب متاح للطالب وولي الأمر فقط' }, 403)
+      const requestId = `logout_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      const accountId = String(auth.user?.accountId || '').slice(0, 160)
+      const notifications = Array.isArray(existingData.notifications) ? existingData.notifications.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
+      const active = notifications.find((item) => item.type === 'logout_request' && String(item.userId || '') === accountId && (item.status === 'pending' || item.status === 'approved'))
+      if (active) return response({ saved: true, request: active })
+      const now = new Date()
+      const item = {
+        id: requestId,
+        requestId,
+        type: 'logout_request',
+        category: 'تسجيل الخروج',
+        title: 'طلب تسجيل خروج',
+        message: `طلب ${role === 'parent' ? 'ولي الأمر' : 'الطالب'} تسجيل الخروج من الصفحة الحالية`,
+        role,
+        roleLabel: role === 'parent' ? 'ولي أمر' : 'طالب',
+        userId: accountId,
+        email: String(auth.user?.email || '').slice(0, 240).toLowerCase(),
+        name: String(auth.user?.name || auth.user?.accountName || '').slice(0, 160),
+        requestedFromPage: String(body?.page || '').slice(0, 120),
+        deviceId: String(body?.deviceId || '').slice(0, 120),
+        status: 'pending',
+        time: now.toLocaleString('ar-EG'),
+        createdAt: now.toISOString(),
+        read: false,
+      }
+      const mergedData = { ...existingData, notifications: [item, ...notifications].slice(0, 500) }
+      await db.insert(appSnapshots)
+        .values({ id: SNAPSHOT_ID, data: mergedData, updatedAt: now })
+        .onConflictDoUpdate({ target: appSnapshots.id, set: { data: mergedData, updatedAt: now } })
+      return response({ saved: true, request: item })
+    }
+
+    if (body?.action === 'resolve_logout_request') {
+      const admin = await requireAdmin(request)
+      if (admin.response) return admin.response
+      const requestId = String(body?.requestId || '')
+      const status = body?.status === 'approved' ? 'approved' : body?.status === 'rejected' ? 'rejected' : ''
+      if (!requestId || !status) return response({ error: 'طلب الخروج غير صالح' }, 400)
+      const notifications = Array.isArray(existingData.notifications) ? existingData.notifications.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
+      const target = notifications.find((item) => String(item.id || item.requestId || '') === requestId && item.type === 'logout_request')
+      if (!target) return response({ error: 'لم يتم العثور على طلب الخروج' }, 404)
+      Object.assign(target, { status, read: true, reviewedAt: new Date().toISOString(), reviewedBy: admin.user?.email || admin.user?.id || null })
+      const mergedData = { ...existingData, notifications }
+      await db.insert(appSnapshots)
+        .values({ id: SNAPSHOT_ID, data: mergedData, updatedAt: new Date() })
+        .onConflictDoUpdate({ target: appSnapshots.id, set: { data: mergedData, updatedAt: new Date() } })
+      return response({ saved: true, request: target })
+    }
+
+    const device = body?.device
+    if (!device || typeof device !== 'object' || Array.isArray(device) || typeof device.deviceId !== 'string') {
+      return response({ error: 'بيانات الجهاز غير صالحة' }, 400)
+    }
     const devices = Array.isArray(existingData.devices) ? existingData.devices.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
     const safeDevice = {
       deviceId: device.deviceId.slice(0, 120),
