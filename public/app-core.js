@@ -682,7 +682,7 @@ function bindLiveProctorHold(){}
 function proctorShowWarning(reason,startedAt){const grace=Math.ceil(getProctorSettings().gazeGraceMs/1000),left=Math.max(0,grace-Math.floor((Date.now()-startedAt)/1000)),w=document.getElementById('proctorWarning');if(w){w.textContent='تنبيه: '+reason+' — صحح الوضع خلال '+left+' ثانية';w.classList.remove('hidden')}}
 function proctorHandleLiveState(ok,reason){if(ok){proctor.warningAt=0;proctor.lastGoodAt=Date.now();if(proctor.blocked&&getProctorSettings().autoRestore&&Date.now()-proctor.stableSince>=1500){proctor.blocked=false;document.getElementById('proctorBlock')?.classList.add('hidden');document.getElementById('proctorWarning')?.classList.add('hidden');}if(!proctor.touchWarningAt)document.getElementById('proctorWarning')?.classList.add('hidden');return}proctor.stableSince=0;if(!proctor.warningAt)proctor.warningAt=Date.now();proctorShowWarning(reason,proctor.warningAt);if(Date.now()-proctor.warningAt>=getProctorSettings().gazeGraceMs)proctorBlockTask(reason)}
 function proctorBlockTask(reason){if(!proctor.active)return;proctor.blocked=true;proctor.stableSince=Date.now();const message=document.getElementById('proctorBlockMessage');if(message)message.textContent='تنبيه قابل للتفسير: '+reason+' — صحح الوضع أمام اشاة. تعد عناصر التحكم تلقائياً عند استقرار الإشارات.';document.getElementById('proctorBlock')?.classList.remove('hidden');recordProctorIncident(reason+' (حجب مؤقت قابل للاسترجاع)')}
-function proctorHandleTouches(e){if(!proctor.active||!getProctorSettings().touch)return;const touches=e&&e.touches?Array.from(e.touches):[];proctor.touches=new Set(touches.map(t=>t.identifier));const count=proctor.touches.size,tooMany=count>1,status=document.getElementById('proctorTouchStatus');proctor.holding=count===1;if(!tooMany){proctor.touchWarningAt=0;if(status){status.textContent=count===1?'إصبع واحد':'جاهز لل��سة واحدة';status.className='badge badge-success'}return}if(!proctor.touchWarningAt)proctor.touchWarningAt=Date.now();const reason='استخدم إصبعًا واحدًا فقط';if(status){status.textContent='أزل اللمسات الإضافية';status.className='badge badge-warning'}proctorShowWarning(reason,proctor.touchWarningAt);if(Date.now()-proctor.touchWarningAt>=getProctorSettings().touchGraceMs)cancelProctoredTask(reason)}
+function proctorHandleTouches(e){if(!proctor.active||!getProctorSettings().touch)return;const touches=e&&e.touches?Array.from(e.touches):[];proctor.touches=new Set(touches.map(t=>t.identifier));const count=proctor.touches.size,tooMany=count>1,status=document.getElementById('proctorTouchStatus');proctor.holding=count===1;if(!tooMany){proctor.touchWarningAt=0;if(status){status.textContent=count===1?'إ��بع واحد':'جاهز لل��سة واحدة';status.className='badge badge-success'}return}if(!proctor.touchWarningAt)proctor.touchWarningAt=Date.now();const reason='استخدم إصبعًا واحدًا فقط';if(status){status.textContent='أزل اللمسات الإضافية';status.className='badge badge-warning'}proctorShowWarning(reason,proctor.touchWarningAt);if(Date.now()-proctor.touchWarningAt>=getProctorSettings().touchGraceMs)cancelProctoredTask(reason)}
 ['touchstart','touchmove','touchend','touchcancel'].forEach(type=>document.addEventListener(type,proctorHandleTouches,{passive:true,capture:true}));
 function recordProctorIncident(reason){if(!currentUser)return;const incident={id:'pi_'+Date.now(),studentId:currentUser.id,studentName:currentUser.name,taskType:proctor.context?.type||'unknown',taskId:proctor.context?.id||'',reason,time:new Date().toLocaleString('ar-EG'),timestamp:Date.now(),status:'cancelled'};const incidents=getData('proctoringIncidents',[]);incidents.unshift(incident);setData('proctoringIncidents',incidents.slice(0,500));const messages=getData('messages',[]);messages.push({type:'system',sender:'نظام المراقبة',senderId:0,receiverType:'admin',text:'تنبيه مخالفة مراقبة: '+currentUser.name+' — '+proctorTaskLabel(proctor.context)+' — '+reason+' — '+incident.time,time:incident.time,approved:true,read:false,proctorIncidentId:incident.id});setData('messages',messages);return incident}
 function cancelProctoredTask(reason){if(!proctor.active||proctor.cancelled)return;proctor.cancelled=true;recordProctorIncident(reason);clearInterval(studentExamTimer);clearInterval(studentExamQuestionTimer);Object.keys(typeof activeAudioRecorders==='object'?activeAudioRecorders:{}).forEach(function(key){const state=activeAudioRecorders[key];try{if(state.recorder&&state.recorder.state!=='inactive')state.recorder.stop()}catch(e){}try{state.stream?.getTracks().forEach(t=>t.stop())}catch(e){}});const ctx=proctor.context;if(ctx?.type==='exam'){let students=getData('students',[]),idx=students.findIndex(s=>s.id===currentUser.id);if(idx>=0&&students[idx].activeExam){const ex=students[idx].activeExam;ex.status='cancelled_proctoring';ex.cancelReason=reason;ex.cancelledAt=Date.now();students[idx].examResults=students[idx].examResults||[];students[idx].examResults.push(ex);students[idx].activeExam=null;setData('students',students);currentUser=students[idx];document.getElementById('studentExamContent').innerHTML='<div class="alert alert-danger"><h3>أُلغي الاختبار بسبب مخاءءفة المراقبة</h3><p>'+escapeHtml(reason)+'</p></div>'}}else if(Number.isInteger(ctx?.taskIndex)){let students=getData('students',[]),idx=students.findIndex(s=>s.id===currentUser.id);if(idx>=0&&students[idx].tasks[ctx.taskIndex]){students[idx].tasks[ctx.taskIndex].proctorCancelled=true;students[idx].tasks[ctx.taskIndex].cancelReason=reason;setData('students',students);currentUser=students[idx];renderStudentTasks()}}proctorStop(true);showToast('أُلغيت المهمة وتم إرسال تنبيه للمسؤول','error')}
@@ -739,7 +739,7 @@ function recordCurrentDevice() {
     const devices = getData('devices', []);
     const existing = devices.find(function(device) { return device.deviceId === deviceId; });
     const currentPage = document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)')?.id || defaultPageForRole(currentType);
-    const record = { deviceId: deviceId, role: currentType, userId: account?.id || null, userName: account?.name || account?.parent || '', lastSeenAt: new Date().toISOString(), currentPage, lockedPage: logoutGate?.status === 'locked' ? logoutGate.targetPage : null, userAgent: navigator.userAgent.slice(0, 240) };
+    const record = { deviceId: deviceId, role: currentType, userId: account?.id || null, userName: account?.name || account?.parent || '', lastSeenAt: new Date().toISOString(), currentPage, lockedPage: '', userAgent: navigator.userAgent.slice(0, 240) };
     if(existing) Object.assign(existing, record);
     else devices.unshift(record);
     if(currentType === 'admin') setData('devices', devices.slice(0, 100));
@@ -843,7 +843,7 @@ function roleShellPath(role) {
 function showPage(id, options = {}) {
   // كل الأدوار موجودة داخل shell واحد؛ التنقل بينها محلي بلا إعادة تحميل.
   if(id !== 'lockScreen' && logoutGate?.status === 'pending') id = 'lockScreen';
-  if(id !== 'lockScreen' && ['approved','locked'].includes(logoutGate?.status) && (currentType === 'student' || currentType === 'parent') && id !== logoutGate.targetPage) id = logoutGate.targetPage || defaultPageForRole(currentType);
+
   const dashboardRole = id === 'adminDashboard' ? 'admin' : id === 'studentDashboard' ? 'student' : id === 'parentDashboard' ? 'parent' : null;
   const currentVisible = document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)');
   const currentId = currentVisible ? currentVisible.id : null;
@@ -1052,7 +1052,7 @@ function renderStudentRecordsBox() {
           html += '<div class="history-element-details">';
           html += '<div class="history-detail"><strong>السورة:</strong> ' + (el.surah || '-') + '</div>';
           html += '<div class="history-detail"><strong>من آية:</strong> ' + (el.from || '-') + '</div>';
-          html += '<div class="history-detail"><strong>إلى آية:</strong> ' + (el.to || '-') + '</div>';
+          html += '<div class="history-detail"><strong>إلى ��ية:</strong> ' + (el.to || '-') + '</div>';
           html += '<div class="history-detail"><strong>التقييم:</strong> <span class="badge ' + getRatingClass(el.rating) + '">' + getRatingLabel(el.rating) + '</span></div>';
           html += '</div></div>';
         });
@@ -1418,11 +1418,12 @@ async function pollLogoutApproval() {
     const request = Array.isArray(items) ? items.find(function(item){ return item && item.type === 'logout_request' && item.id === logoutGate.requestId; }) : null;
     if(!request) return;
     runtimeData.notifications = items;
+    if(Array.isArray(body?.data?.messages)) runtimeData.messages = body.data.messages;
     if(request.status === 'approved') {
       logoutGate.status = 'approved';
       saveSessionState();
       showPage(logoutGate.targetPage || defaultPageForRole(currentType), { fromBrowser:true });
-      showToast('تمت الموافقة. استخدم زر الخروج أعلى الصفحة مرة واحدة.','success');
+      showToast('تمت الموافقة. افتح الشريط الجانبي واضغط تسجيل الخروج.','success');
     } else if(request.status === 'rejected') {
       logoutGate = null;
       saveSessionState();
@@ -1443,7 +1444,7 @@ async function requestLogout() {
   const visible = document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)');
   const page = visible?.id || defaultPageForRole(currentType);
   try {
-    const response = await fetch('/api/data', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'request_logout', page, deviceId:getCurrentDeviceId() }) });
+    const response = await fetch('/api/data', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'request_logout', page, deviceId:getCurrentDeviceId(), parentName: currentType === 'parent' && Array.isArray(currentUser) ? (currentUser[0]?.parent || '') : '' }) });
     const body = await response.json().catch(function(){ return {}; });
     if(!response.ok) throw new Error(body.error || 'تعذر إرسال طلب الخروج');
     if(body.request) { const notifications=getData('notifications',[]); notifications.unshift(body.request); runtimeData.notifications = notifications.slice(0,500); }
@@ -1455,12 +1456,13 @@ async function requestLogout() {
     showToast('تم إرسال الطلب. انتظر موافقة المسؤول؛ لن يتم تسجيل الخروج تلقائياً.','success');
   } catch(error) { showToast(error.message || 'تعذر إرسال طلب الخروج','error'); }
 }
-async async function completeApprovedLogout() {
+async function completeApprovedLogout() {
   if(!logoutGate || logoutGate.status !== 'approved') return;
-  const lockedPage = logoutGate.targetPage || defaultPageForRole(currentType);
   try {
-    localStorage.setItem('thimar_device_locked_page', lockedPage);
-    await fetch('/api/data', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'consume_logout_request', requestId:logoutGate.requestId, lockedPage, deviceId:getCurrentDeviceId(), page:lockedPage }) });
+  await fetch('/api/data', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'consume_logout_request', requestId:logoutGate.requestId, deviceId:getCurrentDeviceId(), page:logoutGate.targetPage || defaultPageForRole(currentType) }) });
+  const devices = getData('devices', []);
+  const currentDevice = devices.find(function(device) { return device.deviceId === getCurrentDeviceId(); });
+  if(currentDevice) { currentDevice.currentPage = ''; currentDevice.lockedPage = ''; currentDevice.loggedOutAt = new Date().toISOString(); setData('devices', devices); }
   } catch(error) { console.warn('[v0] logout completion sync skipped', error); }
   if(logoutPollTimer) { clearInterval(logoutPollTimer); logoutPollTimer = null; }
   logoutGate = null;
@@ -1468,7 +1470,6 @@ async async function completeApprovedLogout() {
 }
 function completeUserLogin(user, role, dashboard, message) {
   currentUser = user; currentType = role; currentAdminId = null; pageHistory = [];
-  const lockedPage = (() => { try { return localStorage.getItem('thimar_device_locked_page') || ''; } catch(e) { return ''; } })();
   const request = getLogoutRequestForUser(role, user);
   if(request?.status === 'pending') {
     clearSession();
@@ -1477,7 +1478,7 @@ function completeUserLogin(user, role, dashboard, message) {
     return false;
   }
   prepareApprovedLogoutGate(role, user);
-  if(!logoutGate && lockedPage && (role === 'student' || role === 'parent')) logoutGate = { status:'locked', targetPage:lockedPage };
+  if(logoutGate?.status === 'approved') logoutGate = null;
   saveSessionState();
   showPage(logoutGate?.targetPage || dashboard);
   showToast(message,'success');
@@ -2716,7 +2717,7 @@ const _sur = el.name === 'اللوح' || el.name === 'اسورة' ? (el.surah ||
   html += '</div><div id="inlineAyat_'+i+'" data-open="0" style="margin-top:10px;"></div>';
 
   // Rating
-  html += '<div style="margin-top:12px;"><label style="font-weight:600; color:var(--text-light); margin-bottom:8px; display:block;">التقييم:</label>';
+  html += '<div style="margin-top:12px;"><label style="font-weight:600; color:var(--text-light); margin-bottom:8px; display:block;">ال��قييم:</label>';
   html += '<div class="rating-options">';
   html += '<div class="rating-option rating-excellent '+(el.rating==='4'?'selected':'')+'" onclick="selectRating('+i+', ' + "'" + '4' + "'" + ')">ممتاز (4)</div>';
   html += '<div class="rating-option rating-verygood '+(el.rating==='3'?'selected':'')+'" onclick="selectRating('+i+', ' + "'" + '3' + "'" + ')">جيد جداً (3)</div>';
@@ -2937,7 +2938,7 @@ function localSmartChatReply(message,role){
     }
     return 'لتحسين الحفظ: ابدأ بمراجعة قصيرة ��لمقطع القريب، ثم اختبر نفسك عشوا��ياً من مقطع أقدم، وسجّل المواضع التي توقفت فيها. كرر الموضع الضعيفة ثلاث مرات ثم أعد الاختبار دون النظر إلى المصحف.';
   }
-  if(/وقت|تنظيم|خطه|خطة|جدول|فكرة/.test(q))return 'خطة مقترحة: 10 دقائق للماضي القريب، 10 دقائق للماضي البعيد، 5 دقائق لأسئلة عشوائ��ة من أول ووسط وآخر السور، ثم دقيقتان لتسجيل الأخطاء. اجعل الهدف محدداً بعدد آيات أي سو��، لا بمدة فقط.';
+  if(/وقت|تنظيم|خطه|خطة|جدول|فكرة/.test(q))return 'خطة مقترحة: 10 دقائق للماضي القريب، 10 دقائق للماضي البعيد، 5 دق��ئق لأسئلة عشوائ��ة من أول ووسط وآخر السور، ثم دقيقتان لتسجيل الأخطاء. اجعل الهدف محدداً بعدد آيات أي سو��، لا بمدة فقط.';
   if(/رساله|رسالة|تواصل/.test(q)&&role==='admin')return 'يوجد حالياً '+messages.length+' رسالة محفوظة في بيانات المنصة. رتّب ال��تابعة حسب الرسائل غير المقروءة، ثم الطلبات المتعلقة باختبار أو تسميع، وأرسل لكل حالة إجراءً واضحاً وموعد متابعة.';
   if(/صعب|ضعف|نسي|نسيان|خطا|خطأ/.test(q))return 'عند وجود ضعف، لا تُعد السورة كاملة مباشرة. حدّد موضع الخطأ، اقرأ ما قبله وما بعده، اربطه بأول كلمة في الآية التالية، ثم اختبر الموضع من بداية مختلفة. أعد مراجعته اليوم وبعد يوم وعد أسبوع.';
   return 'بصفتي المساعد المحلي لـ'+roleLabel+'، أستطيع تقديم جواب أدق إذا ��كرت االهدف والسورة أو النتيجة أو المشكلة الحالية. سأحوّلها إلى خطوات واضحة قابلة للتنفيذ دون ادعاء معلومات غير موجودة في المنصة.';
@@ -2997,7 +2998,7 @@ function quranQuestionMediaHtml(q,index){
 }
 function showQuranQuestionImageError(image){
   const box=image&&image.parentElement;if(!box)return;const src=image.getAttribute('src')||'';
-  box.innerHTML='<div class="quran-question-error" role="alert">تعذر تحميل صورة السؤال من المص��ف.<br><button type="button" class="btn btn-sm btn-secondary quran-question-retry" onclick="retryQuranQuestionImage(this,\''+escapeHtml(src)+'\')">إعادة المحاولة</button></div>';
+  box.innerHTML='<div class="quran-question-error" role="alert">تعذر تحميل صورة السؤال من المص��ف.<br><button type="button" class="btn btn-sm btn-secondary quran-question-retry" onclick="retryQuranQuestionImage(this,\''+escapeHtml(src)+'\')">إع��دة المحاولة</button></div>';
 }
 function retryQuranQuestionImage(button,src){
   const box=button&&button.closest('.quran-question-media');if(!box)return;const separator=src.includes('?')?'&':'?';
@@ -3330,7 +3331,7 @@ async function recordStudentExamAudio(i){
       }
       studentExamAudioAnswers[i]={dataUrl,transcript:usedTranscript,voiceMatch:match,aiResult};studentExamAnswers[i]=usedTranscript;
       const pct=aiResult.matchedPercent??0;status.textContent='تم استلام التسجيل بنجاح — النتيجة التفصيلية بانتظار مراجعة المسؤول';
-      aiBox.innerHTML='<div class="alert alert-info">🔒 تم حفظ إجاءءة التسجيل ونتيجة التحليل داخلياً. لن تظهر نتجة الذكاء الاصطناعي للطالب حتى يقرر المسؤول نشرها.</div>';
+      aiBox.innerHTML='<div class="alert alert-info">🔒 تم حفظ إجاءءة التسجيل ونتيجة التحليل داخلياً. لن تظهر نت��ة الذكاء الاصطناعي للطالب حتى يقرر المسؤول نشرها.</div>';
       btn.dataset.recording='false';btn.classList.remove('recording');
     };
     recorder.start();registerAudioRecorder('exam-'+i,recorder,stream,{statusId:'examAudioStatus_'+i,buttonId:'examVoiceBtn_'+i});btn.onclick=()=>{if(recorder.state!=='inactive')recorder.stop()};
@@ -4206,7 +4207,7 @@ function renderMessages() {
       approvalBtns = '<div style="color:var(--danger); font-weight:bold;">❌ تم الرفض</div>';
     }
     if(m.exam&&m.exam.status==='pending_audio_review') approvalBtns += '<div class="approval-btns"><button class="btn-approve" onclick="reviewAudioExam('+m.senderId+',\''+m.exam.id+'\',true)">التسجيل مطابق</button><button class="btn-reject" onclick="reviewAudioExam('+m.senderId+',\''+m.exam.id+'\',false)">التسجيل غير مطابق</button></div>';
-    if(m.expiryKey&&m.parentPhone){const wa=examWhatsAppLink(m.parentPhone,m.text);if(wa)approvalBtns += '<a class="btn btn-sm btn-success" target="_blank" rel="noopener noreferrer" href="'+wa+'">إرسال تنبيه واتساب لولي الأمر</a>';}
+    if(m.expiryKey&&m.parentPhone){const wa=examWhatsAppLink(m.parentPhone,m.text);if(wa)approvalBtns += '<a class="btn btn-sm btn-success" target="_blank" rel="noopener noreferrer" href="'+wa+'">إرسال تنبيه واتساب ��ولي الأمر</a>';}
     html += '<div class="msg-item"><span class="sender">'+m.sender+'</span> <span class="badge '+(m.type === 'student' ? 'badge-primary' : m.type === 'parent' ? 'badge-success' : 'badge-warning')+'">'+m.type+'</span><p style="margin:8px 0">'+m.text+'</p>'+voiceAudioHTML(m)+(m.aiReport ? '<div class="alert alert-info" style="margin:8px 0;">🤖 تقرير الذكاء الاصطناعي: '+m.aiReport+(m.recitationTarget ? ' — المطلوب: '+m.recitationTarget : '')+'</div>' : '')+hasFile+shareBtn+approvalBtns+(m.replyVoice ? '<div class="msg-reply">🎙️ رد صوتي: <audio controls src="'+m.replyVoice+'" style="height:38px; vertical-align:middle;"></audio></div>' : '')+'<span class="time">🕐 '+m.time+'</span></div>';
   });
   document.getElementById('messagesList').innerHTML = html;
@@ -5893,7 +5894,7 @@ function generateParentWelcome(student) {
   const templates = [
     {title: 'أهلاً بك! 🌟', body: 'ابنك '+student.name+' يخطو خطوات جميلة في رحل��ه مع القرآن. دعمه وتحفي��ه هما سر التقدم.'},
     {title: 'تقرير يومي! 📊', body: 'متابعة ابنك تُثمر بالخر. احرص على سؤاله عن حفظه يومياً، فالاهتمام يُشعره بأهمية ما يفعله.'},
-    {title: 'مساء الخير! 🌙', body: 'القرآن غذاء ا��روح. شجع ابنك '+student.name+' لى الاستمرار، وذكّه بأ الله يُضاعف الأجر لمن يتب في سبيله.'}
+    {title: 'مساء الخير! ����', body: 'القرآن غذاء ا��روح. شجع ابنك '+student.name+' لى الاستمرار، وذكّه بأ الله يُضاعف الأجر لمن يتب في سبيله.'}
   ];
   const base = templates[Math.floor(Math.random() * templates.length)];
   if(last) {
@@ -5971,7 +5972,7 @@ function generateAIResponse(text, student) {
   }
   // نصائح
   if(has('نصفحة','نصائح','سادني','مساعدة','انسى','أنسى','نسيت','صعب')) {
-    return '💡 <strong>خمس قواعد ذهبية للحفظ:</strong><br>1. اربط الحفظ بوقت ثابت لا يتغير.<br>2. اقرأ الآية بصوت مسموع — السمع يثبّت أعاف النظر.<br>3. افهم معنى الآية قبل حفظها.<br>4. لا تنتءءل لآية ��ديدة قبل إتقان ما قبلها.<br>5. راجع، ثم راجع، ثم راجع — النسيان طيعي والمراجعة علاجه.';
+    return '💡 <strong>خمس قواعد ذهبية للحفظ:</strong><br>1. اربط الحفظ بوقت ثابت لا يتغير.<br>2. اقرأ الآية بصوت مسموع — السمع يثبّت أعاف النظر.<br>3. افهم معنى الآية قبل حفظها.<br>4. لا تنتءءل لآية ��ديدة قبل إتقان ما قبلها.<br>5. راجع، ��م راجع، ثم راجع — النسيان طيعي والمراجعة علاجه.';
   }
   // تحفيز
   if(has('تحفيز','همة','ملل','تعبا','زهقءءن','احبت','أحطت')) {

@@ -1015,7 +1015,7 @@ tr:hover { background: var(--table-hover); }
 <!-- مساعد تطوير الموقع بالذكاء الاصطناعي (للمسؤول فقط) -->
 <div id="devAssistantPage" class="page hidden" style="max-width:820px; margin:40px auto;">
   <div class="page-header"><h2>🛠️ مساعد تطوير الموقع بالذكاء الاصطناعي</h2></div>
-  <p style="color:var(--text-light); margin-bottom:12px;">اكتب طلب التطوير بالعربية. سيحلّل نموذج الذكاء الاصطناعي المشروع الحالي مباشرة عبر مزوده ويقرأ الملفات الب��مجية اللازمة، ويولّد الكود، ثم يطبّق التعديل تلقائياً على GitHub ويشغّل تحديث الموقع. لا توجد خطوة موافقة ثانية.</p>
+  <p style="color:var(--text-light); margin-bottom:12px;">اكتب طلب التطوير بالعربية. سيحلّل نموذج الذكاء الاصطناعي المشروع الحالي مباشرة عبر مزوده ويقرأ الملفات الب��مجية اللازمة، ��يولّد الكود، ثم يطبّق التعديل تلقائياً على GitHub ويشغّل تحديث الموقع. لا توجد خطوة موافقة ثانية.</p>
   <div style="background:rgba(255,193,7,0.12); border:1px solid #ffc107; border-radius:10px; padding:10px 14px; margin-bottom:15px; color:var(--text); font-size:0.9rem;">
      الوضع التلقائي المباشر: بعد إرسال الطلب سيحلله ��لذكاء الاصطناعي ويقرأ الكود المطلوب ويعدّله تلقائي��ً. ستظهر هنا نتيجة التنفيذ والملفات التي تغّرت وروابط الـcommit. مفتاحا Gemini وGroq وGitHub يبقيان على الخادم فقط.
   </div>
@@ -1216,7 +1216,7 @@ tr:hover { background: var(--table-hover); }
   </div>
   <div class="form-row">
     <div class="form-group"><label>كود الهوية أو جواز السفر</label><div class="country-input-row"><select id="editIdentityCountry" data-country-selector data-identity-id="editNational" aria-label="دولة الهوية"><option value="EG">مصر (+20)</option></select><input type="text" id="editNational" data-identity-input autocomplete="off" placeholder="أدخل هوية الدولة أو رقم جواز السفر"></div><small id="editNationalHint" class="country-hint"></small></div>
-    <div class="form-group"><label>الدولة ورقم الهاتف</label><div class="country-input-row"><select id="editPhoneCountry" data-country-selector data-phone-id="editPhone" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="tel" id="editPhone" data-phone-input class="phone-input" autocomplete="tel" placeholder="الرقم المحلي بدون رمز ��لدولة"></div><small id="editPhoneInternational" class="country-hint"></small></div>
+    <div class="form-group"><label>الدولة ورقم الهاتف</label><div class="country-input-row"><select id="editPhoneCountry" data-country-selector data-phone-id="editPhone" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="tel" id="editPhone" data-phone-input class="phone-input" autocomplete="tel" placeholder="الرقم المحلي بدون رمز ����لدولة"></div><small id="editPhoneInternational" class="country-hint"></small></div>
   </div>
   <div class="form-row">
     <div class="form-group"><label>تاريخ الميلاد</label><input type="date" id="editBirth" onchange="calcEditAge()"></div>
@@ -1381,9 +1381,6 @@ tr:hover { background: var(--table-hover); }
 <div id="studentDashboard" class="page hidden">
   <div class="page-header">
     <h2>👨‍🎓 صفحة الطالب</h2>
-  <div>
-  <button class="btn btn-outline" onclick="logout()">خروج</button>
-  </div>
   </div>
   <button type="button" class="side-fab" onclick="openRoleSidebar('student')" aria-label="فتح قائمة الأدوات" aria-controls="sidebar-student" aria-expanded="false"><span></span><span></span><span></span></button>
   <div id="sidebar-student" class="side-sidebar-wrap">
@@ -1398,7 +1395,8 @@ tr:hover { background: var(--table-hover); }
         <button type="button" class="role-nav-item" onclick="showPage('studentFilesPage')"><span class="role-nav-icon" aria-hidden="true">📁</span><span>الملفات</span></button>
         <button type="button" class="role-nav-item" onclick="showPage('studentAIChat')"><span class="role-nav-icon" aria-hidden="true">✦</span><span>مساعد الذكاء الاصطناعي</span></button>
         <button type="button" class="role-nav-item" onclick="showStudentFullChart()"><span class="role-nav-icon" aria-hidden="true">📈</span><span>مخطط التقييم</span></button>
-        <button type="button" class="role-nav-item" onclick="showPage('studentRecordsPage')"><span class="role-nav-icon" aria-hidden="true">🎙️</span><span>صندوق ال��سجيلات</span></button>
+        <button type="button" class="role-nav-item" onclick="showPage('studentRecordsPage')"><span class="role-nav-icon" aria-hidden="true">🎙️</span><span>صندوق التسجيلات</span></button>
+        <button type="button" class="role-nav-item logout-request-item" onclick="requestLogout()"><span class="role-nav-icon" aria-hidden="true">↪</span><span>تسجيل الخروج</span></button>
       </div>
     </aside>
   </div>
