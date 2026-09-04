@@ -1014,7 +1014,7 @@ tr:hover { background: var(--table-hover); }
   <div class="page-header"><h2>🛠️ مساعد تطوير الموقع بالذكاء الاصطناعي</h2></div>
   <p style="color:var(--text-light); margin-bottom:12px;">اكتب طلب التطوير بالعربية. سيحلّل نموذج الذكاء الاصطناعي المشروع الحالي مباشرة عبر مزوده ويقرأ الملفات البرمجية اللازمة، ويولّد الكود، ثم يطبّق التعديل تلقائياً على GitHub ويشغّل تحديث الموقع. لا توجد خطوة موافقة ثانية.</p>
   <div style="background:rgba(255,193,7,0.12); border:1px solid #ffc107; border-radius:10px; padding:10px 14px; margin-bottom:15px; color:var(--text); font-size:0.9rem;">
-     الوضع التلقائي المباشر: بعد إرسال الطلب سي��لله الذكاء الاصطناعي ويقرأ الكود المطلوب ويعدّله تلقائياً. ستظهر هنا نتيجة التنفيذ والملفات التي تغّرت وروابط الـcommit. مفتاحا Gemini وGroq وGitHub يبقيان على الخادم فقط.
+     الوضع التلقائي المباشر: بعد إرسال الطلب سي��لله الذكاء الاصطناعي ويقرأ الكود المطل��ب ويعدّله تلقائياً. ستظهر هنا نتيجة التنفيذ والملفات التي تغّرت وروابط الـcommit. مفتاحا Gemini وGroq وGitHub يبقيان على الخادم فقط.
   </div>
   <div id="devAssistantAlert"></div>
   <div id="cloudSaveStatus" class="badge badge-success" style="margin-bottom:12px;">الحفظ التلقائي في Neon مفعّل</div>
@@ -1447,7 +1447,7 @@ tr:hover { background: var(--table-hover); }
 
 <!-- إعدادات الطالب -->
 <div id="studentSettings" class="page hidden" style="max-width:500px;">
-  <div class="page-header"><h2>⚙️ تغيير الرقم السري</h2></div>
+  <div class="page-header"><h2>⚙️ تغيي�� الرقم السري</h2></div>
   <div id="studentSettingsAlert"></div>
   <div class="form-group"><label>الر��م السري الحالي</label><input type="password" id="currentStudentPass" placeholder="أدخل الرقم السري الحالي"></div>
   <div class="form-group"><label>الرقم السي الجديد</label><input type="password" id="newStudentPass" placeholder="أدخل الرقم السري لجديد"></div>
@@ -1601,7 +1601,7 @@ tr:hover { background: var(--table-hover); }
   </div>
 </div>
   <div id="proctorWarning" class="proctor-warning hidden" role="alert" aria-live="assertive"></div>
-  <div id="proctorBlock" class="proctor-gate hidden" role="alertdialog" aria-modal="true" aria-labelledby="proctorBlockTitle"><div class="proctor-panel"><h2 id="proctorBlockTitle">تم إيقاف التحكم مؤقتاً</h2><p id="proctorBlockMessage">نحتاج إلى عودة الإشارات الطبيعية قبل استكمال المهمة. لا تُنهى المحاولة بسبب هذا التنبيه.</p><div class="proctor-checks"><div id="proctorBlockStatus" class="proctor-check bad">! جارٍ استعاد�� الفحص</div></div></div></div>
+  <div id="proctorBlock" class="proctor-gate hidden" role="alertdialog" aria-modal="true" aria-labelledby="proctorBlockTitle"><div class="proctor-panel"><h2 id="proctorBlockTitle">تم إيقاف التحكم مؤقتاً</h2><p id="proctorBlockMessage">نحتاج إلى عودة الإشارات الطبيعية قبل استكمال المهمة. لا تُنهى المحاولة بسبب هذا التنبيه.</p><div class="proctor-checks"><div id="proctorBlockStatus" class="proctor-check bad">! ��ارٍ استعاد�� الفحص</div></div></div></div>
 <div id="studentWorkModal" class="student-work-modal hidden" role="dialog" aria-modal="true" aria-labelledby="studentWorkModalTitle" onclick="if(event.target===this)closeStudentWorkModal()">
   <div class="student-work-dialog">
     <div class="student-work-dialog-header"><h3 id="studentWorkModalTitle">المطلوب</h3><button type="button" class="btn btn-secondary" onclick="closeStudentWorkModal()" aria-label="إغلاق النافذة">إغلاق</button></div>
@@ -1657,7 +1657,7 @@ window.alert = function(m){ showToast(m); };
     if (corePromise) return corePromise;
     corePromise = new Promise(function(resolve, reject){
       const s = document.createElement('script');
-      s.src = '/app-core.js?v=20260905';
+      s.src = '/app-core.js?v=20260906-2';
       s.async = false;
       s.onload = function(){ window.__thimarAppCoreLoaded = true; const p=document.createElement('script'); p.src='/proctoring-v2.js'; p.onload=resolve; p.onerror=reject; document.head.appendChild(p); };
       s.onerror = function(){ corePromise = null; reject(new Error('تعذر تحميل ملفات النظام.')); };
@@ -1975,7 +1975,7 @@ window.alert = function(m){ showToast(m); };
     if(form) form.classList.remove('hidden');
   };
 
-  /* عند العودة لشاشة الدخول (تسجيل الخرو�� مثلاً) نعيد عرض الأزرار الرئيسية */
+  /* عند العودة ��شاشة الدخول (تسجيل الخرو�� مثلاً) نعيد عرض الأزرار الرئيسية */
   (function patchShowPage(){
     if(typeof window.showPage !== 'function') return setTimeout(patchShowPage, 60);
     if(window.__thimarShowPagePatched) return;

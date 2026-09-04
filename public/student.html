@@ -1015,7 +1015,7 @@ tr:hover { background: var(--table-hover); }
 <!-- مساعد تطوير الموقع بالذكاء الاصطناعي (للمسؤول فقط) -->
 <div id="devAssistantPage" class="page hidden" style="max-width:820px; margin:40px auto;">
   <div class="page-header"><h2>🛠️ مساعد تطوير الموقع بالذكاء الاصطناعي</h2></div>
-  <p style="color:var(--text-light); margin-bottom:12px;">اكتب طلب التطوير بالعربية. سيحلّل نموذج الذكاء الاصطناعي المشروع الحالي مباشرة عبر مزوده ويقرأ الملفات الب��مجية اللازمة، ويولّد الكود، ثم يطبّق التعديل تلقائياً على GitHub ويشغّل تحديث الموقع. لا توجد خطوة م��افقة ثانية.</p>
+  <p style="color:var(--text-light); margin-bottom:12px;">اكتب طلب التطوير بالعربية. سيحلّل نموذج الذكاء الاصطناعي المشروع الحالي مباشرة عبر مزوده ويقرأ الملفات الب��مجية اللازمة، ويولّد الكود، ��م يطبّق التعديل تلقائياً على GitHub ويشغّل تحديث الموقع. لا توجد خطوة م��افقة ثانية.</p>
   <div style="background:rgba(255,193,7,0.12); border:1px solid #ffc107; border-radius:10px; padding:10px 14px; margin-bottom:15px; color:var(--text); font-size:0.9rem;">
      الوضع التلقائي المباشر: بعد إرسال الطلب سيحلله ا��ذكاء الاصطناعي ويقرأ الكود المطلوب ويعدّله تلقائياً. س����ظهر هنا نتيجة التنفيذ والملفات التي تغّرت وروابط الـcommit. مفتاحا Gemini وGroq وGitHub يبقيان على الخادم فقط.
   </div>
@@ -1281,7 +1281,7 @@ tr:hover { background: var(--table-hover); }
 <p style="color:var(--text-light);margin:10px 0">اختبار رآني مستقل. اختبر نطاق السوءء والنوع والمستوى والوقت وعدد الآيات، وسيتولى النظام تنويع الأسئلة تلقائيًا.</p>
     <div class="form-row">
 <div class="form-group"><label for="examBaseSurah">آخر سورة محفوظة للطالب</label><select id="examBaseSurah" onchange="syncExamSurahRange()"></select><small style="color:var(--text-light)">يُبنى الماضي من السور التي تسبقها في المراجعة حتى سورة الاس.</small></div>
- <div class="form-group"><label for="examPastScope">نوع الماضي</label><select id="examPastScope" onchange="syncExamSurahRange()"><option value="both">الماضي القريب والبعيد</option><option value="near">اماضي القريب</option><option value="far">الماضي البعيد</option></select><small id="examPastScopeHelp" style="color:var(--text-light)">يُقسم الماضي إلى نصف قيب ونص بعيد.</small></div>
+ <div class="form-group"><label for="examPastScope">نوع الماضي</label><select id="examPastScope" onchange="syncExamSurahRange()"><option value="both">الماضي القريب والبعيد</option><option value="near">اماضي القريب</option><option value="far">الماضي البعيد</option></select><small id="examPastScopeHelp" style="color:var(--text-light)">يُقسم الماض�� إلى نصف قيب ونص بعيد.</small></div>
  <div class="form-group"><label for="examLastSurah">نهاية الماضي (اختياري)</label><select id="examLastSurah" onchange="syncExamSurahRange()"><option value="">سورة اناس تلقائياً</option></select><small style="color:var(--text-light)">يمكن تضييق نطاق الماضي يدويا قبل ءءقسيمه.</small></div>
  <div class="form-group"><label for="examDeadline">موعد انتهاء الإتاح��</label><input id="examDeadline" type="datetime-local"></div>
  <div class="form-group"><label for="examSourceMode">المرجع الأساسي</label><select id="examSourceMode" onchange="updateExamSourceDistribution()"><option value="ai">الذكاء الاصطناعي</option><option value="file">من الملفات</option></select><small id="examSourceDistribution" style="color:var(--text-light)">توليد ذكي مع التحقق من النص القرآني والمراجع الموثوقة.</small></div>
@@ -1659,7 +1659,7 @@ window.alert = function(m){ showToast(m); };
     if (corePromise) return corePromise;
     corePromise = new Promise(function(resolve, reject){
       const s = document.createElement('script');
-      s.src = '/app-core.js?v=20260905';
+      s.src = '/app-core.js?v=20260906-2';
       s.async = false;
       s.onload = function(){ window.__thimarAppCoreLoaded = true; const p=document.createElement('script'); p.src='/proctoring-v2.js'; p.onload=resolve; p.onerror=reject; document.head.appendChild(p); };
       s.onerror = function(){ corePromise = null; reject(new Error('تعذر تحميل ملفات النظام.')); };
@@ -1957,7 +1957,7 @@ window.alert = function(m){ showToast(m); };
   </script>
   <section id="quranReaderPage" class="page quran-reader-page hidden" aria-label="قارئ المصحف">
     <button type="button" class="quran-reader-close" onclick="closeQuranReader()" aria-label="إغلاق قارئ المصحف" title="إغلاق">×</button>
-    <div class="quran-reader-frame"><div id="quranZoomWrap" class="quran-zoom-wrap"><canvas id="quranOriginalCanvas" class="quran-reader-canvas" aria-label="صفحة المصحف الأصلية"></canvas></div><div id="quranSwipeSurface" class="quran-swipe-surface" aria-label="اسحب للتنقل بين صفات المصحف أو قرّب بإصبعين للتكبير"></div></div>
+    <div class="quran-reader-frame"><div id="quranZoomWrap" class="quran-zoom-wrap"><canvas id="quranOriginalCanvas" class="quran-reader-canvas" aria-label="صفحة المصحف الأصلية"></canvas></div><div id="quranSwipeSurface" class="quran-swipe-surface" aria-label="اسحب للتنقل بين صفات المصحف أ�� قرّب بإصبعين للتكبير"></div></div>
   </section>
   <script>
 /* واجهة ثمار: زر «تسجيل الدخول» يفتح حقول الدخول نفسها (نفس الوظيفة والتحقق القديم دون أي تغيير) */

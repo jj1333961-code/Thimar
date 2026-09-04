@@ -651,6 +651,7 @@ if(!runtimeData.initialized_v7) {
   // يحتفظ المسؤول بجلسة الدخول الأصلية أثناء زيارة حساب طالب أو ولي أمر.
   let adminVisitState = null;
   let logoutGate = null;
+  let logoutPollTimer = null;
  let voiceBlob = null, voiceChunks = [], mediaRecorder = null;
 let voiceFingerprint = null, voiceDataUrl = null, voiceProfileGemini = null;
 let recordElements = [], homeworkItems = [], readingItems = [];
@@ -681,7 +682,7 @@ function bindLiveProctorHold(){}
 function proctorShowWarning(reason,startedAt){const grace=Math.ceil(getProctorSettings().gazeGraceMs/1000),left=Math.max(0,grace-Math.floor((Date.now()-startedAt)/1000)),w=document.getElementById('proctorWarning');if(w){w.textContent='تنبيه: '+reason+' — صحح الوضع خلال '+left+' ثانية';w.classList.remove('hidden')}}
 function proctorHandleLiveState(ok,reason){if(ok){proctor.warningAt=0;proctor.lastGoodAt=Date.now();if(proctor.blocked&&getProctorSettings().autoRestore&&Date.now()-proctor.stableSince>=1500){proctor.blocked=false;document.getElementById('proctorBlock')?.classList.add('hidden');document.getElementById('proctorWarning')?.classList.add('hidden');}if(!proctor.touchWarningAt)document.getElementById('proctorWarning')?.classList.add('hidden');return}proctor.stableSince=0;if(!proctor.warningAt)proctor.warningAt=Date.now();proctorShowWarning(reason,proctor.warningAt);if(Date.now()-proctor.warningAt>=getProctorSettings().gazeGraceMs)proctorBlockTask(reason)}
 function proctorBlockTask(reason){if(!proctor.active)return;proctor.blocked=true;proctor.stableSince=Date.now();const message=document.getElementById('proctorBlockMessage');if(message)message.textContent='تنبيه قابل للتفسير: '+reason+' — صحح الوضع أمام اشاة. تعد عناصر التحكم تلقائياً عند استقرار الإشارات.';document.getElementById('proctorBlock')?.classList.remove('hidden');recordProctorIncident(reason+' (حجب مؤقت قابل للاسترجاع)')}
-function proctorHandleTouches(e){if(!proctor.active||!getProctorSettings().touch)return;const touches=e&&e.touches?Array.from(e.touches):[];proctor.touches=new Set(touches.map(t=>t.identifier));const count=proctor.touches.size,tooMany=count>1,status=document.getElementById('proctorTouchStatus');proctor.holding=count===1;if(!tooMany){proctor.touchWarningAt=0;if(status){status.textContent=count===1?'إصبع واحد':'جاهز للمسة واحدة';status.className='badge badge-success'}return}if(!proctor.touchWarningAt)proctor.touchWarningAt=Date.now();const reason='استخدم إصبعًا واحدًا فقط';if(status){status.textContent='أزل اللمسات الإضافية';status.className='badge badge-warning'}proctorShowWarning(reason,proctor.touchWarningAt);if(Date.now()-proctor.touchWarningAt>=getProctorSettings().touchGraceMs)cancelProctoredTask(reason)}
+function proctorHandleTouches(e){if(!proctor.active||!getProctorSettings().touch)return;const touches=e&&e.touches?Array.from(e.touches):[];proctor.touches=new Set(touches.map(t=>t.identifier));const count=proctor.touches.size,tooMany=count>1,status=document.getElementById('proctorTouchStatus');proctor.holding=count===1;if(!tooMany){proctor.touchWarningAt=0;if(status){status.textContent=count===1?'إصبع واحد':'جاهز لل��سة واحدة';status.className='badge badge-success'}return}if(!proctor.touchWarningAt)proctor.touchWarningAt=Date.now();const reason='استخدم إصبعًا واحدًا فقط';if(status){status.textContent='أزل اللمسات الإضافية';status.className='badge badge-warning'}proctorShowWarning(reason,proctor.touchWarningAt);if(Date.now()-proctor.touchWarningAt>=getProctorSettings().touchGraceMs)cancelProctoredTask(reason)}
 ['touchstart','touchmove','touchend','touchcancel'].forEach(type=>document.addEventListener(type,proctorHandleTouches,{passive:true,capture:true}));
 function recordProctorIncident(reason){if(!currentUser)return;const incident={id:'pi_'+Date.now(),studentId:currentUser.id,studentName:currentUser.name,taskType:proctor.context?.type||'unknown',taskId:proctor.context?.id||'',reason,time:new Date().toLocaleString('ar-EG'),timestamp:Date.now(),status:'cancelled'};const incidents=getData('proctoringIncidents',[]);incidents.unshift(incident);setData('proctoringIncidents',incidents.slice(0,500));const messages=getData('messages',[]);messages.push({type:'system',sender:'نظام المراقبة',senderId:0,receiverType:'admin',text:'تنبيه مخالفة مراقبة: '+currentUser.name+' — '+proctorTaskLabel(proctor.context)+' — '+reason+' — '+incident.time,time:incident.time,approved:true,read:false,proctorIncidentId:incident.id});setData('messages',messages);return incident}
 function cancelProctoredTask(reason){if(!proctor.active||proctor.cancelled)return;proctor.cancelled=true;recordProctorIncident(reason);clearInterval(studentExamTimer);clearInterval(studentExamQuestionTimer);Object.keys(typeof activeAudioRecorders==='object'?activeAudioRecorders:{}).forEach(function(key){const state=activeAudioRecorders[key];try{if(state.recorder&&state.recorder.state!=='inactive')state.recorder.stop()}catch(e){}try{state.stream?.getTracks().forEach(t=>t.stop())}catch(e){}});const ctx=proctor.context;if(ctx?.type==='exam'){let students=getData('students',[]),idx=students.findIndex(s=>s.id===currentUser.id);if(idx>=0&&students[idx].activeExam){const ex=students[idx].activeExam;ex.status='cancelled_proctoring';ex.cancelReason=reason;ex.cancelledAt=Date.now();students[idx].examResults=students[idx].examResults||[];students[idx].examResults.push(ex);students[idx].activeExam=null;setData('students',students);currentUser=students[idx];document.getElementById('studentExamContent').innerHTML='<div class="alert alert-danger"><h3>أُلغي الاختبار بسبب مخاءءفة المراقبة</h3><p>'+escapeHtml(reason)+'</p></div>'}}else if(Number.isInteger(ctx?.taskIndex)){let students=getData('students',[]),idx=students.findIndex(s=>s.id===currentUser.id);if(idx>=0&&students[idx].tasks[ctx.taskIndex]){students[idx].tasks[ctx.taskIndex].proctorCancelled=true;students[idx].tasks[ctx.taskIndex].cancelReason=reason;setData('students',students);currentUser=students[idx];renderStudentTasks()}}proctorStop(true);showToast('أُلغيت المهمة وتم إرسال تنبيه للمسؤول','error')}
@@ -737,7 +738,8 @@ function recordCurrentDevice() {
     const account = Array.isArray(currentUser) ? currentUser[0] : currentUser;
     const devices = getData('devices', []);
     const existing = devices.find(function(device) { return device.deviceId === deviceId; });
-    const record = { deviceId: deviceId, role: currentType, userId: account?.id || null, userName: account?.name || account?.parent || '', lastSeenAt: new Date().toISOString(), userAgent: navigator.userAgent.slice(0, 240) };
+    const currentPage = document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)')?.id || defaultPageForRole(currentType);
+    const record = { deviceId: deviceId, role: currentType, userId: account?.id || null, userName: account?.name || account?.parent || '', lastSeenAt: new Date().toISOString(), currentPage, lockedPage: logoutGate?.status === 'locked' ? logoutGate.targetPage : null, userAgent: navigator.userAgent.slice(0, 240) };
     if(existing) Object.assign(existing, record);
     else devices.unshift(record);
     if(currentType === 'admin') setData('devices', devices.slice(0, 100));
@@ -840,7 +842,8 @@ function roleShellPath(role) {
 
 function showPage(id, options = {}) {
   // كل الأدوار موجودة داخل shell واحد؛ التنقل بينها محلي بلا إعادة تحميل.
-  if(id !== 'lockScreen' && isLogoutPendingForCurrentUser()) id = 'lockScreen';
+  if(id !== 'lockScreen' && logoutGate?.status === 'pending') id = 'lockScreen';
+  if(id !== 'lockScreen' && ['approved','locked'].includes(logoutGate?.status) && (currentType === 'student' || currentType === 'parent') && id !== logoutGate.targetPage) id = logoutGate.targetPage || defaultPageForRole(currentType);
   const dashboardRole = id === 'adminDashboard' ? 'admin' : id === 'studentDashboard' ? 'student' : id === 'parentDashboard' ? 'parent' : null;
   const currentVisible = document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)');
   const currentId = currentVisible ? currentVisible.id : null;
@@ -870,6 +873,7 @@ function showPage(id, options = {}) {
   updateBackButton();
   renderAdminVisitBanner();
   renderLogoutGateBanner();
+  if(logoutGate?.status === 'pending') startLogoutApprovalPolling();
 
   if(id === 'adminDashboard') { renderAdminStats(); updateMsgBadge(); renderActiveDrafts(); }
   if(id === 'studentsList') renderStudents();
@@ -1398,8 +1402,40 @@ function renderLogoutGateBanner() {
   banner.id = 'logoutGateBanner';
   banner.className = 'logout-gate-banner';
   banner.setAttribute('role', 'status');
-  banner.innerHTML = '<span>تم قبول طلب تسجيل الخروج. يمكنك الآن إنهاء الجلسة.</span><button type="button" class="btn btn-danger btn-sm" onclick="completeApprovedLogout()">الخروج الآن</button>';
+  if(logoutGate.status === 'pending') {
+    banner.innerHTML = '<span>تم إرسال طلب تسجيل الخروج إلى المسؤول. لا يمكن تغيير الصفحة حتى تتم المراجعة.</span>';
+  } else if(logoutGate.status === 'approved') {
+    banner.innerHTML = '<span>وافق المسؤول على تسجيل الخروج.</span><button type="button" class="btn btn-danger btn-sm" onclick="completeApprovedLogout()">الخروج</button>';
+  } else return;
   document.body.prepend(banner);
+}
+async function pollLogoutApproval() {
+  if(!logoutGate || logoutGate.status !== 'pending' || !currentUser) return;
+  try {
+    const response = await fetch('/api/data', { credentials:'same-origin', cache:'no-store' });
+    const body = await response.json().catch(function(){ return {}; });
+    const items = body?.data?.notifications;
+    const request = Array.isArray(items) ? items.find(function(item){ return item && item.type === 'logout_request' && item.id === logoutGate.requestId; }) : null;
+    if(!request) return;
+    runtimeData.notifications = items;
+    if(request.status === 'approved') {
+      logoutGate.status = 'approved';
+      saveSessionState();
+      showPage(logoutGate.targetPage || defaultPageForRole(currentType), { fromBrowser:true });
+      showToast('تمت الموافقة. استخدم زر الخروج أعلى الصفحة مرة واحدة.','success');
+    } else if(request.status === 'rejected') {
+      logoutGate = null;
+      saveSessionState();
+      showPage(defaultPageForRole(currentType), { fromBrowser:true });
+      showToast('تم رفض طلب تسجيل الخروج من المسؤول.','error');
+    }
+  } catch(error) { console.warn('[v0] logout approval polling skipped', error); }
+}
+function startLogoutApprovalPolling() {
+  if(logoutPollTimer) clearInterval(logoutPollTimer);
+  if(logoutGate?.status !== 'pending') return;
+  logoutPollTimer = setInterval(pollLogoutApproval, 5000);
+  pollLogoutApproval();
 }
 async function requestLogout() {
   if(currentType !== 'student' && currentType !== 'parent') return;
@@ -1411,21 +1447,28 @@ async function requestLogout() {
     const body = await response.json().catch(function(){ return {}; });
     if(!response.ok) throw new Error(body.error || 'تعذر إرسال طلب الخروج');
     if(body.request) { const notifications=getData('notifications',[]); notifications.unshift(body.request); runtimeData.notifications = notifications.slice(0,500); }
-    logoutGate = null;
-    neonDataReady = false;
-    currentUser = null; currentType = null; currentAdminId = null;
-    clearSession();
+    logoutGate = { requestId: body.request?.id || body.request?.requestId, status: body.request?.status || 'pending', targetPage: page };
+    saveSessionState();
     showPage('lockScreen');
-    showToast('تم إرسال طلب الخروج إلى المسؤول. يمكنك تسجيل الدخول مجدداً بعد الموافقة.','success');
+    renderLogoutGateBanner();
+    startLogoutApprovalPolling();
+    showToast('تم إرسال الطلب. انتظر موافقة المسؤول؛ لن يتم تسجيل الخروج تلقائياً.','success');
   } catch(error) { showToast(error.message || 'تعذر إرسال طلب الخروج','error'); }
 }
-async function completeApprovedLogout() {
-  if(!logoutGate) return;
+async async function completeApprovedLogout() {
+  if(!logoutGate || logoutGate.status !== 'approved') return;
+  const lockedPage = logoutGate.targetPage || defaultPageForRole(currentType);
+  try {
+    localStorage.setItem('thimar_device_locked_page', lockedPage);
+    await fetch('/api/data', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'consume_logout_request', requestId:logoutGate.requestId, lockedPage, deviceId:getCurrentDeviceId(), page:lockedPage }) });
+  } catch(error) { console.warn('[v0] logout completion sync skipped', error); }
+  if(logoutPollTimer) { clearInterval(logoutPollTimer); logoutPollTimer = null; }
   logoutGate = null;
   await logout();
 }
 function completeUserLogin(user, role, dashboard, message) {
   currentUser = user; currentType = role; currentAdminId = null; pageHistory = [];
+  const lockedPage = (() => { try { return localStorage.getItem('thimar_device_locked_page') || ''; } catch(e) { return ''; } })();
   const request = getLogoutRequestForUser(role, user);
   if(request?.status === 'pending') {
     clearSession();
@@ -1434,6 +1477,7 @@ function completeUserLogin(user, role, dashboard, message) {
     return false;
   }
   prepareApprovedLogoutGate(role, user);
+  if(!logoutGate && lockedPage && (role === 'student' || role === 'parent')) logoutGate = { status:'locked', targetPage:lockedPage };
   saveSessionState();
   showPage(logoutGate?.targetPage || dashboard);
   showToast(message,'success');
@@ -2109,7 +2153,7 @@ function renderActiveDrafts() {
       const timeLeft = Math.max(0, 24 - ((Date.now() - draft.draftCreatedAt) / (60 * 60 * 1000)));
       draftsHtml += '<div style="background:var(--table-header); padding:15px; border-radius:10px; margin-bottom:10px; border-right:4px solid var(--warning); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">';
       draftsHtml += '<div><strong>'+s.name+'</strong> - تسميع بتاريخ '+draft.date+'<br><small style="color:var(--text-light)">متبقي '+timeLeft.toFixed(1)+' ساعة للإغلاق التلقائي</small></div>';
-      draftsHtml += '<div><button class="btn btn-sm btn-success" onclick="openRecord('+s.id+')">تعديل الت��ميع</button></div>';
+      draftsHtml += '<div><button class="btn btn-sm btn-success" onclick="openRecord('+s.id+')">تعديل الت����ميع</button></div>';
       draftsHtml += '</div>';
     });
   });
@@ -3324,7 +3368,7 @@ function saveSession(isFinal) {
   const nowText = new Date().toLocaleString('ar-EG');
   const previousTasks = JSON.parse(JSON.stringify(students[idx].tasks || []));
 
-  // المسودة: تبقى ��لمهام ظاهرة وقابلة للتنفيذ.
+  // المسودة: تبقى ��لمهام ��اهرة وقابلة للتنفيذ.
   if(!isFinal) {
     students[idx].sessions = students[idx].sessions.filter(s => !s.isDraft);
     students[idx].sessions.push({
@@ -4052,7 +4096,7 @@ function renderDevPlan(plan){
 
     // 4) حالة النشر
     h += '<div style="font-weight:bold;margin-top:10px;">🚀 حالة النشر:</div>';
-    h += '<div>'+esc(plan.deployStatus || (plan.deployTriggered ? 'تم تشغيل النشر على Vercel تلقائياً.' : 'حُفظت التعديلات على GitHub؛ وسيبدأ Vercel النشر تلقائياً إذا كان المستودع مربوطاً بالمشروع.'))+'</div>';
+    h += '<div>'+esc(plan.deployStatus || (plan.deployTriggered ? 'تم تشغيل النشر على Vercel تلقائياً.' : 'حُفظت التعديلات على GitHub؛ وسيبدأ Vercel النشر تلقائياً ��ذا كان المستودع مربوطاً بالمشروع.'))+'</div>';
 
     if(Array.isArray(plan.tests) && plan.tests.length){
       h += '<div style="font-weight:bold;margin-top:10px;">🔍 ملاحظات التحقق:</div><ul style="padding-inline-start:20px;line-height:1.8;">';
@@ -4188,7 +4232,7 @@ function openMessageFileById(msgId, readonly) {
   const m = msgs.find(x => x.id === msgId);
   if(!m || !m.fileData) { alert('الملف غير متاح'); return; }
   if(readonly && !m.shareWithParent) { alert('لم يسمح المسؤول بالاطلاع على ذا الملف بعد'); return; }
-  openFileModal(m.fileData, m.fileName || 'file', 'ملف مرسل من ' + m.sender + (typeof m.voiceMatch === 'number' ? ' — 🤖 مطابقة البصم الصوتية: ' + m.voiceMatch + '% ' + (m.voiceMatch >= VOICE_MATCH_THRESHOLD ? '✅ مطابق' : '⚠️ ير مطابق') : ''), m.fileType === 'homework' ? 'image/jpeg' : (m.fileType === 'reading' || m.fileType === 'voice') ? 'audio/webm' : '', readonly);
+  openFileModal(m.fileData, m.fileName || 'file', 'ملف مرسل من ' + m.sender + (typeof m.voiceMatch === 'number' ? ' — 🤖 مطا��قة البصم الصوتية: ' + m.voiceMatch + '% ' + (m.voiceMatch >= VOICE_MATCH_THRESHOLD ? '✅ مطابق' : '⚠️ ير مطابق') : ''), m.fileType === 'homework' ? 'image/jpeg' : (m.fileType === 'reading' || m.fileType === 'voice') ? 'audio/webm' : '', readonly);
 }
 
 function approveMessage(idx, approved) {
@@ -4909,7 +4953,7 @@ async function verifyAndSubmitRecitation(taskIdx, blob, dataUrl, transcript, aiB
 
   // 1) مطابقة البصمة الصوتية
   if(matchPct !== null && matchPct < VOICE_MATCH_THRESHOLD) {
-    showToast('❌ فشل التحقق من البصمة الصوتية (' + matchPct + '%) — لم يتم حفظ أو إرسال التءءجيل', 'error');
+    showToast('❌ فشل التحقق من البصمة الصوتية (' + matchPct + '%) — لم يتم حفظ أو إرس��ل التءءجيل', 'error');
     if(statusEl) statusEl.textContent = 'غير مطابق — أعد التسجيل ❌';
     if(aiBox) aiBox.innerHTML = '<div class="alert alert-danger"><strong>🚫 التحقق الأني:</strong><br>البصمة الصوتية غير مطابقة لصوت الطال (' + matchPct + '%).<br>لم يتم حفظ التسجيل أو إرساله للمسؤول أو ولي الأمر.</div>';
     return false;
@@ -5968,4 +6012,14 @@ async function logout() {
   showPage('lockScreen');
 }
 
+window.requestLogout = requestLogout;
+window.pollLogoutApproval = pollLogoutApproval;
+window.completeApprovedLogout = completeApprovedLogout;
+window.resolveLogoutRequest = resolveLogoutRequest;
+window.logout = logout;
+window.requestLogout = function(){ return requestLogout.apply(null, arguments); };
+window.pollLogoutApproval = function(){ return pollLogoutApproval.apply(null, arguments); };
+window.completeApprovedLogout = function(){ return completeApprovedLogout.apply(null, arguments); };
+window.resolveLogoutRequest = function(){ return resolveLogoutRequest.apply(null, arguments); };
+window.logout = function(){ return logout.apply(null, arguments); };
 initLanguage();

@@ -1216,7 +1216,7 @@ tr:hover { background: var(--table-hover); }
   </div>
   <div class="form-row">
     <div class="form-group"><label>كود الهوية أو جواز السفر</label><div class="country-input-row"><select id="editIdentityCountry" data-country-selector data-identity-id="editNational" aria-label="دولة الهوية"><option value="EG">مصر (+20)</option></select><input type="text" id="editNational" data-identity-input autocomplete="off" placeholder="أدخل هوية الدولة أو رقم جواز السفر"></div><small id="editNationalHint" class="country-hint"></small></div>
-    <div class="form-group"><label>الدولة ورقم الهاتف</label><div class="country-input-row"><select id="editPhoneCountry" data-country-selector data-phone-id="editPhone" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="tel" id="editPhone" data-phone-input class="phone-input" autocomplete="tel" placeholder="الرقم المحلي بدون رمز الدولة"></div><small id="editPhoneInternational" class="country-hint"></small></div>
+    <div class="form-group"><label>الدولة ورقم الهاتف</label><div class="country-input-row"><select id="editPhoneCountry" data-country-selector data-phone-id="editPhone" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="tel" id="editPhone" data-phone-input class="phone-input" autocomplete="tel" placeholder="الرقم المحلي بدون رمز ��لدولة"></div><small id="editPhoneInternational" class="country-hint"></small></div>
   </div>
   <div class="form-row">
     <div class="form-group"><label>تاريخ الميلاد</label><input type="date" id="editBirth" onchange="calcEditAge()"></div>
@@ -1658,7 +1658,7 @@ window.alert = function(m){ showToast(m); };
     if (corePromise) return corePromise;
     corePromise = new Promise(function(resolve, reject){
       const s = document.createElement('script');
-      s.src = '/app-core.js?v=20260905';
+      s.src = '/app-core.js?v=20260906-2';
       s.async = false;
       s.onload = function(){ window.__thimarAppCoreLoaded = true; const p=document.createElement('script'); p.src='/proctoring-v2.js'; p.onload=resolve; p.onerror=reject; document.head.appendChild(p); };
       s.onerror = function(){ corePromise = null; reject(new Error('تعذر تحميل ملفات النظام.')); };

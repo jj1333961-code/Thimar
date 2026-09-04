@@ -112,6 +112,23 @@ export async function POST(request: Request) {
       return response({ saved: true, request: item })
     }
 
+    if (body?.action === 'consume_logout_request') {
+      const role = String(auth.user?.role || '').toLowerCase()
+      if (role !== 'student' && role !== 'parent') return response({ error: 'غير مصرح' }, 403)
+      const requestId = String(body?.requestId || '')
+      const notifications = Array.isArray(existingData.notifications) ? existingData.notifications.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
+      const target = notifications.find((item) => String(item.id || item.requestId || '') === requestId && item.type === 'logout_request' && String(item.userId || '') === String(auth.user?.accountId || ''))
+      if (!target || target.status !== 'approved') return response({ error: 'طلب الخروج غير معتمد' }, 409)
+      Object.assign(target, { status: 'completed', completedAt: new Date().toISOString(), lockedPage: String(body?.lockedPage || '').slice(0, 120), deviceId: String(body?.deviceId || '').slice(0, 120) })
+      const devices = Array.isArray(existingData.devices) ? existingData.devices.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
+      const deviceId = String(body?.deviceId || '')
+      const device = devices.find((item) => String(item.deviceId || '') === deviceId)
+      if (device) Object.assign(device, { lockedPage: String(body?.lockedPage || '').slice(0, 120), currentPage: String(body?.page || body?.lockedPage || '').slice(0, 120), lockedAt: new Date().toISOString() })
+      const mergedData = { ...existingData, notifications, devices }
+      await db.insert(appSnapshots).values({ id: SNAPSHOT_ID, data: mergedData, updatedAt: new Date() }).onConflictDoUpdate({ target: appSnapshots.id, set: { data: mergedData, updatedAt: new Date() } })
+      return response({ saved: true, lockedPage: body?.lockedPage || null })
+    }
+
     if (body?.action === 'resolve_logout_request') {
       const admin = await requireAdmin(request)
       if (admin.response) return admin.response
@@ -140,6 +157,8 @@ export async function POST(request: Request) {
       userId: auth.user?.id || null,
       userName: String(device.userName || '').slice(0, 160),
       lastSeenAt: new Date().toISOString(),
+      currentPage: String(device.currentPage || '').slice(0, 120),
+      lockedPage: String(device.lockedPage || '').slice(0, 120),
       userAgent: String(device.userAgent || '').slice(0, 240),
     }
     const withoutCurrent = devices.filter((item) => item.deviceId !== safeDevice.deviceId)

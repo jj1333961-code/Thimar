@@ -999,7 +999,7 @@ tr:hover { background: var(--table-hover); }
 <div id="adminAIPage" class="page hidden" style="max-width:820px;margin:40px auto;">
   <div class="page-header"><h2>مساعد Gemini / Groq الإداري</h2></div>
   <p style="color:var(--text-light);margin-bottom:15px;">محادثة ذكية دقيقة للأسئلة الإدارية والعامة، مع الاستفادة من بانات الموقع عندما تكون مرتبطة بسؤالك.</p>
-  <div class="ai-chat"><div id="adminChatMessages" class="ai-chat-messages"><div class="ai-msg bot">كيف يمكنني مساعدتك في متابعة الطلاب أو أولياء الأمور أو لاختبارات؟</div></div><div class="ai-input"><span class="badge badge-primary">Gemini / Groq</span><input id="adminChatInput" placeholder="اسأل عن بيانات الموقع..." onkeypress="if(event.key==='Enter' && !event.isComposing && event.keyCode!==229)sendAdminChat()"><button class="btn btn-primary" onclick="sendAdminChat()">إرسال</button></div></div>
+  <div class="ai-chat"><div id="adminChatMessages" class="ai-chat-messages"><div class="ai-msg bot">كيف يمكنني مساعدتك في متابعة الطلاب أو أولياء الأمو�� أو لاختبارات؟</div></div><div class="ai-input"><span class="badge badge-primary">Gemini / Groq</span><input id="adminChatInput" placeholder="اسأل عن بيانات الموقع..." onkeypress="if(event.key==='Enter' && !event.isComposing && event.keyCode!==229)sendAdminChat()"><button class="btn btn-primary" onclick="sendAdminChat()">إرسال</button></div></div>
 </div>
 
 <!-- مساعد تطوير الموقع بالذكاء الاصطناعي (للمسؤول فقط) -->
@@ -1228,7 +1228,7 @@ tr:hover { background: var(--table-hover); }
     </div>
   </div>
   <div class="form-group" style="border:1px dashed var(--primary);padding:12px;border-radius:10px;">
-    <label>🎙️ البصمة الصوتية</label>
+    <label>����️ البصمة الصوتية</label>
     <div id="editVoiceStatus" style="margin:6px 0;color:var(--text-light)">يمءءن استبدال البصة الصوتية الحالية بتسجيل جديد.</div>
     <button type="button" class="voice-record-btn" id="editVoiceBtn" onclick="toggleEditVoiceRecord()">🎙️</button>
     <audio id="editVoicePreview" controls style="display:none;height:40px;margin-top:8px"></audio>
@@ -1526,7 +1526,7 @@ tr:hover { background: var(--table-hover); }
   <div id="parentPendingTasksContent"></div>
 </div>
 
-<!-- صفحة الملفات المرفوعة -->
+<!-- صفحة الم��فات المرفوعة -->
 <div id="filesPage" class="page hidden">
   <div class="page-header"><h2>📁 الملفات المرفوعة</h2></div>
   <div id="filesAlert"></div>
@@ -1646,7 +1646,7 @@ window.alert = function(m){ showToast(m); };
     if (corePromise) return corePromise;
     corePromise = new Promise(function(resolve, reject){
       const s = document.createElement('script');
-      s.src = '/app-core.js?v=20260905';
+      s.src = '/app-core.js?v=20260906-2';
       s.async = false;
       s.onload = function(){ window.__thimarAppCoreLoaded = true; const p=document.createElement('script'); p.src='/proctoring-v2.js'; p.onload=resolve; p.onerror=reject; document.head.appendChild(p); };
       s.onerror = function(){ corePromise = null; reject(new Error('تعذر تحميل ملفات النظام.')); };
