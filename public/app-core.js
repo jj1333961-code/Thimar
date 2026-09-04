@@ -544,6 +544,7 @@ async function saveAllDataToNeon(){
 }
 function setData(key, val) {
   runtimeData[key]=val;
+  if(!neonDataReady) return;
   clearTimeout(neonSaveTimer);
   neonSaveTimer=setTimeout(saveAllDataToNeon,500);
 }
@@ -570,6 +571,11 @@ async function hydrateDataFromNeon(){
 // التفضيلات فقط محلية؛ بيانات الطلاب والمستخدمين والرسائل لا تُحفظ في المتصفح.
 // لا نطلب البيانات قبل تسجيل الدخول؛ API يحمي بيانات Neon من الوصول العام.
 let neonHydrationPromise = null;
+function ensureNeonDataReady() {
+  if(neonDataReady) return Promise.resolve(true);
+  if(!neonHydrationPromise) neonHydrationPromise = hydrateDataFromNeon().finally(function(){ neonHydrationPromise = null; });
+  return neonHydrationPromise;
+}
 
 if(!runtimeData.initialized_v7) {
   runtimeData.subjects = [
@@ -1635,7 +1641,7 @@ async function toggleStudentIntakeRecord(){
         const audio=await voiceAudioPayload(blob),data=await callStudentAI('student_voice_intake',{role:'admin',audioBase64:audio.audioBase64,mimeType:audio.mimeType},0.05),filled=applyStudentVoiceFields(data.fields||{});
         if(!filled.length)throw new Error('لم أتعرف على بيانات واضحة. اذكر اسم كل خانة ثم قيمتها ببطء.');
         result.innerHTML='<div class="alert alert-success">تم ملء '+filled.length+' خانة. راجع جميع البيانات قبل الحفظ.<br><small>ا��نص المسموع: '+escapeHtml(data.transcript||'لم يُرجع تفريغاً')+'</small></div>';status.textContent='اكتمل التحل��ل';
-      }catch(e){result.innerHTML='<div class="alert alert-danger">تعذر تحليل التسجيل: '+escapeHtml(e.message||'خطأ غير معروف')+'<br><button type="button" class="btn btn-sm btn-primary" onclick="retryStudentIntakeAnalysis()">إعادة تحليل نفس التسجيل</button><button type="button" class="btn btn-sm btn-secondary" onclick="toggleStudentIntakeRecord()">تسجيل جديد</button></div>';status.textContent='فشل التحليل';}
+      }catch(e){result.innerHTML='<div class="alert alert-danger">تعذر تحليل التسجيل: '+escapeHtml(e.message||'خطأ غ��ر معروف')+'<br><button type="button" class="btn btn-sm btn-primary" onclick="retryStudentIntakeAnalysis()">إعادة تحليل نفس التسجيل</button><button type="button" class="btn btn-sm btn-secondary" onclick="toggleStudentIntakeRecord()">تسجيل جديد</button></div>';status.textContent='فشل التحليل';}
       finally{btn.disabled=false;btn.textContent='إعادة التسجيل';studentIntakeRecorder=null;}
     };
     recorder.start(1000);registerAudioRecorder('student-intake',recorder,stream,{statusId:'studentIntakeStatus',pauseBtnId:'studentIntakePauseBtn',timerId:'studentIntakeTimer',maxMs:120000});btn.textContent='إنهاء وتحليئ';status.textContent='جاري التسجيل... حدث بوضوح واذكر اسم كل خانة قبل قيمتها.';
@@ -1771,25 +1777,31 @@ function deleteAdmin(id) {
   setData('admins', admins); renderAdmins();
 }
 
-function adminLogin() {
+async function adminLogin() {
   const mobile = normalizeLocalPhoneInput(document.getElementById('adminMobile').value);
   const mobileCountry = selectedCountryIso('adminMobileCountry');
   const pass = document.getElementById('adminPass').value;
-  const admins = getData('admins');
-  const international = normalizeWaNumber(mobile, mobileCountry);
-  const admin = admins.find(a => normalizeWaNumber(a.mobile, a.mobileCountry || 'EG') === international && a.password === pass);
-  if(admin) {
+  const alertBox = document.getElementById('adminLoginAlert');
+  try {
+    alertBox.innerHTML = '<div class="alert alert-info">جارٍ تحميل بيانات المنصة...</div>';
+    const response = await fetch('/api/auth/password', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:mobile, password:pass}) });
+    const body = await response.json().catch(function(){ return {}; });
+    if(!response.ok) throw new Error(body.error || 'بيانات الدخول غير صحيحة');
+    if(!await ensureNeonDataReady()) throw new Error('تعذر تحميل بيانات المنصة');
+    const international = normalizeWaNumber(mobile, mobileCountry);
+    const admin = getData('admins').find(a => normalizeWaNumber(a.mobile, a.mobileCountry || 'EG') === international && a.password === pass);
+    if(!admin) throw new Error('بيانات المسؤول غير موجودة في البيانات المحملة');
     currentUser = admin; currentType = 'admin'; currentAdminId = admin.id;
     saveSessionState();
     const devices = getData('devices');
     devices.push({type:'admin', user:mobile, time:new Date().toLocaleString('ar-EG'), agent:navigator.userAgent});
     setData('devices', devices);
-    document.getElementById('adminDeviceInfo').textContent = '📱 جهازك مسجل: ' + new Date().toLocaleString('ar-EG');
+    document.getElementById('adminDeviceInfo').textContent = 'جهازك مسجل: ' + new Date().toLocaleString('ar-EG');
     showPage('adminDashboard');
     updateNotificationBadges();
-    document.getElementById('adminLoginAlert').innerHTML = '';
-  } else {
-    document.getElementById('adminLoginAlert').innerHTML = '<div class="alert alert-danger">❌ رقم الوبايل أو الرقم السري غير صحيح</div>';
+    alertBox.innerHTML = '';
+  } catch(error) {
+    alertBox.innerHTML = '<div class="alert alert-danger">'+escapeHtml(error.message || 'تعذر تسجيل الدخول')+'</div>';
   }
 }
 
@@ -2460,7 +2472,7 @@ function renderRecordElementHTML(el, i, num) {
     }
     if(afterSurahs.length > 0) {
       html += '<select onchange="updateRecordElement('+i+', ' + "'" + 'surah' + "'" + ', this.value)" style="margin-bottom:8px; width:100%;">';
-      html += '<option value="">-- اختر من السور التي بعد '+mainSurah+' --</option>';
+      html += '<option value="">-- اختر من الس��ر التي بعد '+mainSurah+' --</option>';
       afterSurahs.forEach(sur => {
         html += '<option value="'+sur+'" '+(el.surah===sur?'selected':'')+'>'+sur+'</option>';
       });
@@ -2767,7 +2779,7 @@ function localSmartChatReply(message,role){
   if(/وقت|تنظيم|خطه|خطة|جدول|فكرة/.test(q))return 'خطة مقترحة: 10 دقائق للماضي القريب، 10 دقائق للماضي البعيد، 5 دقائق لأسئلة عشوائ��ة من أول ووسط وآخر السور، ثم دقيقتان لتسجيل الأخطاء. اجعل الهدف محدداً بعدد آيات أي سور، لا بمدة فقط.';
   if(/رساله|رسالة|تواصل/.test(q)&&role==='admin')return 'يوجد حالياً '+messages.length+' رسالة محفوظة في بيانات المنصة. رتّب ال��تابعة حسب الرسائل غير المقروءة، ثم الطلبات المتعلقة باختبار أو تسميع، وأرسل لكل حالة إجراءً واضحاً وموعد متابعة.';
   if(/صعب|ضعف|نسي|نسيان|خطا|خطأ/.test(q))return 'عند وجود ضعف، لا تُعد السورة كاملة مباشرة. حدّد موضع الخطأ، اقرأ ما قبله وما بعده، اربطه بأول كلمة في الآية التالية، ثم اختبر الموضع من بداية مختلفة. أعد مراجعته اليوم وبعد يوم وعد أسبوع.';
-  return 'بصفتي المساعد المحلي لـ'+roleLabel+'، أستطيع تقديم جواب أدق إذا ذكرت االهدف والسورة أو النتيجة أو المشكلة الحالية. سأحوّلها إلى خطوات واضحة قابلة للتنفيذ دون ادعاء معلومات غير موجودة في المنصة.';
+  return 'بصفتي المساعد المحلي لـ'+roleLabel+'، أستطيع تقديم جواب أدق إذا ��كرت االهدف والسورة أو النتيجة أو المشكلة الحالية. سأحوّلها إلى خطوات واضحة قابلة للتنفيذ دون ادعاء معلومات غير موجودة في المنصة.';
 }
 async function sendAdminChat(){const input=document.getElementById('adminChatInput'),box=document.getElementById('adminChatMessages'),message=input.value.trim();if(!message||currentType!=='admin')return;input.value='';const typing=document.createElement('div');typing.className='ai-msg bot';typing.textContent='جاري التحلي...';box.append('<div class="ai-msg user">'+escapeHtml(message)+'</div>');box.appendChild(typing);box.scrollTop=box.scrollHeight;try{const students=getData('students',[]).map(s=>({id:s.id,name:s.name,parent:s.parent,juz:s.juz,surah:s.surah,examResults:(s.examResults||[]).slice(-5),activeExam:s.activeExam?{status:s.activeExam.status,date:s.activeExam.date}:null}));const res=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'admin_assistant',payload:{role:'admin',message,context:{students,studentCount:students.length,messageCount:getData('messages',[]).length}}})});const data=await readApiJson(res,'تعذر رد Gemini وGroq');typing.innerHTML=escapeHtml(data.result||'لم يصل رد.').replace(/\n/g,'<br>')}catch(e){typing.innerHTML=escapeHtml(localSmartChatReply(message,'admin'))}box.scrollTop=box.scrollHeight}
 
@@ -3308,7 +3320,7 @@ function renderAdminExamHistory(s) {
       h+='<div class="task-card" style="margin-top:12px">';
       h+='<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><strong>س'+(i+1)+': '+escapeHtml(q.prompt||q.stem||'سؤال بدون عنوان')+'</strong><span class="badge '+(answerScore>=1?'badge-success':answerScore>0?'badge-warning':'badge-danger')+'">'+answerLabel+' — '+answerScore+'</span></div>';
       h+='<div class="history-element-details" style="margin-top:10px"><div class="history-detail"><strong>النوع:</strong> '+escapeHtml(q.type||'غير محدد')+'</div><div class="history-detail"><strong>السورة:</strong> '+escapeHtml(q.surah||'—')+'</div><div class="history-detail"><strong>الآيات:</strong> '+escapeHtml(String(q.from||'—'))+' إلى '+escapeHtml(String(q.to||'—'))+'</div><div class="history-detail"><strong>وقت الإجابة:</strong> '+(Number(a.timeSeconds)||0)+' ثانية</div></div>';
-      h+='<p><strong>��جابة الطالب:</strong> '+escapeHtml(a.answer||r.transcript||'لم تتم الإجابة')+'</p>';
+      h+='<p><strong>��جابة الطالب:</strong> '+escapeHtml(a.answer||r.transcript||'لم تتم ��لإجابة')+'</p>';
       h+='<p><strong>الإجابة الصحيحة:</strong> '+escapeHtml(q.correct||'غير متاحة')+'</p>';
       if(r.reason)h+='<p><strong>سبب التصحيح:</strong> '+escapeHtml(r.reason)+'</p>';
       if(Number.isFinite(Number(r.matchedPercent)))h+='<p><strong>نسبة المطابقة:</strong> '+Math.max(0,Math.min(100,Number(r.matchedPercent)))+'٪</p>';
@@ -4051,7 +4063,7 @@ function toggleShareWithParent(idx) {
   msgs[idx].shareWithParent = !msgs[idx].shareWithParent;
   setData('messages', msgs);
   renderMessages();
-  alert(msgs[idx].shareWithParent ? '✅ أصبح بإمكان ولي الأمر الاطلاع على هذا الملف (بدون تعديءء).' : '���� تم منع ولي الأ من الاطلاع على هذا الملف.');
+  alert(msgs[idx].shareWithParent ? '✅ أصبح بإمكان ولي الأمر الاطلاع على ه��ا الملف (بدون تعديءء).' : '���� تم منع ولي الأ من الاطلاع على هذا الملف.');
 }
 
 function openMessageFileById(msgId, readonly) {
@@ -4286,23 +4298,27 @@ function deleteSubject(id) {
   renderSubjects();
 }
 
-function studentLogin() {
+async function studentLogin() {
   const username = document.getElementById('studentUsername').value.trim();
   const pass = document.getElementById('studentPassInput').value;
-  const students = getData('students');
-  const s = students.find(x => x.username === username);
-  if(!s) {
-    document.getElementById('studentLoginAlert').innerHTML = '<div class="alert alert-danger">❌ اسم المستخدم غير مسجل في النظام</div>'; return;
+  const alertBox = document.getElementById('studentLoginAlert');
+  try {
+    alertBox.innerHTML = '<div class="alert alert-info">جارٍ تحميل بيانات المنصة...</div>';
+    const response = await fetch('/api/auth/password', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username, password:pass}) });
+    const body = await response.json().catch(function(){ return {}; });
+    if(!response.ok) throw new Error(body.error || 'بيانات الدخول غير صحيحة');
+    if(!await ensureNeonDataReady()) throw new Error('تعذر تحميل بيانات المنصة');
+    const s = getData('students').find(x => x.username === username && x.studentPass === pass);
+    if(!s) throw new Error('بيانات الطالب غير موجودة في البيانات المحملة');
+    currentUser = s; currentType = 'student';
+    saveSessionState();
+    const devices = getData('devices');
+    devices.push({type:'student', user:s.name, time:new Date().toLocaleString('ar-EG'), agent:navigator.userAgent});
+    setData('devices', devices);
+    renderStudentDashboard(); showPage('studentDashboard');
+  } catch(error) {
+    alertBox.innerHTML = '<div class="alert alert-danger">'+escapeHtml(error.message || 'تعذر تسجيل الدخول')+'</div>';
   }
-  if(s.studentPass !== pass) {
-    document.getElementById('studentLoginAlert').innerHTML = '<div class="alert alert-danger">❌ الرقم السري غير صحيح</div>'; return;
-  }
-  currentUser = s; currentType = 'student';
-  saveSessionState();
-  const devices = getData('devices');
-  devices.push({type:'student', user:s.name, time:new Date().toLocaleString('ar-EG'), agent:navigator.userAgent});
-  setData('devices', devices);
-  renderStudentDashboard(); showPage('studentDashboard');
 }
 
 function saveStudentPass() {
@@ -4408,7 +4424,7 @@ function renderStudentCompletedTasks() {
     html += '<div class="task-card" style="border-right-color:var(--success); background:linear-gradient(135deg, rgba(40,167,69,0.05), rgba(32,201,151,0.05));">';
     html += '<h5 style="color:var(--success);">✅ '+(task.type === 'homework' ? 'واجب' : task.type === 'reading' ? 'قراء��' : 'تسجيل صوتي')+': '+(task.name || task.text || '')+'</h5>';
     if(task.surah) html += '<p><strong>السورة:</strong> '+task.surah+' | <strong>من آية:</strong> '+(task.from || '-')+' | <strong>إلى آية:</strong> '+(task.to || '-')+'</p>';
-    html += '<p style="color:var(--text-light); font-size:0.9rem;">🕐 تمت الموءءفقة: '+task.approvedAt+'</p>';
+    html += '<p style="color:var(--text-light); font-size:0.9rem;">🕐 تمت الم��ءءفقة: '+task.approvedAt+'</p>';
     html += '</div>';
   });
   html += '</div>';
@@ -5201,20 +5217,27 @@ async function sendStudentChat() {
   chatDiv.scrollTop=chatDiv.scrollHeight;
 }
 
-function parentLogin() {
+async function parentLogin() {
   const name = document.getElementById('parentName').value.trim();
   const pass = document.getElementById('parentPass').value.trim();
-  const students = getData('students');
-  const matched = students.filter(s => s.parent === name && s.parentPass === pass);
-  if(matched.length === 0) {
-    document.getElementById('parentLoginAlert').innerHTML = '<div class="alert alert-danger">❌ الاسم أو ائرقم السري غير صحيح</div>'; return;
+  const alertBox = document.getElementById('parentLoginAlert');
+  try {
+    alertBox.innerHTML = '<div class="alert alert-info">جارٍ تحميل بيانات المنصة...</div>';
+    const response = await fetch('/api/auth/password', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:name, password:pass}) });
+    const body = await response.json().catch(function(){ return {}; });
+    if(!response.ok) throw new Error(body.error || 'بيانات الدخول غير صحيحة');
+    if(!await ensureNeonDataReady()) throw new Error('تعذر تحميل بيانات المنصة');
+    const matched = getData('students').filter(s => s.parent === name && s.parentPass === pass);
+    if(!matched.length) throw new Error('بيانات ولي الأمر غير موجودة في البيانات المحملة');
+    currentUser = matched; currentType = 'parent';
+    saveSessionState();
+    const devices = getData('devices');
+    devices.push({type:'parent', user:name, time:new Date().toLocaleString('ar-EG'), agent:navigator.userAgent});
+    setData('devices', devices);
+    renderParentDashboard(); showPage('parentDashboard');
+  } catch(error) {
+    alertBox.innerHTML = '<div class="alert alert-danger">'+escapeHtml(error.message || 'تعذر تسجيل الدخول')+'</div>';
   }
-  currentUser = matched; currentType = 'parent';
-  saveSessionState();
-  const devices = getData('devices');
-  devices.push({type:'parent', user:name, time:new Date().toLocaleString('ar-EG'), agent:navigator.userAgent});
-  setData('devices', devices);
-  renderParentDashboard(); showPage('parentDashboard');
 }
 
 function renderParentDashboard() {
@@ -5685,7 +5708,7 @@ function generateWelcomeMessages(student) {
   const last = finalizedSessions.length > 0 ? finalizedSessions[finalizedSessions.length - 1] : null;
   const dayOfWeek = new Date().getDay();
   const templates = [
-    {title: 'هلاً بك يا '+student.name+'! 🌟', body: 'يوم جديد، فرصة جديدة للتقرب من كتاب الله. اجعل لنفسك ورداً يومياً لا يفوتك، فالقرآن نور يُهدى به الله من شيء.'},
+    {title: 'هلاً بك يا '+student.name+'! 🌟', body: 'يوم جديد، فرصة جديدة للتقرب من كتاب الله. اجعل لنفسك ورداً يومياً ل�� يفوتك، فالقرآن نور يُهدى به الله من شيء.'},
     {title: 'صباح التفاؤل يا '+student.name+'! ☀️', body: 'تذكر ن كل حرف تقرأه في كتاب الله له أجر عظيم. لا تستهن بمراجعة صفحة واحدة، فالقل��ل الدائم خير من الكثير المنقطع.'},
     {title: 'مرحباً يا '+student.name+'! 📖', body: 'القرآن كلام الله، فاجعل له قلباً خاشعاً ولساناً رطباً. ابدأ يومك بآية، وانتهِ به بآية وسترى الفرق في حياتك.'},
     {title: 'مساء الخير يا '+student.name+'! 🌙', body: 'اللهم اجعل القرآن ربيع قلبك. خصص وقتاً للمراجعة قبل النوم، فإنها تثبت الحفظ وتجعله متياً.'},

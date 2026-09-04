@@ -32,12 +32,17 @@ export async function GET(request: Request) {
     const admin = await requireAdmin(request)
     if (!admin.response) return response({ data: storedData ?? null, updatedAt: snapshot?.updatedAt ?? null })
     const email = String(auth.user?.email || '').trim().toLowerCase()
+    const role = String(auth.user?.role || '').trim().toLowerCase()
+    const accountId = String(auth.user?.accountId || '').trim()
+    const accountName = String(auth.user?.accountName || '').trim().toLowerCase()
     const rawData = storedData && typeof storedData === 'object' && !Array.isArray(storedData) ? storedData as Record<string, unknown> : {}
     const data = Object.fromEntries(Object.entries(rawData).filter(([key]) => USER_DATA_KEYS.has(key)).map(([key, value]) => {
       if (key === 'students' && Array.isArray(value)) {
         return [key, value.filter((student) => {
           if (!student || typeof student !== 'object') return false
           const record = student as Record<string, unknown>
+          if (role === 'student') return String(record.id || '') === accountId || String(record.username || '').trim().toLowerCase() === accountName
+          if (role === 'parent') return String(record.parent || '').trim().toLowerCase() === accountName || String(record.parentPhone || '').replace(/\D/g, '') === accountName.replace(/\D/g, '') || String(record.id || '') === accountId
           return [record.email, record.googleEmail, record.parentEmail, record.parentGoogleEmail].some((candidate) => String(candidate || '').trim().toLowerCase() === email)
         })]
       }
@@ -45,7 +50,7 @@ export async function GET(request: Request) {
         return [key, value.filter((notification) => {
           if (!notification || typeof notification !== 'object') return false
           const record = notification as Record<string, unknown>
-          return [record.userId, record.email, record.recipientId].some((candidate) => String(candidate || '').trim().toLowerCase() === email)
+          return [record.userId, record.email, record.recipientId].some((candidate) => String(candidate || '').trim().toLowerCase() === email || String(candidate || '').trim() === accountId)
         })]
       }
       return [key, value]
