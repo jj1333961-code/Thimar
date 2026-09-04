@@ -1057,7 +1057,7 @@ tr:hover { background: var(--table-hover); }
   <!-- حذف ملف بتأكيد صريح -->
   <div id="githubDeleteBox" style="display:none; background:rgba(220,53,69,0.08); border:1px solid #dc3545; border-radius:10px; padding:14px 16px;">
     <h3 style="margin:0 0 8px; color:#dc3545;">🗑️ حذف ملف من المستودع</h3>
-    <p style="color:var(--text-light); font-size:0.88rem; margin-bottom:10px;">ءءُءءشئ الحذف Commit في مستودعك ويحافظ على الإصدارات السابقة في السجل. الملفات الأساية للمشروع محمية ولا يمكن حذفها. يتطلب الحذف تأ����داً صري��اً.</p>
+    <p style="color:var(--text-light); font-size:0.88rem; margin-bottom:10px;">ءءُءءشئ الحذف Commit في مستودعك ويحافظ على الإصدارات السابقة في السجل. الملفات الأساية للمشروع محمية ولا يمكن حذفها. يتطلب الحذف تأ����داً صري����اً.</p>
     <div class="form-group"><label>مسر المل�� المراد حذفه</label><input id="githubDeletePath" placeholder="مثال: public/old-file.js" /></div>
     <label style="display:flex; gap:8px; align-items:center; font-size:0.88rem; margin-bottom:10px;"><input type="checkbox" id="githubDeleteConfirm" style="width:auto;" /> أؤكد أنني أريد حذف هذا الملف نهائياً من المستودع</label>
     <button class="btn" style="background:#dc3545; color:#fff;" onclick="deleteGithubFile()">حذف الملف</button>
@@ -1071,7 +1071,7 @@ tr:hover { background: var(--table-hover); }
   <div id="notificationsList" class="notifications-grid" aria-live="polite"></div>
 </div>
 
-<!-- إدارة المسؤ��لين -->
+<!-- إدارة المسؤ���لين -->
 <div id="adminsPage" class="page hidden">
   <div class="page-header"><h2>👨‍💼 إدارة المسؤولين</h2></div>
   <div id="adminsAlert"></div>
@@ -1220,7 +1220,7 @@ tr:hover { background: var(--table-hover); }
     <div class="form-group"><label>السن</label><input type="number" id="editAge" readonly style="background:var(--table-header)"></div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label>الرقم السري للطالب</label><div style="position:relative;"><input type="password" id="editStudentPass" style="padding-left:45px;"><span onclick="togglePassVisibility('editStudentPass', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span></div><label style="font-weight:normal; margin-top:6px; display:block;"><input type="checkbox" id="editSamePass" onchange="syncStudentPass('edit')"> نفس الرقم السري لولي الأمر</label></div>
+    <div class="form-group"><label>الرقم ا��سري للطالب</label><div style="position:relative;"><input type="password" id="editStudentPass" style="padding-left:45px;"><span onclick="togglePassVisibility('editStudentPass', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span></div><label style="font-weight:normal; margin-top:6px; display:block;"><input type="checkbox" id="editSamePass" onchange="syncStudentPass('edit')"> نفس الرقم السري لولي الأمر</label></div>
     <div class="form-group"><label>اسم ولي الأمر</label><input type="text" id="editParent"></div>
   </div>
   <div class="form-row">
@@ -1469,9 +1469,6 @@ tr:hover { background: var(--table-hover); }
 <div id="parentDashboard" class="page hidden">
   <div class="page-header">
     <h2>👨‍👩‍👧 متابعة الأبناء</h2>
-  <div>
-  <button class="btn btn-outline" onclick="logout()">خروج</button>
-  </div>
   </div>
   <button type="button" class="side-fab" onclick="openRoleSidebar('parent')" aria-label="فتح قائمة الأدوات" aria-controls="sidebar-parent" aria-expanded="false"><span></span><span></span><span></span></button>
   <div id="sidebar-parent" class="side-sidebar-wrap">

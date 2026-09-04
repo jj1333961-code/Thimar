@@ -62,6 +62,45 @@ export async function GET(request: Request) {
   }
 }
 
+export async function POST(request: Request) {
+  const originError = rejectCrossOrigin(request)
+  if (originError) return originError
+  const auth = await requireUser(request)
+  if (auth.response) return auth.response
+  try {
+    const body = await request.json()
+    const device = body?.device
+    if (!device || typeof device !== 'object' || Array.isArray(device) || typeof device.deviceId !== 'string') {
+      return response({ error: 'بيانات الجهاز غير صالحة' }, 400)
+    }
+    const existing = await db.select({ data: appSnapshots.data })
+      .from(appSnapshots)
+      .where(eq(appSnapshots.id, SNAPSHOT_ID))
+      .limit(1)
+    const existingData = existing[0]?.data && typeof existing[0].data === 'object' && !Array.isArray(existing[0].data)
+      ? existing[0].data as Record<string, unknown>
+      : {}
+    const devices = Array.isArray(existingData.devices) ? existingData.devices.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
+    const safeDevice = {
+      deviceId: device.deviceId.slice(0, 120),
+      role: String(auth.user?.role || device.role || '').slice(0, 30),
+      userId: auth.user?.id || null,
+      userName: String(device.userName || '').slice(0, 160),
+      lastSeenAt: new Date().toISOString(),
+      userAgent: String(device.userAgent || '').slice(0, 240),
+    }
+    const withoutCurrent = devices.filter((item) => item.deviceId !== safeDevice.deviceId)
+    const mergedData = { ...existingData, devices: [safeDevice, ...withoutCurrent].slice(0, 100) }
+    await db.insert(appSnapshots)
+      .values({ id: SNAPSHOT_ID, data: mergedData, updatedAt: new Date() })
+      .onConflictDoUpdate({ target: appSnapshots.id, set: { data: mergedData, updatedAt: new Date() } })
+    return response({ saved: true })
+  } catch (error) {
+    console.error('[v0] POST /api/data device registration failed', error)
+    return response({ error: 'تعذر تسجيل الجهاز' }, 503)
+  }
+}
+
 export async function PUT(request: Request) {
   const originError = rejectCrossOrigin(request)
   if (originError) return originError

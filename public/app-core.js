@@ -647,6 +647,7 @@ if(!runtimeData.initialized_v7) {
   }());
   
   let currentUser = null, currentType = null, currentAdminId = null;
+  let restoredSessionPage = null;
   // يحتفظ المسؤول بجلسة الدخول الأصلية أثناء زيارة حساب طالب أو ولي أمر.
   let adminVisitState = null;
  let voiceBlob = null, voiceChunks = [], mediaRecorder = null;
@@ -708,9 +709,10 @@ function initializeThimarApp(){if(window.__thimarAppInitialized)return;window.__
     history.replaceState({ page: defaultPageForRole(currentType) }, '', roleShellPath(currentType));
   }
   const routed=pageFromUrl();
-  if(routed && pageAllowedForUser(routed)) showPage(routed,{fromBrowser:true});
+  const restoredPage = restoredSessionPage && pageAllowedForUser(restoredSessionPage) ? restoredSessionPage : routed;
+  if(restoredPage && pageAllowedForUser(restoredPage)) showPage(restoredPage,{fromBrowser:true});
   else showPage(defaultPageForRole(currentType),{fromBrowser:true});
-}else restorePendingGoogleSignup()}; restoreDeviceSession().then(function(restored){ if(!restored) continueSession(); else { const expectedRole=/\/(?:admin|admin\.html)$/.test(location.pathname)?'admin':/(?:student|student\.html)$/.test(location.pathname)?'student':/(?:parent|parent\.html)$/.test(location.pathname)?'parent':null; if(expectedRole&&expectedRole!==currentType) history.replaceState({page:defaultPageForRole(currentType)},'',roleShellPath(currentType)); const routed=pageFromUrl(); const renderRestored=function(){ if(routed&&pageAllowedForUser(routed)) showPage(routed,{fromBrowser:true}); else showPage(defaultPageForRole(currentType),{fromBrowser:true}); }; hydrateDataFromNeon().catch(function(){}).finally(renderRestored); } });}
+}else restorePendingGoogleSignup()}; restoreDeviceSession().then(function(restored){ if(!restored) continueSession(); else { const expectedRole=/\/(?:admin|admin\.html)$/.test(location.pathname)?'admin':/(?:student|student\.html)$/.test(location.pathname)?'student':/(?:parent|parent\.html)$/.test(location.pathname)?'parent':null; if(expectedRole&&expectedRole!==currentType) history.replaceState({page:defaultPageForRole(currentType)},'',roleShellPath(currentType)); const routed=pageFromUrl(); const renderRestored=function(){ const restoredPage=restoredSessionPage&&pageAllowedForUser(restoredSessionPage)?restoredSessionPage:routed; if(restoredPage&&pageAllowedForUser(restoredPage)) showPage(restoredPage,{fromBrowser:true}); else showPage(defaultPageForRole(currentType),{fromBrowser:true}); }; hydrateDataFromNeon().catch(function(){}).finally(renderRestored); } });}
 
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeThimarApp, {once:true});
 else initializeThimarApp();
@@ -718,10 +720,40 @@ else initializeThimarApp();
 window.addEventListener('popstate',()=>{const id=pageFromUrl();if(!id||!pageAllowedForUser(id)){showPage(defaultPageForRole(),{fromBrowser:true});return;}showPage(id,{fromBrowser:true});});
 
 // ====== SESSION PERSISTENCE ======
+function flushPendingDeviceRegistration() {
+  try {
+    const pending = localStorage.getItem('thimar_pending_device');
+    if(!pending || !navigator.onLine) return;
+    fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: pending, credentials: 'same-origin' }).then(function(response) { if(response.ok) { const device=JSON.parse(pending).device; localStorage.setItem('thimar_device_last_sent', device.deviceId + ':' + device.role); localStorage.removeItem('thimar_pending_device'); } }).catch(function() {});
+  } catch(e) { console.warn('[v0] pending device sync skipped', e); }
+}
+window.addEventListener('online', flushPendingDeviceRegistration);
+function recordCurrentDevice() {
+  if(!currentUser || !currentType) return;
+  try {
+    let deviceId = localStorage.getItem('thimar_device_id');
+    if(!deviceId) { deviceId = 'device_' + (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '_' + Math.random().toString(36).slice(2)); localStorage.setItem('thimar_device_id', deviceId); }
+    const account = Array.isArray(currentUser) ? currentUser[0] : currentUser;
+    const devices = getData('devices', []);
+    const existing = devices.find(function(device) { return device.deviceId === deviceId; });
+    const record = { deviceId: deviceId, role: currentType, userId: account?.id || null, userName: account?.name || account?.parent || '', lastSeenAt: new Date().toISOString(), userAgent: navigator.userAgent.slice(0, 240) };
+    if(existing) Object.assign(existing, record);
+    else devices.unshift(record);
+    if(currentType === 'admin') setData('devices', devices.slice(0, 100));
+    else {
+      const payload = JSON.stringify({ device: record });
+      const marker = deviceId + ':' + currentType;
+      const alreadySent = localStorage.getItem('thimar_device_last_sent') === marker;
+      if(!alreadySent && navigator.onLine) fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, credentials: 'same-origin' }).then(function(response) { if(response.ok) localStorage.setItem('thimar_device_last_sent', marker); }).catch(function() { localStorage.setItem('thimar_pending_device', payload); });
+      else if(!alreadySent) localStorage.setItem('thimar_pending_device', payload);
+    }
+  } catch(e) { console.warn('[v0] device registration skipped', e); }
+}
 function saveSessionState() {
+  recordCurrentDevice();
   try {
     if(currentUser && currentType) {
-      const session = { user: currentUser, type: currentType, adminId: currentAdminId || null, adminVisitState: adminVisitState || null, page: document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)')?.id || defaultPageForRole(currentType), savedAt: Date.now(), expiresAt: Date.now() + 8 * 60 * 60 * 1000 };
+      const session = { user: currentUser, type: currentType, adminId: currentAdminId || null, adminVisitState: adminVisitState || null, page: document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)')?.id || defaultPageForRole(currentType), savedAt: Date.now() };
       sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
       sessionStorage.setItem('currentType', currentType);
       sessionStorage.setItem('currentAdminId', currentAdminId || '');
@@ -731,8 +763,9 @@ function saveSessionState() {
   } catch(e) { console.error('saveSessionState error:', e); }
 }
 function applySavedSession(saved) {
-  if(!saved || !saved.user || !saved.type || (saved.expiresAt && saved.expiresAt <= Date.now())) return false;
+  if(!saved || !saved.user || !saved.type) return false;
   currentUser = saved.user; currentType = saved.type; currentAdminId = saved.adminId || null; adminVisitState = saved.adminVisitState || null;
+  restoredSessionPage = saved.page || defaultPageForRole(saved.type);
   return true;
 }
 function restoreSession() {
@@ -1761,7 +1794,7 @@ function editAdmin(id) {
   if(newMobile === null) return;
   const newPass = prompt('الرقم السري الجديد:', a.password);
   if(newPass === null) return;
-  const newType = confirm('هل تريد جعله مسؤولاً رئيسياً (موافق = رئيسي، إلغاء = فرعي)');
+  const newType = confirm('هل تريد جعله ��سؤولاً رئيسياً (موافق = رئيسي، إلغاء = فرعي)');
   const normalizedMobile = normalizeLocalPhoneInput(newMobile);
   if(!normalizedMobile || !countryRuleForValue(country).phoneLengths.includes(normalizedMobile.length)) return alert('رقم الموبايل يجب أن يطابق الدولة المختارة');
   const international = normalizeWaNumber(normalizedMobile, country);
@@ -2713,7 +2746,7 @@ function renderReadingItems() {
         for(let a = fromNum; a <= ayahCount; a++) html += '<option value="'+a+'" '+(item.to == a ? 'selected':'')+'>'+a+'</option>';
         html += '</select>';
       } else {
-        html += '<select disabled style="min-width:100px; opacity:0.6;"><option>اختر "من الآية" أولاً</option></select>';
+        html += '<select disabled style="min-width:100px; opacity:0.6;"><option>اختر "��ن الآية" أولاً</option></select>';
       }
       html += '</div><span style="color:var(--text-light); font-size:0.85rem; align-self:center;">(السورة '+ayahCount+' آية)</span></div>';
     }
@@ -2776,7 +2809,7 @@ function localSmartChatReply(message,role){
     }
     return 'لتحسين الحفظ: ابدأ بمراجعة قصيرة ��لمقطع القريب، ثم اختبر نفسك عشوا��ياً من مقطع أقدم، وسجّل المواضع التي توقفت فيها. كرر الموضع الضعيفة ثلاث مرات ثم أعد الاختبار دون النظر إلى المصحف.';
   }
-  if(/وقت|تنظيم|خطه|خطة|جدول|فكرة/.test(q))return 'خطة مقترحة: 10 دقائق للماضي القريب، 10 دقائق للماضي البعيد، 5 دقائق لأسئلة عشوائ��ة من أول ووسط وآخر السور، ثم دقيقتان لتسجيل الأخطاء. اجعل الهدف محدداً بعدد آيات أي سور، لا بمدة فقط.';
+  if(/وقت|تنظيم|خطه|خطة|جدول|فكرة/.test(q))return 'خطة مقترحة: 10 دقائق للماضي القريب، 10 دقائق للماضي البعيد، 5 دقائق لأسئلة عشوائ��ة من أول ووسط وآخر السور، ثم دقيقتان لتسجيل الأخطاء. اجعل الهدف محدداً بعدد آيات أي سو��، لا بمدة فقط.';
   if(/رساله|رسالة|تواصل/.test(q)&&role==='admin')return 'يوجد حالياً '+messages.length+' رسالة محفوظة في بيانات المنصة. رتّب ال��تابعة حسب الرسائل غير المقروءة، ثم الطلبات المتعلقة باختبار أو تسميع، وأرسل لكل حالة إجراءً واضحاً وموعد متابعة.';
   if(/صعب|ضعف|نسي|نسيان|خطا|خطأ/.test(q))return 'عند وجود ضعف، لا تُعد السورة كاملة مباشرة. حدّد موضع الخطأ، اقرأ ما قبله وما بعده، اربطه بأول كلمة في الآية التالية، ثم اختبر الموضع من بداية مختلفة. أعد مراجعته اليوم وبعد يوم وعد أسبوع.';
   return 'بصفتي المساعد المحلي لـ'+roleLabel+'، أستطيع تقديم جواب أدق إذا ��كرت االهدف والسورة أو النتيجة أو المشكلة الحالية. سأحوّلها إلى خطوات واضحة قابلة للتنفيذ دون ادعاء معلومات غير موجودة في المنصة.';
