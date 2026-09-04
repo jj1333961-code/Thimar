@@ -1451,6 +1451,7 @@ async function submitSignupRequest() {
     const authResponse = await fetch('/api/auth/supabase', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'signup', email:email, password:password, name:name, role:role }) });
     const authBody = await authResponse.json().catch(function(){ return {}; });
     if(!authResponse.ok) { console.error('[v0] Supabase signup failed', authBody); throw new Error(authBody.error || 'تعذر إنشاء حساب Supabase'); }
+    if(authBody.profileReady === false && authBody.profileError) console.error('[v0] Supabase profile was not created', authBody.profileError);
     if(authBody.pendingEmailConfirmation) { box.innerHTML = '<div class="alert alert-success">✅ تم إنشاء الحساب بنجاح. تحقق من بريدك الإلكتروني لتفعيل الحساب، ثم استخدم البريد وكلمة المرور لتسجيل الدخول.</div>'; return; }
   } catch(error) {
     console.error('[v0] Supabase signup request failed', error);
@@ -1619,7 +1620,7 @@ async function toggleStudentIntakeRecord(){
         preview.src=URL.createObjectURL(blob);preview.style.display='block';status.textContent='جاري فهم بيانات الطالب...';result.innerHTML='';
         const audio=await voiceAudioPayload(blob),data=await callStudentAI('student_voice_intake',{role:'admin',audioBase64:audio.audioBase64,mimeType:audio.mimeType},0.05),filled=applyStudentVoiceFields(data.fields||{});
         if(!filled.length)throw new Error('لم أتعرف على بيانات واضحة. اذكر اسم كل خانة ثم قيمتها ببطء.');
-        result.innerHTML='<div class="alert alert-success">تم ملء '+filled.length+' خانة. راجع جميع البيانات قبل الحفظ.<br><small>النص المسموع: '+escapeHtml(data.transcript||'لم يُرجع تفريغاً')+'</small></div>';status.textContent='اكتمل التحليل';
+        result.innerHTML='<div class="alert alert-success">تم ملء '+filled.length+' خانة. راجع جميع البيانات قبل الحفظ.<br><small>النص المسموع: '+escapeHtml(data.transcript||'لم يُرجع تفريغاً')+'</small></div>';status.textContent='اكتمل التحل��ل';
       }catch(e){result.innerHTML='<div class="alert alert-danger">تعذر تحليل التسجيل: '+escapeHtml(e.message||'خطأ غير معروف')+'<br><button type="button" class="btn btn-sm btn-primary" onclick="retryStudentIntakeAnalysis()">إعادة تحليل نفس التسجيل</button><button type="button" class="btn btn-sm btn-secondary" onclick="toggleStudentIntakeRecord()">تسجيل جديد</button></div>';status.textContent='فشل التحليل';}
       finally{btn.disabled=false;btn.textContent='إعادة التسجيل';studentIntakeRecorder=null;}
     };
@@ -1639,7 +1640,7 @@ async function toggleVoiceRecord() {
     status.textContent = 'تم التسجيل ✅'; 
     return;
   }
-  const allowMic = confirm('🔴 يرجى السماح للموقع بالوصول إلى الميكروفون لتسجءءل البصمة الصوتية.\n\nاضغط "موافق" ثم اختر "السماح" في نافذة المتصفح.');
+  const allowMic = confirm('🔴 يرجى السماح للموقع بالو��ول إلى الميكروفون لتسجءءل البصمة الصوتية.\n\nاضغط "موافق" ثم اختر "السماح" في نافذة المتصفح.');
   if(!allowMic) { status.textContent = 'تم إلغاء التسجيل ❌'; return; }
   try {
     const stream = await safeGetMic();
@@ -2940,7 +2941,7 @@ function renderExamQuestions(){
     (q.type==='audio'?'<div class="form-group"><label>التسجيل لولي الأمر</label><select onchange="updateExamQuestion('+i+',\'audioShareWithParent\',this.value===\'true\')"><option value="true" '+(q.audioShareWithParent!==false?'selected':'')+'>مس��وح</option><option value="false" '+(q.audioShareWithParent===false?'selected':'')+'>إخفاء</option></select></div>':'')+
     '<div class="form-group"><label>فحص الغش لهذا السؤال</label><select onchange="updateExamQuestion('+i+',\'proctorEnabled\',this.value===\'true\')"><option value="true" '+(q.proctorEnabled!==false?'selected':'')+'>مفعّل</option><option value="false" '+(q.proctorEnabled===false?'selected':'')+'>غير مفعّل</option></select></div></div>'+
     '<div class="form-group"><label>تعليمات السؤال (ئن دون الإجابة)</label><input value="'+escapeHtml(q.prompt||'')+'" onchange="updateExamQuestion('+i+',\'prompt\',this.value)"></div>'+ 
-    '<div class="form-group"><label>السورة</label><input value="'+escapeHtml(q.surah||'')+'" onchange="updateExamQuestion('+i+',\'surah\',this.value)"><small style="color:var(--text-light)">حدود الآيات محفوظة داخلياً للصورة والتصح��ح ولا تظهر كخانات في السؤال.</small></div>';
+    '<div class="form-group"><label>السورة</label><input value="'+escapeHtml(q.surah||'')+'" onchange="updateExamQuestion('+i+',\'surah\',this.value)"><small style="color:var(--text-light)">حدود الآيات محفوظة داخلياً للصورة والتصح����ح ولا تظهر كخانات في السؤال.</small></div>';
   if(q.type==='mcq'||q.type==='truefalse')h+='<div class="form-group"><label>الاختيارات (كل اختيار في سطر)</label><textarea rows="4" onchange="updateExamQuestion('+i+',\'options\',this.value.split(/\\n/).map(x=>x.trim()).filter(Boolean))">'+escapeHtml((q.options||[]).join('\n'))+'</textarea></div><div class="form-group"><label>الإجابة الصحيحة — لا تظهر للطالب</label><input value="'+escapeHtml(q.correct||'')+'" onchange="updateExamQuestion('+i+',\'correct\',this.value)"></div>';
   else if(q.type==='complete')h+='<div class="form-group"><label>الإجابة المرجعية — لا تظهر للطالب</label><textarea rows="3" onchange="updateExamQuestion('+i+',\'correct\',this.value)">'+escapeHtml(q.correct||'')+'</textarea></div>';
   else h+='<div class="alert alert-info">سيتم التحقق من بصمة الطالب أولاً، ثم من محتوى التلوة. إذا كانت البصمة غير طابقة فلن يُحفظ التسجيل.</div>';
@@ -5086,7 +5087,7 @@ function renderStudentChart() {
     document.getElementById('studentChartSection').innerHTML = '<div class="page" style="margin-top:20px;"><h4 style="color:var(--primary); margin-bottom:15px;">📊 مخطط التقييم</h4><div class="alert alert-info">لا توجد تقييمات نهائية مسجلة عد. سيتم ظهور المخطط بعد إغلاق أول تسميع.</div></div>'; return;
   }
   const canvasId = 'chart_' + s.id;
-  document.getElementById('studentChartSection').innerHTML = '<div class="chart-container"><h4 style="color:var(--primary); margin-bottom:15px;">📊 مخطط تقييم حفظ القرآن الكريم</h4><canvas id="'+canvasId+'" width="1100" height="550" style="max-width:100%; height:auto;"></canvas><div class="chart-legend"><div class="legend-item"><div class="legend-dot" style="background:#6f42c1"></div><span>المجموع</span></div></div><div style="margin-top:15px;"><button class="btn btn-info" onclick="showStudentFullChart()">ءءءء عرض المخطط الكامل في صفحة منفصة</button></div></div>';
+  document.getElementById('studentChartSection').innerHTML = '<div class="chart-container"><h4 style="color:var(--primary); margin-bottom:15px;">📊 مخطط تقييم حفظ القرآن الكري��</h4><canvas id="'+canvasId+'" width="1100" height="550" style="max-width:100%; height:auto;"></canvas><div class="chart-legend"><div class="legend-item"><div class="legend-dot" style="background:#6f42c1"></div><span>المجموع</span></div></div><div style="margin-top:15px;"><button class="btn btn-info" onclick="showStudentFullChart()">ءءءء عرض المخطط الكامل في صفحة منفصة</button></div></div>';
   setTimeout(() => drawTotalOnlyChart(canvasId, finalizedSessions), 100);
 }
 
@@ -5758,7 +5759,7 @@ function generateAIResponse(text, student) {
   }
   // التواصل مع المسؤول
   if(has('مسؤول','معلم','شيخ','ابلاغ','إبلاغ','رسالءء','رسالة','تواصل','شكوى')) {
-    return 'ءء يمكنك مراسلة المسؤول مب��شرة من <strong>صندوق الرسائءء</strong> في صفحتك، وسيصلك الرد هناك مع إشعار. إن كان الأمر عاجلاً اذكر كلمة "عاءءل" في بداية رسالتك.';
+    return 'ءء يمكنك مراسلة المسؤول مب��شرة ��ن <strong>صندوق الرسائءء</strong> في صفحتك، وسيصلك الرد هناك مع إشعار. إن كان الأمر عاجلاً اذكر كلمة "عاءءل" في بداية رسالتك.';
   }
   // ديني عام
   if(has('دئن','اسلام','إسلام','الله','نبي','رسول','دعاء','صلاة')) {
@@ -5771,7 +5772,8 @@ function generateAIResponse(text, student) {
   return r;
 }
 
-function logout() {
+async function logout() {
+  if(navigator.onLine) { try { await fetch('/api/auth/supabase', { method:'DELETE', credentials:'same-origin' }); } catch(error) { console.error('[v0] Supabase logout failed', error); } }
   currentUser = null; currentType = null; currentAdminId = null;
   clearSession();
   const uu = document.getElementById('unifiedUser'); if(uu) uu.value = '';
