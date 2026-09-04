@@ -1,6 +1,7 @@
 (function () {
   var isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
   document.documentElement.classList.toggle('is-native-app', isNative)
+  if (isNative) window.__THIMAR_API_ORIGIN = 'https://thimar-1jsvz90zj-to-30b1.vercel.app'
 
   function announceNetwork() {
     document.documentElement.classList.toggle('is-offline', !navigator.onLine)
