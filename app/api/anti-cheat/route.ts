@@ -3,6 +3,8 @@ import { and, desc, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { antiCheatEvents, antiCheatGlobalConfig, antiCheatItemConfigs, antiCheatSessions } from '@/lib/db/schema'
 import { calculateRiskScore, defaultAntiCheatConfig, normalizeServerConfig, severityFor, type AntiCheatConfig } from '@/lib/anti-cheat-engine'
+import { rejectCrossOrigin } from '@/lib/request-security'
+import { requireAdmin, requireUser } from '@/lib/server-auth'
 
 const id = () => crypto.randomUUID()
 const clamp = (value: unknown, min = 0, max = 100) => Math.max(min, Math.min(max, Number(value) || 0))
@@ -18,18 +20,24 @@ async function resolveConfig(itemId: string, itemType: string) {
 }
 
 export async function GET(request: Request) {
+  const auth = await requireUser(request)
+  if (auth.response) return auth.response
   try {
     const { searchParams } = new URL(request.url)
     const itemId = searchParams.get('itemId')
     const itemType = searchParams.get('itemType')
     const sessionId = searchParams.get('sessionId')
     if (sessionId) {
+      const admin = await requireAdmin(request)
+      if (admin.response) return admin.response
       const sessions = await db.select().from(antiCheatSessions).where(eq(antiCheatSessions.id, sessionId)).limit(1)
       if (!sessions[0]) return NextResponse.json({ error: 'جلسة المراقبة غير موجودة' }, { status: 404 })
       const events = await db.select().from(antiCheatEvents).where(eq(antiCheatEvents.sessionId, sessionId)).orderBy(desc(antiCheatEvents.timestamp))
       return NextResponse.json({ session: sessions[0], events })
     }
     if (itemId && itemType && validType(itemType)) return NextResponse.json(await resolveConfig(itemId, itemType))
+    const admin = await requireAdmin(request)
+    if (admin.response) return admin.response
     const [global, items] = await Promise.all([
       db.select().from(antiCheatGlobalConfig).where(eq(antiCheatGlobalConfig.id, true)).limit(1),
       db.select().from(antiCheatItemConfigs).orderBy(desc(antiCheatItemConfigs.updatedAt)),
@@ -39,9 +47,19 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const originError = rejectCrossOrigin(request)
+  if (originError) return originError
+  const auth = await requireUser(request)
+  if (auth.response) return auth.response
   try {
+    const contentLength = Number(request.headers.get('content-length') || 0)
+    if (contentLength > 256_000) return NextResponse.json({ error: 'بيانات المراقبة أكبر من الحد المسموح' }, { status: 413 })
     const body = await request.json()
     const { action } = body ?? {}
+    if (action === 'save-global' || action === 'save-config') {
+      const admin = await requireAdmin(request)
+      if (admin.response) return admin.response
+    }
     if (action === 'save-global') {
       const enabled = Boolean(body.enabled)
       const existingGlobal = await db.select().from(antiCheatGlobalConfig).where(eq(antiCheatGlobalConfig.id, true)).limit(1)
@@ -79,11 +97,11 @@ export async function POST(request: Request) {
       if (!session || session.status !== 'active' || session.studentId !== String(event.studentId) || session.itemId !== String(event.itemId) || session.itemType !== String(event.itemType)) return NextResponse.json({ error: 'جلسة المراقبة غير صالحة' }, { status: 403 })
       const resolved = await resolveConfig(session.itemId, session.itemType)
       const rawSignals = Array.isArray(event.signals) ? event.signals.filter((signal: unknown) => signal && typeof signal === 'object').slice(0, 20) : []
-      const signals = rawSignals.map((signal: Record<string, unknown>) => ({ type: String(signal.type || 'unknown').slice(0, 64), active: Boolean(signal.active), durationMs: clamp(signal.durationMs, 0, 86400000), frequency: clamp(signal.frequency, 0, 100) }))
+      const signals: Array<{ type: string; active: boolean; durationMs: number; frequency: number }> = rawSignals.map((signal: Record<string, unknown>) => ({ type: String(signal.type || 'unknown').slice(0, 64), active: Boolean(signal.active), durationMs: clamp(signal.durationMs, 0, 86400000), frequency: clamp(signal.frequency, 0, 100) }))
       const riskScore = clamp(calculateRiskScore(signals, session.riskScore)), severity = severityFor(riskScore, resolved.config)
       const riskDelta = riskScore - session.riskScore
       const reason = String(event.reason || 'تم رصد إشارة قابلة للتفسير من مجموعة الفحوص').slice(0, 300)
-      const metadata = event.metadata && typeof event.metadata === 'object' ? event.metadata : { signalCount: signals.filter((s: { active: boolean }) => s.active).length, signalTypes: signals.filter((s: { active: boolean }) => s.active).map((s: { type: string }) => s.type) }
+      const metadata = event.metadata && typeof event.metadata === 'object' ? event.metadata : { signalCount: signals.filter((signal) => signal.active).length, signalTypes: signals.filter((signal) => signal.active).map((signal) => signal.type) }
       await db.insert(antiCheatEvents).values({ id: id(), sessionId: session.id, studentId: session.studentId, itemId: session.itemId, itemType: session.itemType, eventType: String(event.eventType).slice(0, 64), riskScore, riskDelta, severity, decision: severity, reason, durationMs: clamp(event.durationMs, 0, 86400000), metadata })
       await db.update(antiCheatSessions).set({ riskScore, severity, updatedAt: new Date() }).where(eq(antiCheatSessions.id, session.id))
       return NextResponse.json({ ok: true, riskScore, severity })

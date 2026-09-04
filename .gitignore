@@ -4,6 +4,8 @@ __v0_devtools.tsx
 __v0_jsx-dev-runtime.ts
 .snowflake/
 .v0-trash/
+.incoming-teacher/
+*.zip
 .vercel/
 
 # Environment variables

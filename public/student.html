@@ -7,10 +7,11 @@
 <meta name="description" content="ثمار — منصة قرآنية هادئة للتسميع والاختبارات والمهام والنمو العلمي.">
 <meta name="referrer" content="no-referrer-when-downgrade">
   <link rel="preload" href="/quran/quran.pdf" as="fetch" type="application/pdf" crossorigin fetchpriority="high">
-  <link rel="preload" href="/app-core.js" as="script" fetchpriority="high">
   <script src="/islamic-data.js" defer></script>
+  <script src="/country-data.js" defer></script>
   <link rel="stylesheet" href="/islamic-hub.css">
   <link rel="stylesheet" href="/prayer-screen.css">
+  <link rel="stylesheet" href="/country-fields.css">
   <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
 <title>ثمار | منصة القرآن والتعليم</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -610,17 +611,20 @@ tr:hover { background: var(--table-hover); }
     color:var(--thimar-ink);
   }
   #lockScreen.thimar-auth::before, #lockScreen.thimar-auth::after { content:none !important; display:none !important; }
-  .thimar-arch { position:absolute; left:0; right:0; top:clamp(6px,2vw,14px); display:flex; justify-content:center; pointer-events:none; opacity:.9; }
+  .thimar-arch { display:none !important; }
   .thimar-arch svg { width:min(100%,400px); height:auto; }
   .thimar-arch svg path { stroke:var(--thimar-gold); }
   .thimar-inner { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:0; }
   .thimar-leaf { width:clamp(46px,13vw,66px); height:auto; display:block; margin-bottom:-8px; filter:drop-shadow(0 6px 12px rgba(0,0,0,.28)); }
-  .thimar-logo { font-family:'Noto Kufi Arabic','Segoe UI',sans-serif; font-weight:900; color:var(--thimar-logo); line-height:1; font-size:clamp(3.2rem,17vw,5rem); text-shadow:0 6px 22px rgba(0,0,0,.20); letter-spacing:0; }
-  .thimar-logo-en { font-family:'Segoe UI',Tahoma,sans-serif; color:var(--thimar-gold); letter-spacing:.42em; text-indent:.42em; font-size:clamp(1rem,4.6vw,1.5rem); font-weight:600; margin-top:6px; }
+  .thimar-logo { font-family:'Amiri','Noto Kufi Arabic',serif; font-weight:700; color:var(--thimar-logo); line-height:1.05; font-size:clamp(3.5rem,18vw,5.3rem); text-align:center; text-shadow:0 2px 0 rgba(255,255,255,.55),0 6px 22px rgba(0,0,0,.20); letter-spacing:0; }
+  .thimar-logo-en { font-family:'Segoe UI',Tahoma,sans-serif; color:var(--thimar-gold); letter-spacing:.42em; text-indent:.42em; font-size:clamp(1rem,4.6vw,1.5rem); font-style:italic; font-weight:600; text-align:center; width:100%; margin-top:6px; }
   .thimar-tagline { font-family:'Noto Kufi Arabic','Segoe UI',sans-serif; color:var(--thimar-ink); font-size:clamp(1rem,4.4vw,1.3rem); line-height:1.85; margin-top:clamp(14px,4vw,22px); text-wrap:balance; }
-  .thimar-ayah-wrap { display:flex; align-items:center; justify-content:center; gap:clamp(6px,2.5vw,14px); margin-top:clamp(16px,5vw,26px); width:100%; }
-  .thimar-orn { flex:0 0 auto; width:clamp(14px,4.5vw,22px); height:clamp(70px,22vw,110px); color:var(--thimar-gold); opacity:.95; }
+  .thimar-ayah-wrap { display:flex; align-items:center; justify-content:center; gap:0; margin:clamp(16px,5vw,26px) auto 0; width:100%; text-align:center; }
+  .thimar-orn { display:none !important; }
   .thimar-orn:last-of-type { transform:scaleX(-1); }
+  .thimar-ayah-heading { display:block; margin-bottom:6px; color:var(--thimar-gold); font-family:'Amiri',serif; font-size:.9rem; }
+  .thimar-ayah-frame { display:inline-block; padding:4px 12px; border:1px solid var(--thimar-gold-line); border-radius:18px; direction:rtl; unicode-bidi:isolate; }
+  .thimar-ayah-ref { direction:rtl; unicode-bidi:isolate; }
   .thimar-ayah { font-family:'Amiri',serif; color:var(--thimar-ink); font-size:clamp(1rem,4.6vw,1.35rem); line-height:2.1; text-wrap:balance; }
   .thimar-ayah-ref { display:block; color:var(--thimar-gold); font-family:'Noto Kufi Arabic','Segoe UI',sans-serif; font-size:clamp(.75rem,3.2vw,.9rem); margin-top:10px; }
   .thimar-quran { width:min(100%,370px); height:auto; display:block; margin:clamp(6px,2vw,14px) auto clamp(10px,3vw,18px); filter:var(--thimar-quran-glow); border-radius:28px; mix-blend-mode:screen; opacity:.94; transform:translateY(2px); }
@@ -656,10 +660,14 @@ tr:hover { background: var(--table-hover); }
   .thimar-signup-row span { color:var(--thimar-ink-soft); font-size:.9rem; font-family:'Noto Kufi Arabic','Segoe UI',Tahoma,sans-serif; }
   .thimar-signup-inline { background:transparent; border:1px solid var(--thimar-gold-line); border-radius:999px; color:var(--thimar-gold); padding:9px 18px; font-family:'Noto Kufi Arabic','Segoe UI',sans-serif; font-weight:700; font-size:.95rem; cursor:pointer; }
   .thimar-signup-inline:hover { background:var(--thimar-gold-fade); }
-  .thimar-password-toggle { position:absolute; right:16px; top:50%; transform:translateY(-50%); width:38px; height:38px; display:grid; place-items:center; border:0; border-radius:50%; background:transparent; color:var(--thimar-gold); cursor:pointer; }
-  .thimar-password-toggle::after { content:''; position:absolute; width:22px; height:2px; border-radius:2px; background:currentColor; transform:rotate(-42deg); transition:opacity .15s ease; }
+  .thimar-password-toggle { position:absolute; left:16px; right:auto; top:50%; transform:translateY(-50%) !important; width:38px; height:38px; display:grid; place-items:center; border:0; border-radius:50%; background:transparent; color:#2f80ed; cursor:pointer; flex:0 0 38px; transition:none; }
+  .thimar-password-toggle:hover, .thimar-password-toggle:active, .thimar-password-toggle:focus-visible { transform:translateY(-50%) !important; }
+  .thimar-eye-icon { width:22px; height:14px; border:2px solid currentColor; border-radius:50% / 60%; position:relative; display:block; }
+  .thimar-eye-icon::after { content:''; position:absolute; width:5px; height:5px; border-radius:50%; background:currentColor; inset:0; margin:auto; }
+  .thimar-password-toggle::after { content:''; position:absolute; width:22px; height:2px; border-radius:2px; background:currentColor; transform:rotate(-42deg); transition:none; }
   .thimar-password-toggle.is-visible::after { opacity:0; }
-  .thimar-field.has-password-toggle input { padding-right:58px; }
+  .thimar-password-toggle:focus-visible { outline:2px solid #2f80ed; outline-offset:2px; }
+  .thimar-field.has-password-toggle input { padding-left:58px; padding-right:20px; text-align:start; }
   .thimar-forgot { display:inline-flex; margin-top:10px; border:0; background:transparent; color:var(--thimar-gold); font:inherit; font-size:.9rem; font-weight:700; cursor:pointer; text-decoration:underline; text-underline-offset:4px; }
   .notification-count { min-width:22px; height:22px; display:inline-grid; place-items:center; padding:0 6px; border-radius:999px; background:var(--danger); color:#fffdf7; font-size:.75rem; }
   .notifications-grid { display:grid; gap:14px; }
@@ -678,8 +686,9 @@ tr:hover { background: var(--table-hover); }
   .thimar-footer .lbl { display:block; font-family:'Noto Kufi Arabic','Segoe UI',Tahoma,sans-serif; color:var(--thimar-ink-soft); font-size:.8rem; margin-bottom:6px; }
   .thimar-footer .ayah { font-family:'Amiri','Traditional Arabic',serif; color:var(--thimar-ink); font-size:clamp(1rem,4.3vw,1.2rem); }
   .thimar-footer .ref { display:block; font-family:'Noto Kufi Arabic','Segoe UI',Tahoma,sans-serif; color:var(--thimar-gold); font-size:.75rem; margin-top:6px; }
+ .thimar-footer-sidq { display:block; margin-top:4px; color:var(--thimar-ink-soft); font-family:'Amiri',serif; font-size:.78rem; }
   #lockScreen.thimar-auth .btn:disabled { opacity:.7; }
-  /* الهوية الإسلامية التراثية الجديدة — نحافظ على أماكن البطاقات كما هي */
+  /* الهوية الإسلامية التراثية الجديدة — نحافظ ��لى أماكن البطاقات كما هي */
   :root { --bg:#f4efe3; --card-bg:#fffdf7; --text:#203c32; --text-light:#65766b; --border:#d9c9a5; --primary:#1f5845; --primary-hover:#174334; --success:#477b61; --warning:#b38a43; --input-bg:#fffdf7; --table-header:#edf2e9; --table-hover:#f3f5ed; --shadow:0 12px 30px rgba(31,88,69,.12); --chart-bg:#fffdf7; --chart-grid:#ded6c4; --chart-text:#203c32; }
   [data-theme="dark"] { --bg:#142c23; --card-bg:#1d3b30; --text:#f4efe3; --text-light:#bfd0c2; --border:#456858; --primary:#d3ad61; --primary-hover:#e1c177; --input-bg:#203f32; --table-header:#26493a; --table-hover:#2b5141; --shadow:0 14px 34px rgba(0,0,0,.28); --chart-bg:#1d3b30; --chart-grid:#3c5c4c; --chart-text:#f4efe3; }
   * { font-family:'Cairo','Tajawal','Segoe UI',Tahoma,sans-serif; }
@@ -825,9 +834,8 @@ tr:hover { background: var(--table-hover); }
   </div>
 
   <div class="thimar-inner">
-    <img class="thimar-leaf" src="/images/thimar-leaves.png" alt="" aria-hidden="true">
     <h1 class="thimar-logo">ثمار</h1>
-    <div class="thimar-logo-en">THMAR</div>
+    <div class="thimar-logo-en">THIMAR</div>
     <p class="thimar-tagline">منصة ثِمار<br>لحفظ القرآن الكريم</p>
 
     <div class="thimar-ayah-wrap">
@@ -835,10 +843,7 @@ tr:hover { background: var(--table-hover); }
         <path d="M12 4c7 10 7 16 0 22-7 6-7 12 0 18 7 6 7 12 0 18-7 6-7 12 0 18 7 6 7 12 0 22" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
         <path d="M12 26c-4-3-4-7 0-10 4 3 4 7 0 10Zm0 34c-4-3-4-7 0-10 4 3 4 7 0 10Zm0 34c-4-3-4-7 0-10 4 3 4 7 0 10Z" fill="currentColor" opacity=".55"/>
       </svg>
-      <p class="thimar-ayah">
-        أَلَمْ تَرَ كَيْفَ ضَرَبَ اللَّهُ مَثَلًا كَلِمَةً طَيِّبَةً كَشَجَرَةٍ طَيِّبَةٍ أَصْلُهَا ثَابِتٌ وَفَرْعُهَا فِي السَّمَاءِ
-        <span class="thimar-ayah-ref">(إبراهيم: 24)</span>
-      </p>
+      <p class="thimar-ayah"><span class="thimar-ayah-heading">قال تعالى:</span><span class="thimar-ayah-frame" data-no-translate>﴿ أَلَمْ تَرَ كَيْفَ ضَرَبَ اللَّهُ مَثَلًا كَلِمَةً طَيِّبَةً كَشَجَرَةٍ طَيِّبَةٍ أَصْلُهَا ثَابِتٌ وَفَرْعُهَا فِي السَّمَاءِ ﴾</span><span class="thimar-ayah-ref" data-no-translate>(إبراهيم: 24)</span></p>
       <span class="thimar-orn" aria-hidden="true">❁</span>
     </div>
 
@@ -859,10 +864,9 @@ tr:hover { background: var(--table-hover); }
           <input type="text" id="unifiedUser" placeholder="اسم المستخدم" autocomplete="username" onkeypress="if(event.key==='Enter'&&!event.nativeEvent?.isComposing&&event.keyCode!==229)unifiedLogin()">
         </div>
         <div class="thimar-field has-password-toggle">
-          <span class="thimar-field-icon" aria-hidden="true">🔒</span>
-          <label class="sr-only" for="unifiedPass">الرقم السري</label>
+                  <label class="sr-only" for="unifiedPass">الرقم السري</label>
           <input type="password" id="unifiedPass" placeholder="الرقم السري" autocomplete="current-password" onkeypress="if(event.key==='Enter'&&!event.nativeEvent?.isComposing&&event.keyCode!==229)unifiedLogin()">
-          <button type="button" id="unifiedPassToggle" class="thimar-password-toggle" onclick="toggleUnifiedPassword()" aria-label="إظهار الرقم السري" aria-pressed="false"><span aria-hidden="true">👁</span></button>
+          <button type="button" id="unifiedPassToggle" class="thimar-password-toggle" onclick="toggleUnifiedPassword()" aria-label="إظهار الرقم السري" aria-pressed="false"><span class="thimar-eye-icon" aria-hidden="true"></span></button>
         </div>
         <button type="button" class="thimar-forgot" onclick="openAccountRecovery()">هل نسيت الرقم السري؟</button>
       </div>
@@ -875,8 +879,9 @@ tr:hover { background: var(--table-hover); }
     <div class="thimar-footer">
       <span class="lbl">قال تعالى:</span>
       <span class="ayah">﴿ وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا ﴾</span>
-      <span class="ref">(المزمل: 4)</span>
-    </div>
+  <span class="ref" data-no-translate>(المزمل: 4)</span>
+  <span class="thimar-footer-sidq" data-no-translate>صدق الله العظيم</span>
+  </div>
   </div>
 </div>
 
@@ -885,8 +890,8 @@ tr:hover { background: var(--table-hover); }
   <p style="color:var(--text-light);margin-bottom:20px;">أدخل البيانات المسجلة بالحساب. لن يتم إرسال الطلب إلا بعد مطابقتها بالكامل.</p>
   <div id="recoveryResult" aria-live="polite"></div>
   <div class="form-row"><div class="form-group"><label for="recoveryRole">نوع الحساب *</label><select id="recoveryRole"><option value="student">طالب</option><option value="parent">ولي أمر</option></select></div><div class="form-group"><label for="recoveryName">الاسم بالكامل *</label><input id="recoveryName" type="text" autocomplete="name" placeholder="الاسم المسجل بالحساب"></div></div>
-  <div class="form-group"><label for="recoveryNid">الرقم القومي *</label><input id="recoveryNid" type="text" inputmode="numeric" autocomplete="off" placeholder="الرقم القومي المسجل" oninput="this.value=this.value.replace(/\D/g,'')"></div>
-  <div class="form-group"><label for="recoveryPhone">رقم الهاتف *</label><div style="display:flex;gap:8px;direction:ltr;"><select id="recoveryCountry" aria-label="كود دولة الهاتف" onchange="updateSignupInternationalNumber('recoveryPhone','recoveryCountry','recoveryPhoneInternational')" style="max-width:145px;"><option value="20">مصر (+20)</option><option value="966">السعودية (+966)</option><option value="971">الإمارات (+971)</option><option value="974">قطر (+974)</option><option value="965">الكويت (+965)</option><option value="962">الأردن (+962)</option><option value="212">المغرب (+212)</option><option value="213">الجزائر (+213)</option><option value="216">تونس (+216)</option><option value="1">أمريكا/كندا (+1)</option><option value="44">بريطانيا (+44)</option><option value="49">ألمانيا (+49)</option><option value="90">تركيا (+90)</option></select><input id="recoveryPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="الرقم بدون كود الدولة" oninput="this.value=this.value.replace(/\D/g,'');updateSignupInternationalNumber('recoveryPhone','recoveryCountry','recoveryPhoneInternational')" style="flex:1;direction:ltr;"></div><small id="recoveryPhoneInternational" style="color:var(--text-light)">الرقم الدولي: +20</small></div>
+  <div class="form-group"><label for="recoveryNid">كود الهوية أو جواز السفر *</label><div class="country-input-row"><select id="recoveryIdentityCountry" data-country-selector data-identity-id="recoveryNid" aria-label="دولة الهوية"><option value="EG">مصر (+20)</option></select><input id="recoveryNid" data-identity-input type="text" autocomplete="off" placeholder="أدخل هوية الدولة أو رقم جواز السفر" style="flex:1;"></div><small id="recoveryNidHint" class="country-hint" style="color:var(--text-light)"></small></div>
+  <div class="form-group"><label for="recoveryPhone">رقم الهاتف *</label><div class="country-input-row"><select id="recoveryCountry" data-country-selector data-phone-id="recoveryPhone" aria-label="كود دولة الهاتف"><option value="EG">مصر (+20)</option></select><input id="recoveryPhone" data-phone-input class="phone-input" type="tel" inputmode="numeric" autocomplete="tel" placeholder="الرقم المحلي بدون رمز الدولة" style="flex:1;direction:ltr;"></div><small id="recoveryPhoneInternational" class="country-hint" style="color:var(--text-light)"></small></div>
   <button type="button" class="btn btn-primary" onclick="submitAccountRecovery()" style="width:100%">استرجاع الحساب</button>
 </div>
 
@@ -896,10 +901,10 @@ tr:hover { background: var(--table-hover); }
   <div id="signupStep1Alert"></div>
   <p style="color:var(--text-light); margin-bottom:15px;">اختر طريقة التسجيل، وسيتم إرسال رسالة تحقق على واتساب للتأكد من هويتك قبل إدخال البيانات.</p>
   <div class="form-row" style="margin-bottom:5px;">
-    <div class="form-group"><button class="btn btn-outline" id="signupMethodGoogleBtn" onclick="setSignupMethod('google')" style="width:100%">🔵 التسجيل بحساب جو��ل</button></div>
+    <div class="form-group"><button class="btn btn-outline" id="signupMethodGoogleBtn" onclick="setSignupMethod('google')" style="width:100%">🔵 التسجيل بحساب جول</button></div>
     <div class="form-group"><button class="btn btn-outline" id="signupMethodPhoneBtn" onclick="setSignupMethod('phone')" style="width:100%">🟢 التسجيل برقم الهاتف (واتساب)</button></div>
   </div>
-  <!-- منطقة التسجيل بحساب جوجل: ��ظ��ر حسابات جوجل الموجود���� على الجهاز للاختيار مباشرةً بدون تحقق واتساب -->
+  <!-- منطقة التسجيل بحساب جوجل: ظر حسابات جوجل الموجود على الجهاز للاختيار مباشرةً بدون تحقق واتساب -->
   <div class="form-group" id="signupGoogleBox" style="display:none;">
     <label>اختر حساب جوجل لإكمال التسجيل *</label>
     <div id="googleBtnContainer" style="display:flex; justify-content:center; margin:10px 0;"></div>
@@ -907,10 +912,10 @@ tr:hover { background: var(--table-hover); }
   </div>
   <!-- منطقة التسجيل برقم اءءءءهاتف: تظهر خانة الواتساب وكود التحقق فقط -->
   <div id="signupPhoneBox" style="display:none;">
-    <div class="form-group"><label>رقم الواتساب لاستلام كود التحقق *</label><div style="display:flex; gap:8px; direction:ltr;"><select id="signupWhatsCountry" aria-label="كود دولة الواتساب" style="max-width:145px;"><option value="20">مصر (+20)</option><option value="966">السعودية (+966)</option><option value="971">الإمارات (+971)</option><option value="974">قطر (+974)</option><option value="965">ا��كويت (+965)</option><option value="962">الأردن (+962)</option><option value="212">المغرب (+212)</option><option value="213">الجزائر (+213)</option><option value="216">تونس (+216)</option><option value="1">أمريكا/كندا (+1)</option><option value="44">بريطانيا (+44)</option><option value="49">ألمانيا (+49)</option><option value="90">تركيا (+90)</option></select><input type="text" id="signupWhats" placeholder="رقم واتساب بدون كود الدولة" oninput="this.value=this.value.replace(/\D/g,''); updateSignupInternationalNumber('signupWhats','signupWhatsCountry','signupWhatsInternational')" style="flex:1; direction:ltr;"></div><small id="signupWhatsInternational" style="color:var(--text-light)">الرقم الدولي: +20</small></div>
+    <div class="form-group"><label for="signupWhats">رقم الواتساب لاستلام كود التحقق *</label><div class="country-input-row"><select id="signupWhatsCountry" data-country-selector data-phone-id="signupWhats" aria-label="كود دولة الواتساب"><option value="EG">مصر (+20)</option></select><input type="tel" id="signupWhats" data-phone-input class="phone-input" inputmode="numeric" placeholder="الرقم المحلي بدون رمز الدولة" style="flex:1; direction:ltr;"></div><small id="signupWhatsInternational" class="country-hint" style="color:var(--text-light)"></small></div>
     <button class="btn btn-primary" id="signupSendCodeBtn" onclick="sendSignupCode()" style="width:100%">📩 إرسال كود التحقق على واتساب</button>
     <div id="signupVerifyBox" class="hidden" style="margin-top:18px; padding-top:15px; border-top:2px solid var(--border);">
-      <div class="form-group"><label>كود التحقق (6 أرقام) *</label><input type="text" id="signupCode" maxlength="6" placeholder="أدخل الكود الذي وصلك" oninput="this.value=this.value.replace(/\D/g,'')"></div>
+      <div class="form-group"><label>كود التحقق (6 رقام) *</label><input type="text" id="signupCode" maxlength="6" placeholder="أدخل الكود الذي وصلك" oninput="this.value=this.value.replace(/\D/g,'')"></div>
       <button class="btn btn-success" onclick="verifySignupCode()" style="width:100%">✅ تأكيد الهوية والمتابعة</button>
       <button class="btn btn-outline" onclick="sendSignupCode()" style="width:100%; margin-top:10px;">🔁 إعادة إرسال الكود</button>
     </div>
@@ -931,8 +936,8 @@ tr:hover { background: var(--table-hover); }
     <input type="text" id="signupRelationshipName" placeholder="اكتب اسم ولي الأمر بالكامل">
   </div>
   <div class="form-row">
-    <div class="form-group"><label>الرقم القومي *</label><input type="text" id="signupNid" maxlength="14" placeholder="14 رقم" oninput="this.value=this.value.replace(/\D/g,'')"></div>
-    <div class="form-group"><label>رقم الهاتف *</label><div style="display:flex; gap:8px; direction:ltr;"><select id="signupPhoneCountry" aria-label="كود دولة الهاءءءءءءءءءءءءف" onchange="updateSignupInternationalNumber('signupPhone','signupPhoneCountry','signupPhoneInternational')" style="max-width:145px;"><option value="20">مصر (+20)</option><option value="966">السعودية (+966)</option><option value="971">الإمءءرات (+971)</option><option value="974">قطر (+974)</option><option value="965">الكويت (+965)</option><option value="962">الأردن (+962)</option><option value="212">المغرب (+212)</option><option value="213">الجزائر (+213)</option><option value="216">تونس (+216)</option><option value="1">أمريكا/كندا (+1)</option><option value="44">بريطانيا (+44)</option><option value="49">ألمانيا (+49)</option><option value="90">تركيا (+90)</option></select><input type="text" id="signupPhone" placeholder="رقم الهاتف بدون كود الدولة" oninput="this.value=this.value.replace(/\D/g,'')" style="flex:1; direction:ltr;"></div><small id="signupPhoneInternational" style="color:var(--text-light)">الرقم الدولي: +20</small></div>
+    <div class="form-group"><label for="signupNid">كود الهوية أو جواز السفر *</label><div class="country-input-row"><select id="signupIdentityCountry" data-country-selector data-identity-id="signupNid" aria-label="دولة الهوية"><option value="EG">مصر (+20)</option></select><input type="text" id="signupNid" data-identity-input autocomplete="off" placeholder="أدخل هوية الدولة أو رقم جواز السفر"></div><small id="signupNidHint" class="country-hint" style="color:var(--text-light)"></small></div>
+    <div class="form-group"><label>رقم الهاتف *</label><div class="country-input-row"><select id="signupPhoneCountry" data-country-selector data-phone-id="signupPhone" aria-label="كود دولة الهاتف"><option value="EG">مصر (+20)</option></select><input type="tel" id="signupPhone" data-phone-input class="phone-input" inputmode="numeric" autocomplete="tel" placeholder="الرقم المحلي بدون رمز الدولة" style="flex:1; direction:ltr;"></div><small id="signupPhoneInternational" style="color:var(--text-light)">الرقم الدولي: +20</small></div>
   </div>
   <div class="form-row">
     <div class="form-group"><label>الجزء</label><select id="signupJuz" onchange="updateSignupSurahSelect()"><option value="">اختر الجزء...</option></select></div>
@@ -944,12 +949,12 @@ tr:hover { background: var(--table-hover); }
 
 <!-- دخول المسؤول -->
 <div id="adminLogin" class="page hidden" style="max-width:500px; margin:40px auto;">
-  <div class="page-header"><h2>🔐 د��ول المسؤول</h2></div>
+  <div class="page-header"><h2>🔐 دخول المسؤول</h2></div>
   <div id="adminLoginAlert"></div>
-  <div class="form-group"><label>رقم الموبايل</label><input type="text" id="adminMobile" placeholder="��دخل رقم المو��ايل" maxlength="11"></div>
+  <div class="form-group"><label>رقم الموبايل</label><div class="country-input-row"><select id="adminMobileCountry" data-country-selector data-phone-id="adminMobile" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="tel" id="adminMobile" data-phone-input class="phone-input" placeholder="الرقم المحلي بدون رمز الدولة" autocomplete="tel"></div></div>
   <div class="form-group"><label>الرقم السري</label><input type="password" id="adminPass" placeholder="أدخل الرقم السري"></div>
   <button class="btn btn-primary" onclick="adminLogin()" style="width:100%">دخول</button>
-  <button class="btn btn-secondary" onclick="showPage('lockScreen')" style="width:100%; margin-top:10px">رجوع للر��يسية</button>
+  <button class="btn btn-secondary" onclick="showPage('lockScreen')" style="width:100%; margin-top:10px">رجوع للريسية</button>
 </div>
 
 <!-- لوحة المسؤول -->
@@ -993,23 +998,23 @@ tr:hover { background: var(--table-hover); }
 <div id="adminAIPage" class="page hidden" style="max-width:820px;margin:40px auto;">
   <div class="page-header"><h2>مساعد Gemini / Groq الإداري</h2></div>
   <p style="color:var(--text-light);margin-bottom:15px;">محادثة ذكية دقيقة للأسئلة الإدارية والعامة، مع الاستفادة من بانات الموقع عندما تكون مرتبطة بسؤالك.</p>
-  <div class="ai-chat"><div id="adminChatMessages" class="ai-chat-messages"><div class="ai-msg bot">كيف يمكنني مساعدتك في متابعة الطلاب أو أولياء الأمور أو ��لاختبارات؟</div></div><div class="ai-input"><span class="badge badge-primary">Gemini / Groq</span><input id="adminChatInput" placeholder="اسأل عن بيانات الموقع..." onkeypress="if(event.key==='Enter' && !event.isComposing && event.keyCode!==229)sendAdminChat()"><button class="btn btn-primary" onclick="sendAdminChat()">إرسال</button></div></div>
+  <div class="ai-chat"><div id="adminChatMessages" class="ai-chat-messages"><div class="ai-msg bot">كيف يمكنني مساعدتك في متابعة الطلاب أو أولياء الأمو أو لاختبارات؟</div></div><div class="ai-input"><span class="badge badge-primary">Gemini / Groq</span><input id="adminChatInput" placeholder="اسأل عن بيانات الموقع..." onkeypress="if(event.key==='Enter' && !event.isComposing && event.keyCode!==229)sendAdminChat()"><button class="btn btn-primary" onclick="sendAdminChat()">إرسال</button></div></div>
 </div>
 
 <!-- مساعد تطوير الموقع بالذكاء الاصطناعي (للمسؤول فقط) -->
 <div id="devAssistantPage" class="page hidden" style="max-width:820px; margin:40px auto;">
   <div class="page-header"><h2>🛠️ مساعد تطوير الموقع بالذكاء الاصطناعي</h2></div>
-  <p style="color:var(--text-light); margin-bottom:12px;">اكتب طلب التطوير بالعربية. سيحلّل نموذج الذكاء الاصطناعي المشروع الحالي مباشرة عبر مزوده�� ويقرأ الملفات البرمجية اللازمة، ويولّد الكود، ثم يطبّق التعديل تلقائياً على GitHub ويشغّل تحديث الموقع. لا توجد خطوة موافقة ثانية.</p>
+  <p style="color:var(--text-light); margin-bottom:12px;">اكتب طلب التطوير بالعربية. سيحلّل نموذج الذكاء الاصطناعي المشروع الحالي مباشرة عبر مزوده ويقرأ الملفات الب��مجية اللازمة، ويولّد الكود، ثم يطبّق التعديل تلقائياً على GitHub ويشغّل تحديث الموقع. لا توجد خطوة م��افقة ثانية.</p>
   <div style="background:rgba(255,193,7,0.12); border:1px solid #ffc107; border-radius:10px; padding:10px 14px; margin-bottom:15px; color:var(--text); font-size:0.9rem;">
-    �� الوضع التلقائي المباشر: بعد إرسال الطلب سيحلله الذكاء الاصطناعي ويقرأ الكو�� المطلوب ويعدّله تلقائياً. ستظهر هنا نتيجة التنفيذ والملفات التي تغّرت وروابط الـcommit. مفتاحا Gemini وGroq وGitHub يبقيان على الخادم فقط.
+     الوضع التلقائي المباشر: بعد إرسال الطلب سيحلله ا��ذكاء الاصطناعي ويقرأ الكود المطلوب ويعدّله تلقائياً. س����ظهر هنا نتيجة التنفيذ والملفات التي تغّرت وروابط الـcommit. مفتاحا Gemini وGroq وGitHub يبقيان على الخادم فقط.
   </div>
   <div id="devAssistantAlert"></div>
   <div id="cloudSaveStatus" class="badge badge-success" style="margin-bottom:12px;">الحفظ التلقائي في Neon مفعّل</div>
   <div class="form-group">
     <label>طلب التطوير</label>
-    <textarea id="devAssistantInput" rows="4" placeholder="اكتب ما تر����د إضافته أو تعديله ف الموقع..."></textarea>
+    <textarea id="devAssistantInput" rows="4" placeholder="اكتب ما ترد إضافته أو تعديله ف الموقع..."></textarea>
   </div>
-  <button class="btn btn-primary" id="devAssistantBtn" onclick="runDevAssistant()" style="width:100%">تنفيذ التعديل بالذكاء الاصطناعي</button>
+  <button class="btn btn-primary" id="devAssistantBtn" onclick="runDevAssistant()" style="width:100%">تنفيذ التعديل بالذكاء الاصطنعي</button>
   <div id="devProgressPanel" style="display:none;margin-top:14px;border:1px solid var(--border);border-radius:10px;padding:12px;">
     <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;"><strong id="devProgressLabel">تحليل الطلب</strong><span id="devEta">الءءقت المتبقي: 02:00</span></div>
     <div style="height:9px;background:var(--border);border-radius:999px;overflow:hidden;"><div id="devProgressBar" style="height:100%;width:8%;background:var(--primary);transition:width .5s;"></div></div>
@@ -1033,7 +1038,7 @@ tr:hover { background: var(--table-hover); }
 <!-- مزامنة GitHub (للمسؤول فقط) -->
 <div id="githubSyncPage" class="page hidden" style="max-width:820px; margin:40px auto;">
   <div class="page-header"><h2>🔗 مزامنة المشروع مع GitHub</h2></div>
-  <p style="color:var(--text-light); margin-bottom:12px;">المشروع مرتبط بمستودعك ا��شخصي فقط عبر متغيرات البيئة عل�� الخادم (<code>GITHUB_TOKEN</code>, <code>GITHUB_OWNER</code>, <code>GITHUB_REPO</code>, <code>GITHUB_BRANCH</code>). كل إضافة أو تعديل يقوم به مساعد ا��تطوير يُنشئ <b>Commit</b> ويُدفع تلقائياً إلى فرعك المحدد، مع الحفاظ على كامل تاريخ الإصدارات. ل�� يتم وضع أي مفتاح أو سرّ داخل الملفات أو في المتصفح.</p>
+  <p style="color:var(--text-light); margin-bottom:12px;">المشروع مرتبط بمستودعك الشخصي فقط عبر متغيرات البيئة عل الخادم (<code>GITHUB_TOKEN</code>, <code>GITHUB_OWNER</code>, <code>GITHUB_REPO</code>, <code>GITHUB_BRANCH</code>). كل إضافة أو تعديل يقوم به مساعد اتطوير يُنشئ <b>Commit</b> ويُدفع تلقائياً إلى فرعك المحدد، مع الحفاظ على كامل تاريخ الإصدارات. لن يتم وضع أي مفتاح أو سرّ داخل الملفات أو في المتصفح.</p>
   <div id="githubSyncAlert"></div>
   <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
     <button class="btn btn-primary" id="githubSyncRefreshBtn" onclick="refreshGithubSync()">🔄 تحقق من حالة المزامنة</button>
@@ -1044,8 +1049,8 @@ tr:hover { background: var(--table-hover); }
   <!-- حذف ملف بتأكيد صريح -->
   <div id="githubDeleteBox" style="display:none; background:rgba(220,53,69,0.08); border:1px solid #dc3545; border-radius:10px; padding:14px 16px;">
     <h3 style="margin:0 0 8px; color:#dc3545;">🗑️ حذف ملف من المستودع</h3>
-    <p style="color:var(--text-light); font-size:0.88rem; margin-bottom:10px;">ءءُءءشئ الحذف Commit في مستودعك ويحافظ على الإصدارات السابقة في السجل. الملفات الأسا��ية للمشروع محمية ولا يمكن حذفها. يتطلب الحذف تأكيداً صريحاً.</p>
-    <div class="form-group"><label>مسر الملف المراد حذفه</label><input id="githubDeletePath" placeholder="مثال: public/old-file.js" /></div>
+    <p style="color:var(--text-light); font-size:0.88rem; margin-bottom:10px;">ءءُءءشئ الحذف Commit في مستودعك ويحافظ على الإصدارات السابقة في السجل. الملفات الأساية للمشروع محمية ولا يمكن حذفها. يتطلب الحذف تأكيداً صريحاً.</p>
+    <div class="form-group"><label>مسر الملف المر��د حذفه</label><input id="githubDeletePath" placeholder="مثال: public/old-file.js" /></div>
     <label style="display:flex; gap:8px; align-items:center; font-size:0.88rem; margin-bottom:10px;"><input type="checkbox" id="githubDeleteConfirm" style="width:auto;" /> أؤكد أنني أريد حذف هذا الملف نهائياً من المستودع</label>
     <button class="btn" style="background:#dc3545; color:#fff;" onclick="deleteGithubFile()">حذف الملف</button>
     <div id="githubDeleteResult" style="margin-top:12px;"></div>
@@ -1053,29 +1058,29 @@ tr:hover { background: var(--table-hover); }
 </div>
 
 <div id="notificationsPage" class="page hidden">
-  <div class="page-header"><h2>التنبيهات</h2><button type="button" class="btn btn-outline" onclick="markAllNotificationsRead()">تحديد الكل كمقروء</button></div>
-  <p style="color:var(--text-light);margin-bottom:18px;">جميع طلبات استرجاع الحساب والإنذارات والمخالفات والتنبيهات العامة في مكان واحد.</p>
+  <div class="page-header"><h2>التنبيها</h2><button type="button" class="btn btn-outline" onclick="markAllNotificationsRead()">تحديد الكل كمقروء</button></div>
+  <p style="color:var(--text-light);margin-bottom:18px;">جميع طلبات استرجاع الحساب والإنذارات والمخالفات والتنبيهت العامة في مكان واحد.</p>
   <div id="notificationsList" class="notifications-grid" aria-live="polite"></div>
 </div>
 
 <!-- إدارة المسؤولين -->
 <div id="adminsPage" class="page hidden">
-  <div class="page-header"><h2>👨‍💼 إدارة المسؤولين</h2></div>
+  <div class="page-header"><h2>👨‍💼 إدارة المسؤو��ين</h2></div>
   <div id="adminsAlert"></div>
   <div class="form-row" style="margin-bottom:20px; border:2px solid var(--primary); border-radius:12px; padding:15px; background:var(--table-header);">
     <div class="form-group" style="margin-bottom:0;">
-      <label>رقم واتساب المسؤول لاستلام طلبات الا����مام</label>
-      <input type="text" id="adminWhatsInput" placeholder="201554542019" oninput="this.value=this.value.replace(/[^\d+]/g,'')">
-      <small style="color:var(--text-light)">يُستخدم لإرسال طلبات الحسابات الجديدة على واتساب (بصيغة الدولة، مثال: 201554542019)</small>
+      <label>رقم واتساب المسؤول لاستلام طلبات الامام</label>
+      <div class="country-input-row"><select id="adminWhatsappCountry" data-country-selector data-phone-id="adminWhatsInput" aria-label="دولة رقم الواتساب"><option value="EG">مصر (+20)</option></select><input type="tel" id="adminWhatsInput" data-phone-input class="phone-input" placeholder="الرقم المحلي بدون رمز الدولة" autocomplete="tel"></div>
+      <small style="color:var(--text-light)">يُستخدم لإرسال طلبات الحسابات الجديدة على واتساب (صيغة الدولة، مثال: 201554542019)</small>
     </div>
     <div class="form-group" style="display:flex; align-items:flex-end; margin-bottom:0;">
-      <button class="btn btn-primary" onclick="saveAdminWhatsapp()">💾 ح��ظ الرقم</button>
+      <button class="btn btn-primary" onclick="saveAdminWhatsapp()">💾 حظ الرقم</button>
     </div>
   </div>
-  <div class="alert alert-info" style="margin-bottom:20px;">تفع��ل Google مركزي ومتاح لجميع الأجهزة عبر إعداد GOOGLE_CLIENT_ID في بيئة Vercel.</div>
+  <div class="alert alert-info" style="margin-bottom:20px;">تفعل Google مركزي ومتاح لجميع الأجهزة عبر إعداد GOOGLE_CLIENT_ID في بيئة Vercel.</div>
 
   <div class="form-row" style="margin-bottom:20px;">
-    <div class="form-group"><label>��قم الموبايل</label><input type="text" id="newAdminMobile" placeholder="رقم الموبايل (11 رقم)" maxlength="11" oninput="this.value=this.value.replace(/\D/g,'')"></div>
+    <div class="form-group"><label>رقم الموبايل</label><div class="country-input-row"><select id="newAdminMobileCountry" data-country-selector data-phone-id="newAdminMobile" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="tel" id="newAdminMobile" data-phone-input class="phone-input" placeholder="الرقم المحلي بدون رمز الدولة" autocomplete="tel"></div></div>
     <div class="form-group"><label>الرقم السري</label><input type="password" id="newAdminPass" placeholder="الرقم السري"></div>
     <div class="form-group"><label>نوع المسؤول</label>
       <select id="newAdminType">
@@ -1097,8 +1102,8 @@ tr:hover { background: var(--table-hover); }
   <h4 style="color:var(--primary); margin:20px 0 15px; border-bottom:2px solid var(--border); padding-bottom:10px;">🔐 تأكيد الهوية</h4>
   <div class="form-group">
     <label>رقم الموبايل الحالي (للتأكيد)</label>
-    <div style="position:relative;">
-      <input type="password" id="confirmMobile" placeholder="أدخل رقم الموبايل الحالي للتأئيد" maxlength="11" oninput="this.value=this.value.replace(/\D/g,'')" style="padding-left:45px;">
+    <div class="country-input-row" style="position:relative;">
+      <select id="confirmMobileCountry" data-country-selector data-phone-id="confirmMobile" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="password" id="confirmMobile" data-phone-input class="phone-input" placeholder="أدخل رقم الموبايل الحالي للتأكيد" autocomplete="tel" style="padding-left:45px;">
       <span onclick="togglePassVisibility('confirmMobile', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span>
     </div>
   </div>
@@ -1111,9 +1116,9 @@ tr:hover { background: var(--table-hover); }
   </div>
   <h4 style="color:var(--success); margin:25px 0 15px; border-bottom:2px solid var(--border); padding-bottom:10px;">✏️ البيانات الجديدة</h4>
   <div class="form-group">
-    <label>رقم الموبا��ل الجديد</label>
-    <div style="position:relative;">
-      <input type="password" id="newMobile" placeholder="أدخل الرقم الجديد" maxlength="11" oninput="this.value=this.value.replace(/\D/g,'')" style="padding-left:45px;">
+    <label>رقم الموبايل الجديد</label>
+    <div class="country-input-row" style="position:relative;">
+      <select id="newMobileCountry" data-country-selector data-phone-id="newMobile" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="password" id="newMobile" data-phone-input class="phone-input" placeholder="أدخل الرقم الجديد" autocomplete="tel" style="padding-left:45px;">
       <span onclick="togglePassVisibility('newMobile', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span>
     </div>
   </div>
@@ -1132,8 +1137,8 @@ tr:hover { background: var(--table-hover); }
   <div class="page-header"><h2>➕ إضافة طالب جديد</h2></div>
   <div id="addStudentAlert"></div>
   <div class="form-group" style="border:2px solid var(--primary);padding:16px;border-radius:12px;background:var(--table-header);">
-    <label style="font-size:1.05rem;">الإ��لاء الصوتي لبيانات الطالب</label>
-    <p style="color:var(--text-light);margin:6px 0 12px;">اذكر البي��نات في جملة واحدة، مثال: اسم الطالب أحمد، اسم ا��م��ت��دم ahmed، الرقم اءءقومي...، اله��تف...، تاريخ الميلاد...، ولي الأمر...، ال��و��د القرآن والعر��ي، الجزء الأول، سورة البقرة. ستُملأ ��لخانات للمراجعة ولن يتم الحفظ تلقائياً.</p>
+    <label style="font-size:1.05rem;">الإلاء الصوتي لبيانات الطالب</label>
+    <p style="color:var(--text-light);margin:6px 0 12px;">اذكر البيانات في جملة واحدة، مثال: اسم الطالب أحمد، اسم امتدم ahmed، الرقم اءءقومي...، الهتف...، تاريخ الميلاد...، ولي الأمر...، الود القرآن والعري، الجزء الأول، سورة البقرة. ستُملأ لخانات للمراجعة ولن يتم الحفظ تلقائياً.</p>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <button type="button" id="studentSpeechBtn" class="btn btn-outline" onclick="toggleStudentSpeech()" aria-pressed="false" aria-describedby="studentSpeechStatus">🎤 إدخال البيانات بالصوت</button>
       <span id="studentSpeechStatus" aria-live="polite">جاهز</span>
@@ -1150,11 +1155,11 @@ tr:hover { background: var(--table-hover); }
   </div>
   <div class="form-row">
     <div class="form-group"><label>اسم الطالب *</label><input type="text" id="stName"></div>
-    <div class="form-group"><label>اسم المستخدم *</label><input type="text" id="stUsername" placeholder="اسم المستخدم لتسجيل الدخول"></div>
+    <div class="form-group"><label>اسم المستخدم *</label><input type="text" id="stUsername" placeholder="اسم المستخدم لتسجيل الد��ول"></div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label>الرقم القومي * (14 رقم)</label><input type="text" id="stNational" maxlength="14" placeholder="أدخل 14 رقم" oninput="this.value=this.value.replace(/\D/g,'')"></div>
-    <div class="form-group"><label>رقم الهاتف (11 رقم)</label><input type="text" id="stPhone" maxlength="11" placeholder="أدخل 11 رقم" oninput="this.value=this.value.replace(/\D/g,'')"></div>
+    <div class="form-group"><label>كود الهوية أو جواز السفر *</label><div class="country-input-row"><select id="stIdentityCountry" data-country-selector data-identity-id="stNational" aria-label="دولة الهوية"><option value="EG">مصر (+20)</option></select><input type="text" id="stNational" data-identity-input autocomplete="off" placeholder="أدخل هوية الدولة أو رقم جواز السفر"></div><small id="stNationalHint" class="country-hint"></small></div></div>
+    <div class="form-group"><label>الدولة ورقم الهاتف</label><div style="display:flex;gap:8px;direction:ltr;"><select id="stPhoneCountry" data-country-selector data-phone-id="stPhone" aria-label="اختر الدولة" style="max-width:180px;"><option value="20">مصر (+20)</option></select><input type="tel" id="stPhone" data-phone-input class="phone-input" autocomplete="tel" placeholder="الرقم المحلي بدون رمز الدولة" style="flex:1;"></div></div>
   </div>
   <div class="form-row">
     <div class="form-group"><label>تاريخ الميلاد *</label><input type="date" id="stBirth" onchange="calcAge()"></div>
@@ -1182,7 +1187,7 @@ tr:hover { background: var(--table-hover); }
         <span id="voiceRecordStatus">اضغط للتسجيل (20 ثانية)</span>
         <audio id="voicePreview" controls style="display:none; height:40px;"></audio>
       </div>
-      <small style="color:var(--text-light)">اختياري: يمكن حفظ ب��انا�� الطالب بدون تسجيل البصمة الصوتية، ومكن إضافتها لاحقاً من تءءديل الطالب. عند وجودها تُستخدم للتحق من هوية الطالب.</small>
+      <small style="color:var(--text-light)">اختياري: يمكن حفظ بانا الطالب بدون تسجيل البصمة الصوتية، ومكن إضافتها لاحقاً من تءءديل الطالب. عند وجودها تُستخدم للتحق من هوية الطالب.</small>
     </div>
   </div>
   <div class="form-group"><label>ملاحظات إضافية</label><textarea id="stNotes" rows="2" placeholder="أي ملاحظات إضافية..."></textarea></div>
@@ -1199,8 +1204,8 @@ tr:hover { background: var(--table-hover); }
     <div class="form-group"><label>اسم المستخدم</label><input type="text" id="editUsername"></div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label>الرقم القومي (14 رقم)</label><input type="text" id="editNational" maxlength="14" oninput="this.value=this.value.replace(/\D/g,'')"></div>
-    <div class="form-group"><label>رقم ال��اتف (11 رقم)</label><input type="text" id="editPhone" maxlength="11" oninput="this.value=this.value.replace(/\D/g,'')"></div>
+    <div class="form-group"><label>كود الهوية أو جواز السفر</label><div class="country-input-row"><select id="editIdentityCountry" data-country-selector data-identity-id="editNational" aria-label="دولة الهوية"><option value="EG">مصر (+20)</option></select><input type="text" id="editNational" data-identity-input autocomplete="off" placeholder="أدخل هوية الدولة أو رقم جواز السفر"></div><small id="editNationalHint" class="country-hint"></small></div>
+    <div class="form-group"><label>الدولة ورقم الهاتف</label><div class="country-input-row"><select id="editPhoneCountry" data-country-selector data-phone-id="editPhone" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="tel" id="editPhone" data-phone-input class="phone-input" autocomplete="tel" placeholder="الرقم المحلي بدون رمز الدولة"></div><small id="editPhoneInternational" class="country-hint"></small></div>
   </div>
   <div class="form-row">
     <div class="form-group"><label>تاريخ الميلاد</label><input type="date" id="editBirth" onchange="calcEditAge()"></div>
@@ -1211,11 +1216,11 @@ tr:hover { background: var(--table-hover); }
     <div class="form-group"><label>اسم ولي الأمر</label><input type="text" id="editParent"></div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label>الرقم السري لولي الأمر</label><div style="position:relative;"><input type="password" id="editParentPass" style="padding-left:45px;" oninput="syncStudentPass('edit')"><span onclick="togglePassVisibility('editParentPass', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁��</span></div></div>
-    <div class="form-group"><label>المواد الدرا��ية</label><select id="editSubject" multiple class="subjects-select" onchange="toggleEditQuran()"></select></div>
+    <div class="form-group"><label>الرقم السري لولي الأمر</label><div style="position:relative;"><input type="password" id="editParentPass" style="padding-left:45px;" oninput="syncStudentPass('edit')"><span onclick="togglePassVisibility('editParentPass', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁</span></div></div>
+    <div class="form-group"><label>المواد الدراية</label><select id="editSubject" multiple class="subjects-select" onchange="toggleEditQuran()"></select></div>
   </div>
   <div id="editQuranFields" class="quran-section hidden">
-    <h4>📖 بيانات حفظ القرآن الكريم</h4>
+    <h4>📖 ��يانات حفظ القرآن الكريم</h4>
     <div class="form-row">
       <div class="form-group"><label>الجزء</label><select id="editJuz" onchange="updateEditSurahSelect()"><option value="">اختر الجزء...</option></select></div>
       <div class="form-group"><label>السورة</label><select id="editSurah"><option value="">اختر الجزء أولاً...</option></select></div>
@@ -1223,7 +1228,7 @@ tr:hover { background: var(--table-hover); }
   </div>
   <div class="form-group" style="border:1px dashed var(--primary);padding:12px;border-radius:10px;">
     <label>🎙️ البصمة الصوتية</label>
-    <div id="editVoiceStatus" style="margin:6px 0;color:var(--text-light)">يمءءن استبدال البص������ الصوتية الحالية بتسجيل جديد.</div>
+    <div id="editVoiceStatus" style="margin:6px 0;color:var(--text-light)">يمءءن استبدال البص الصوتية الحالية بتسجيل جديد.</div>
     <button type="button" class="voice-record-btn" id="editVoiceBtn" onclick="toggleEditVoiceRecord()">🎙️</button>
     <audio id="editVoicePreview" controls style="display:none;height:40px;margin-top:8px"></audio>
   </div>
@@ -1236,11 +1241,11 @@ tr:hover { background: var(--table-hover); }
   <div class="page-header"><h2>🎙️ تسجيل تسميع جديد</h2></div>
   <div id="recordAlert"></div>
   <input type="hidden" id="recordStudentId">
-  <div class="form-group"><label>اسم الطالب</label><input type="text" id="recordName" readonly style="background:var(--table-header)"></div>
+  <div class="form-group"><label>سم الطالب</label><input type="text" id="recordName" readonly style="background:var(--table-header)"></div>
   <div class="form-row">
-    <div class="form-group"><label>تاريخ التسميع</label><input type="date" id="recordDate"><small style="color:var(--text-light)">يُحدد تلقائياً بتاريخ اليوم — يمكنك تغييره يدوياً</small></div>
+    <div class="form-group"><label>تاريخ التسميع</label><input type="date" id="recordDate"><small style="color:var(--text-light)">يُدد تلقائياً بتاريخ اليوم — يمكنك تغييره يدوياً</small></div>
     <div class="form-group"><label>الجزء</label><input type="text" id="recordJuz" readonly style="background:var(--table-header)"></div>
-    <div class="form-group"><label>السور�� الأساسية</label><input type="text" id="recordSurahName" readonly style="background:var(--table-header)"></div>
+    <div class="form-group"><label>السور الأساسية</label><input type="text" id="recordSurahName" readonly style="background:var(--table-header)"></div>
   </div>
   <div class="page" style="margin:15px 0;border:2px solid var(--primary);padding:14px;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;"><strong>إعدادات فحص الغش الموحدة لجميع عناصر التسميع والاختبار والواجب</strong><button class="btn btn-secondary btn-sm" type="button" onclick="toggleGlobalProctorSettings()">إخفاء الإعدادات</button></div>
@@ -1259,19 +1264,19 @@ tr:hover { background: var(--table-hover); }
   </div>
   <div class="exam-builder-section" id="examBuilderSection" style="background:linear-gradient(135deg, rgba(31,88,69,.08), rgba(179,138,67,.08)); border:2px solid var(--primary); border-radius:15px; padding:20px; margin:15px 0;">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-      <h4 style="color:var(--primary);margin:0">🧪 اختبار مستقل بعد ال��ورة الأساسية</h4>
+      <h4 style="color:var(--primary);margin:0">🧪 اختبار مستقل بعد السورة الأساسية</h4>
       <span class="badge badge-primary">لا يختلط بعناصر التسميع</span>
     </div>
-<p style="color:var(--text-light);margin:10px 0">اختبار ��رآني مستقل. اختبر نطاق السوءء والنوع والمستوى والوقت وعدد الآيات، وسيتولى النظام تنويع الأسئلة تلقائيًا.</p>
+<p style="color:var(--text-light);margin:10px 0">اختبار رآني مستقل. اختبر نطاق السوءء والنوع والمستوى والوقت وعدد الآيات، وسيتولى النظام تنويع الأسئلة تلقائيًا.</p>
     <div class="form-row">
-<div class="form-group"><label for="examBaseSurah">آخر سورة محفوظة للطالب</label><select id="examBaseSurah" onchange="syncExamSurahRange()"></select><small style="color:var(--text-light)">يُبنى الماضي من السور التي تسبقها في المراجعة حتى سورة ال��اس.</small></div>
- <div class="form-group"><label for="examPastScope">نوع الماضي</label><select id="examPastScope" onchange="syncExamSurahRange()"><option value="both">الماضي القريب والبعيد</option><option value="near">ا��ماضي القريب</option><option value="far">الماضي البعيد</option></select><small id="examPastScopeHelp" style="color:var(--text-light)">يُقسم الماضي إلى نصف ق����يب ونص�� بعيد.</small></div>
- <div class="form-group"><label for="examLastSurah">نهاية الماضي (اختياري)</label><select id="examLastSurah" onchange="syncExamSurahRange()"><option value="">سورة ا��ناس تلقائياً</option></select><small style="color:var(--text-light)">يمكن تضييق نطاق الماضي يدويا�� قبل ءءقسيمه.</small></div>
+<div class="form-group"><label for="examBaseSurah">آخر سورة محفوظة للطالب</label><select id="examBaseSurah" onchange="syncExamSurahRange()"></select><small style="color:var(--text-light)">يُبنى الماضي من السور التي تسبقها في المراجعة حتى سورة الاس.</small></div>
+ <div class="form-group"><label for="examPastScope">نوع الماضي</label><select id="examPastScope" onchange="syncExamSurahRange()"><option value="both">الماضي القريب والبعيد</option><option value="near">اماضي القريب</option><option value="far">الماضي البعيد</option></select><small id="examPastScopeHelp" style="color:var(--text-light)">يُقسم الماضي إلى نصف قيب ونص بعيد.</small></div>
+ <div class="form-group"><label for="examLastSurah">نهاية الماضي (اختياري)</label><select id="examLastSurah" onchange="syncExamSurahRange()"><option value="">سورة اناس تلقائياً</option></select><small style="color:var(--text-light)">يمكن تضييق نطاق الماضي يدويا قبل ءءقسيمه.</small></div>
  <div class="form-group"><label for="examDeadline">موعد انتهاء الإتاحة</label><input id="examDeadline" type="datetime-local"></div>
  <div class="form-group"><label for="examSourceMode">المرجع الأساسي</label><select id="examSourceMode" onchange="updateExamSourceDistribution()"><option value="ai">الذكاء الاصطناعي</option><option value="file">من الملفات</option></select><small id="examSourceDistribution" style="color:var(--text-light)">توليد ذكي مع التحقق من النص القرآني والمراجع الموثوقة.</small></div>
- <div class="form-group" id="examFileSourceGroup" style="display:none"><label for="examFileSource">ملف المرجع</label><select id="examFileSource"><option value="">اختر مرجع��ً...</option></select><small style="color:var(--text-light)">يجب اختيار ملف عند استخدام «من الملفات».</small></div>
+ <div class="form-group" id="examFileSourceGroup" style="display:none"><label for="examFileSource">ملف المرجع</label><select id="examFileSource"><option value="">اختر مرجعً...</option></select><small style="color:var(--text-light)">يجب اختيار ملف عند استخدام «من الملفات».</small></div>
  </div>
- <div class="alert alert-info"><strong>مصدر حصري وواضح:</strong> اختر الذكاء الاصطناعي لأسئلة قرآنية صعبة ومتنوعة، أو اختر ملفاً واحداً ليكون مصدر الدفعة كاملة. كل ضغطة توليد تضيف أسئلة جديدة ولا تمسح السابقة.</div>
+ <div class="alert alert-info"><strong>مصدر حصري وواضح:</strong> اختر الذكاء الاصطناعي لأسئلة قرآنية صعبة ومتنوعة، أو اختر ملفاً واحداً ليكون مصدر الدفعة كاملة. كل ضغطة توليد تض��ف أسئلة جديدة ولا تمسح السابقة.</div>
     <div id="examPlanRows"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
       <button class="btn btn-info" onclick="addExamPlanRow()">➕ مستوى/نوع جديد</button>
@@ -1320,7 +1325,7 @@ tr:hover { background: var(--table-hover); }
 <!-- صفحة المخطط الكامل -->
 <div id="fullChartPage" class="chart-page hidden">
   <div class="page-header">
-    <h2>📊 ا��م��ط���� الت���صيلي</h2>
+    <h2>📊 امط التصيلي</h2>
     <button class="btn btn-secondary" onclick="closeFullChart()">رجوع</button>
   </div>
   <div id="fullChartContainer" style="text-align:center;"></div>
@@ -1341,7 +1346,7 @@ tr:hover { background: var(--table-hover); }
 
 <!-- المواد والمعلمين -->
 <div id="subjectsPage" class="page hidden">
-  <div class="page-header"><h2>📚 ��لمواد والمعلم���ن</h2></div>
+  <div class="page-header"><h2>📚 لمواد والمعلمن</h2></div>
   <div class="form-row" style="margin-bottom:20px;">
     <div class="form-group"><label>اسم امادة الجديدة</label><input type="text" id="newSubName"></div>
     <div class="form-group"><label>اسم المدرس</label><input type="text" id="newSubTeacher"></div>
@@ -1375,10 +1380,10 @@ tr:hover { background: var(--table-hover); }
     <aside class="side-sidebar" aria-label="أدوات الطالب">
       <div class="side-sidebar-head">
         <h3>الأدوات</h3>
-        <button type="button" class="side-sidebar-close" onclick="closeRoleSidebar('student')" aria-label="إغلاق الق��ئمة">×</button>
+        <button type="button" class="side-sidebar-close" onclick="closeRoleSidebar('student')" aria-label="إغلاق القئمة">×</button>
       </div>
       <div class="side-sidebar-body">
-        <button type="button" class="role-nav-item" onclick="showPage('studentInbox')"><span class="role-nav-icon" aria-hidden="true">💬</span><span>الرسائل</span></button><button type="button" class="role-nav-item" onclick="openQuranReader()"><span class="role-nav-icon" aria-hidden="true">📖</span><span>المصحف الشريف</span></button>
+        <button type="button" class="role-nav-item" onclick="showPage('studentInbox')"><span class="role-nav-icon" aria-hidden="true">💬</span><span>الرسائل</span></button><button type="button" class="role-nav-item" onclick="openQuranReader()"><span class="role-nav-icon" aria-hidden="true">📖</span><span>الم��حف الشريف</span></button>
         <button type="button" class="role-nav-item" onclick="showPage('studentFilesPage')"><span class="role-nav-icon" aria-hidden="true">📁</span><span>الملفات</span></button>
         <button type="button" class="role-nav-item" onclick="showPage('studentAIChat')"><span class="role-nav-icon" aria-hidden="true">✦</span><span>مساعد الذكاء الاصطناعي</span></button>
         <button type="button" class="role-nav-item" onclick="showStudentFullChart()"><span class="role-nav-icon" aria-hidden="true">📈</span><span>مخطط التقييم</span></button>
@@ -1396,7 +1401,7 @@ tr:hover { background: var(--table-hover); }
   <div id="studentCompletedTasksSection"></div>
 </div>
 
-<!-- ��ندوق التسجيلات ل��طالب -->
+<!-- ندوق التسجيلات لطالب -->
 <div id="studentExamPage" class="page hidden">
   <div class="page-header"><h2>🧪 الاختبار الحالي</h2><button class="btn btn-secondary" onclick="goBack()">رجءءع</button></div>
   <div id="studentExamContent"></div>
@@ -1444,7 +1449,7 @@ tr:hover { background: var(--table-hover); }
 
 <!-- دخول ولي الأمر -->
 <div id="parentLogin" class="page hidden" style="max-width:500px; margin:40px auto;">
-  <div class="page-header"><h2>👨‍👩‍👧 دخول ولي ��لأمر</h2></div>
+  <div class="page-header"><h2>👨‍👩‍👧 دخول ولي الأمر</h2></div>
   <div id="parentLoginAlert"></div>
   <div class="form-group"><label>اسم ولي الأمر</label><input type="text" id="parentName" placeholder="أدخل اسمك كما سجله المسؤول"></div>
   <div class="form-group"><label>الرقم السري</label><input type="password" id="parentPass" placeholder="الرقم السري الخاص بك"></div>
@@ -1470,8 +1475,8 @@ tr:hover { background: var(--table-hover); }
       </div>
       <div class="side-sidebar-body">
         <button type="button" class="role-nav-item" onclick="showPage('parentInbox')"><span class="role-nav-icon" aria-hidden="true">💬</span><span>الرسائل</span></button><button type="button" class="role-nav-item" onclick="openQuranReader()"><span class="role-nav-icon" aria-hidden="true">📖</span><span>المصحف الشريف</span></button>
-        <button type="button" class="role-nav-item" onclick="showPage('parentFilesPage')"><span class="role-nav-icon" aria-hidden="true">📁</span><span>الملفات</span></button>
-        <button type="button" class="role-nav-item" onclick="showPage('parentAIChat')"><span class="role-nav-icon" aria-hidden="true">✦</span><span>مساعد الذكا�� الاصطناعي</span></button>
+        <button type="button" class="role-nav-item" onclick="showPage('parentFilesPage')"><span class="role-nav-icon" aria-hidden="true"></span><span>لملفات</span></button>
+        <button type="button" class="role-nav-item" onclick="showPage('parentAIChat')"><span class="role-nav-icon" aria-hidden="true">✦</span><span>مساعد الذكا الاصطناعي</span></button>
         <button type="button" class="role-nav-item" onclick="showPage('parentChartPage')"><span class="role-nav-icon" aria-hidden="true">📈</span><span>المخطط</span></button>
       </div>
     </aside>
@@ -1500,7 +1505,7 @@ tr:hover { background: var(--table-hover); }
     <div id="parentChatMessages" class="ai-chat-messages"></div>
     <div class="ai-input">
 <span class="badge badge-primary">Gemini / Groq</span>
-      <input type="text" id="parentChatInput" placeholder="اسألنئ ن مستوى ابنك، أو ��ن القرآن..." onkeypress="if(event.key==='Enter' && !event.isComposing && event.keyCode!==229)sendParentChat()">
+      <input type="text" id="parentChatInput" placeholder="اسألنئ ن مستوى ابنك، أو ن القرآن..." onkeypress="if(event.key==='Enter' && !event.isComposing && event.keyCode!==229)sendParentChat()">
       <button class="btn btn-primary" onclick="sendParentChat()">إرسال</button>
     </div>
   </div>
@@ -1509,7 +1514,7 @@ tr:hover { background: var(--table-hover); }
 <!-- صفحة سجلات الطال لولي الأمر -->
 <div id="parentRecordsPage" class="page hidden">
   <div class="page-header">
-    <h2>📋 سجلات التسميعات النهائية</h2>
+    <h2>📋 سجلات التسميع��ت النهائية</h2>
     
   </div>
   <div id="parentRecordsContent"></div>
@@ -1530,16 +1535,16 @@ tr:hover { background: var(--table-hover); }
   <div id="filesAlert"></div>
   <section style="background:var(--table-header);border:2px solid var(--primary);border-radius:15px;padding:20px;margin-bottom:20px;">
     <h3 style="color:var(--primary);margin-bottom:8px;">ملفات إنشاء الاختبارات</h3>
-    <p style="color:var(--text-light);margin-bottom:15px;">ارفع PDF أو Word أو TXT. تُحفظ الملفات بشكل خاص حتى يحذفها المسؤول، ويُستخدم نصها مح��ياً دون إرساله إلى Gemini وGroq.</p>
+    <p style="color:var(--text-light);margin-bottom:15px;">ارفع PDF أو Word أو TXT. تُحفظ الملفات بشكل خاص حتى يحذفها المسؤول، ويُستخدم نصها محياً دون إرساله إلى Gemini وGroq.</p>
     <input id="examFileUpload" type="file" accept=".pdf,.docx,.txt" onchange="uploadExamFile(this)">
     <div id="examFileUploadStatus" style="margin-top:10px;"></div>
     <div id="examFilesList" style="margin-top:15px;"></div>
   </section>
   <div style="background:linear-gradient(135deg, rgba(31,88,69,0.08), rgba(179,138,67,0.1)); border-radius:15px; padding:20px; margin-bottom:20px; border:2px solid var(--primary);">
-    <h4 style="color:var(--primary); margin-bottom:15px;">⬆️ رفع ملف جديد</h4>
+    <h4 style="color:var(--primary); margin-bottom:15px;">⬆️ رفع ملف ��ديد</h4>
     <div class="form-row">
       <div class="form-group" style="flex:2;"><label>اسم الملف / الوصف</label><input type="text" id="fileDesc" placeholder="وصف الملف..."></div>
-      <div class="form-group" style="flex:1;"><label>الفئة (المُرسَل إل��ه)</label>
+      <div class="form-group" style="flex:1;"><label>الفئة (المُرسَل إل)</label>
         <select id="fileCategory" onchange="renderFileTargetSelect()">
           <option value="student">👨‍🎓 الطالب</option>
           <option value="parent">👨‍👩‍👧 ولي الأمر</option>
@@ -1563,7 +1568,7 @@ tr:hover { background: var(--table-hover); }
 <!-- صفحة المخطط لولي الأمر -->
 <div id="parentChartPage" class="chart-page hidden">
   <div class="page-header">
-    <h2>📊 ��خطط التقييم الكامل</h2>
+    <h2>📊 خطط التقييم الكامل</h2>
     
   </div>
   <div id="parentChartContainer" style="text-align:center;"></div>
@@ -1575,15 +1580,15 @@ tr:hover { background: var(--table-hover); }
   <div class="proctor-panel">
     <h2 id="proctorTitle">التحقق قبل بدء الجلسة</h2>
     <p>لن تُحفظ صورة أو فيديو. يجري الفحص على جهازك، ويُرسل للمسؤول سبب المخالفة ووقتها فقط.</p>
-    <div class="proctor-camera"><video id="proctorVideo" autoplay playsinline muted></video><div id="proctorCameraStatus" class="proctor-camera-status">اضغط تشغيل الفحص ل��سماح بالكامير��</div></div>
+    <div class="proctor-camera"><video id="proctorVideo" autoplay playsinline muted></video><div id="proctorCameraStatus" class="proctor-camera-status">اضغط تشغيل الفحص لسماح بالكامير</div></div>
     <canvas id="proctorCanvas" width="160" height="120" hidden></canvas>
     <div class="proctor-checks" aria-live="polite">
       <div id="proctorTouchCheck" class="proctor-check bad">شاشة لمس مطلوبة</div><div id="proctorLightCheck" class="proctor-check bad">الإضاءة غير مفحوصة</div>
-      <div id="proctorCameraCheck" class="proctor-check bad">الكاميرا غير متاحة</div><div id="proctorFrameCheck" class="proctor-check bad">بانتظار إطارات فعلية</div><div id="proctorFaceCheck" class="proctor-check bad">الوجه غير مفحوص</div><div id="proctorEyeCheck" class="proctor-check bad">العينان غير مفحو��تين</div><div id="proctorGazeCheck" class="proctor-check bad">اتجاه النظر غير مفحوص</div><div id="proctorReadyCheck" class="proctor-check bad">الفحص غير مكتمل</div>
+      <div id="proctorCameraCheck" class="proctor-check bad">الكاميرا غير متاحة</div><div id="proctorFrameCheck" class="proctor-check bad">بانتظار إطارات فعلية</div><div id="proctorFaceCheck" class="proctor-check bad">الوجه غير مفحوص</div><div id="proctorEyeCheck" class="proctor-check bad">العينان غير مفحوتين</div><div id="proctorGazeCheck" class="proctor-check bad">اتجاه النظر غير مفحوص</div><div id="proctorReadyCheck" class="proctor-check bad">الفحص غير مكتمل</div>
     </div>
 <p id="proctorHelp">ضع الهاتف أمامك وانظر إلى الشاشة. استخدم الموقع بشكل طبيعي بلمسة واحدة في كل مرة؛ لا يلزم إبقاء الإصبع مضغوطًا أثناء الاختبار.</p>
 <details id="proctorDiagnostics" hidden><summary>تشخيص الكاميرا للمطور</summary><dl class="proctor-diagnostics"><dt>Permission</dt><dd id="proctorDiagPermission">unknown</dd><dt>Video devices</dt><dd id="proctorDiagDevices">0</dd><dt>Stream</dt><dd id="proctorDiagStream">no</dd><dt>Track</dt><dd id="proctorDiagTrack">none</dd><dt>Video</dt><dd id="proctorDiagVideo">none</dd><dt>play()</dt><dd id="proctorDiagPlay">no</dd><dt>Frames</dt><dd id="proctorDiagFrames">no</dd><dt>Error</dt><dd id="proctorDiagError">none</dd></dl></details>
-<div id="proctorGateHold" class="proctor-touch-zone" aria-disabled="true">بع�� نجاح الفحص: ضع إصبع واحد هنا للبدء</div>
+<div id="proctorGateHold" class="proctor-touch-zone" aria-disabled="true">بع نجاح الفحص: ضع إصبع واحد هنا للبدء</div>
     <div class="proctor-actions"><button id="proctorScanBtn" type="button" class="btn btn-primary" onclick="startProctorScan()">تشغيل الفحص</button><button type="button" class="btn btn-secondary" onclick="closeProctorGate()">إلغاء</button></div>
   </div>
 </div>
@@ -1623,7 +1628,7 @@ function showToast(msg, type){
   }
   if(!type){
     var t = String(msg);
-    type = (/(❌||فشل|طأ|��ا يم��ن|يرجى|مسبق|غير|يجب|لم )/.test(t)) ? 'error' : 'success';
+    type = (/(❌||فشل|طأ|ا يمن|يرجى|مسبق|غير|يجب|لم )/.test(t)) ? 'error' : 'success';
   }
   var box = document.getElementById('toastBox');
   if(!box){ box = document.createElement('div'); box.id='toastBox'; document.body.appendChild(box); }
@@ -1644,7 +1649,7 @@ window.alert = function(m){ showToast(m); };
     if (corePromise) return corePromise;
     corePromise = new Promise(function(resolve, reject){
       const s = document.createElement('script');
-      s.src = '/app-core.js';
+      s.src = '/app-core.js?v=20260903';
       s.async = false;
       s.onload = function(){ window.__thimarAppCoreLoaded = true; const p=document.createElement('script'); p.src='/proctoring-v2.js'; p.onload=resolve; p.onerror=reject; document.head.appendChild(p); };
       s.onerror = function(){ corePromise = null; reject(new Error('تعذر تحميل ملفات النظام.')); };
@@ -1653,10 +1658,8 @@ window.alert = function(m){ showToast(m); };
     return corePromise;
   };
 
-  // تجهيز النظام بعد ظهور الصفحة، بدون حجب أزرار الدخول أو إعدادات الواجهة.
-  const warm = function(){ window.loadThimarAppCore().catch(function(err){ console.error('App core warmup failed', err); }); };
-  if ('requestIdleCallback' in window) requestIdleCallback(warm, {timeout:1500});
-  else setTimeout(warm, 350);
+  // يبدأ تحميل النظام مرة واحدة فور قراءة هذا السكربت، قبل أي نقرة.
+  window.loadThimarAppCore();
 })();
 </script>
 <script>
@@ -1665,23 +1668,16 @@ window.alert = function(m){ showToast(m); };
   var wrappers = {};
   function runWhenCoreReady(name, args, button){
     if (button) button.disabled = true;
-    if (name === 'unifiedLogin') {
-      var box = document.getElementById('unifiedLoginAlert');
-      if (box) box.innerHTML = '<div class="alert alert-info">جارٍ تجهيز النظام...</div>';
-    }
     return window.loadThimarAppCore().then(function(){
-      if (button) button.disabled = false;
       var fn = window[name];
       if (typeof fn !== 'function' || fn === wrappers[name]) throw new Error('الدالة المطلوبة غير متاحة');
       return fn.apply(window, Array.prototype.slice.call(args || []));
     }).catch(function(err){
-      if (button) button.disabled = false;
-      var message = '❌ تعذر تجهيز النظام. تحقق من الاتصال ثم أعد المحاولة.';
+      var message = 'تعذر تنفيذ الطب. أعد المحاولة.';
       var box = document.getElementById('unifiedLoginAlert');
       if (box) box.innerHTML = '<div class="alert alert-danger">' + message + '</div>';
-      console.error('App core failed to load', err);
-      if (typeof showToast === 'function') showToast(message, 'error');
-    });
+      console.error('[v0] App core failed to load', err);
+    }).finally(function(){ if (button) button.disabled = false; });
   }
 
   ['unifiedLogin','startSignup'].forEach(function(name){
@@ -1951,7 +1947,7 @@ window.alert = function(m){ showToast(m); };
   </script>
   <section id="quranReaderPage" class="page quran-reader-page hidden" aria-label="قارئ المصحف">
     <button type="button" class="quran-reader-close" onclick="closeQuranReader()" aria-label="إغلاق قارئ المصحف" title="إغلاق">×</button>
-    <div class="quran-reader-frame"><div id="quranZoomWrap" class="quran-zoom-wrap"><canvas id="quranOriginalCanvas" class="quran-reader-canvas" aria-label="صفحة المصحف الأصلية"></canvas></div><div id="quranSwipeSurface" class="quran-swipe-surface" aria-label="اسحب للتنقل بين صفحات المصحف أو قرّب بإصبعين للتكبير"></div></div>
+    <div class="quran-reader-frame"><div id="quranZoomWrap" class="quran-zoom-wrap"><canvas id="quranOriginalCanvas" class="quran-reader-canvas" aria-label="صفحة المصحف الأصلية"></canvas></div><div id="quranSwipeSurface" class="quran-swipe-surface" aria-label="اسحب للتنقل بين صفات المصحف أو قرّب بإصبعين للتكبير"></div></div>
   </section>
   <script>
 /* واجهة ثمار: زر «تسجيل الدخول» يفتح حقول الدخول نفسها (نفس الوظيفة والتحقق القديم دون أي تغيير) */

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 const OLD_HOST = "teacher.vercel.app"
 const CANONICAL_ORIGIN = "https://teacher-three-ashen.vercel.app"
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (request.nextUrl.hostname !== OLD_HOST) return NextResponse.next()
 
   const target = new URL(request.nextUrl.pathname + request.nextUrl.search, CANONICAL_ORIGIN)

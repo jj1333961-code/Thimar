@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { del, get, list, put } from "@vercel/blob"
 import mammoth from "mammoth"
+import { rejectCrossOrigin } from "@/lib/request-security"
+import { requireAdmin } from "@/lib/server-auth"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -124,7 +126,9 @@ async function listAllMetadataPathnames() {
   return pathnames
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await requireAdmin(request)
+  if (auth.response) return auth.response
   try {
     const pinnedFiles = await getPinnedFiles()
     if (!(process.env.BLOB_READ_WRITE_TOKEN || "").trim()) {
@@ -146,6 +150,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const originError = rejectCrossOrigin(request)
+  if (originError) return originError
+  const auth = await requireAdmin(request)
+  if (auth.response) return auth.response
   let uploadedPathname = ""
   try {
     ensureBlobConfigured()
@@ -177,6 +185,10 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const originError = rejectCrossOrigin(request)
+  if (originError) return originError
+  const auth = await requireAdmin(request)
+  if (auth.response) return auth.response
   try {
     ensureBlobConfigured()
     const { pathname, metadataPathname } = await request.json()

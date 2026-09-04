@@ -5,6 +5,10 @@ import { LanguageRuntime } from '@/components/language-runtime'
 import { LanguageToggle } from '@/components/language-toggle'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://teacher-three-ashen.vercel.app'),
+  alternates: {
+    canonical: '/',
+  },
   title: 'ثمار | منصة القرآن والتعليم',
   description: 'ثمار منصة قرآنية هادئة للتسميع والاختبارات والمهام، تجمع الطالب والمعلم في مساحة للنمو والثبات.',
   generator: 'v0.app',

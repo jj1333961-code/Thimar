@@ -1,7 +1,6 @@
 import { getReferenceContext, normalizeQuranText } from "@/lib/quran-reference"
-import { checkQuestionSimilarity, saveQuestion, getRecentFingerprints } from "@/lib/question-similarity"
-import { generateDiversityPlan } from "@/lib/question-diversity"
-import { validateQuranQuestion, getSurahInfo } from "@/lib/quran-validator"
+import { rejectCrossOrigin } from "@/lib/request-security"
+import { requireUser, requireAdmin } from "@/lib/server-auth"
 
 export const runtime = "nodejs"
 export const maxDuration = 300
@@ -19,8 +18,8 @@ function safeAudioLog(event: string, details: Record<string, unknown> = {}) {
 const GEMINI = {
   label: "Google Gemini",
   endpoint: "https://generativelanguage.googleapis.com/v1beta/models",
-  models: ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"],
-  model: "gemini-2.5-flash",
+  models: Array.from(new Set([(process.env.GEMINI_MODEL || "").trim(), "gemini-2.5-flash", "gemini-2.0-flash"])).filter(Boolean),
+  model: (process.env.GEMINI_MODEL || "gemini-2.5-flash").trim(),
   get key() {
     return (process.env.GEMINI_API_KEY || "").trim()
   },
@@ -29,7 +28,7 @@ const GROQ = {
   label: "Groq",
   endpoint: "https://api.groq.com/openai/v1",
   // النموذج المتاح حاليًا في Groq؛ النموذج القديم كان يعيد 404 ويؤخر كل ردود الدردشة.
-  model: "qwen/qwen3.6-27b",
+  model: (process.env.GROQ_MODEL || "qwen/qwen3.6-27b").trim(),
   transcriptionModel: "whisper-large-v3-turbo",
   get key() {
     return (process.env.GROQ_API_KEY || "").trim()
@@ -302,7 +301,7 @@ async function geminiText(prompt: string, system: string, temperature: number, a
       if (!audio || !/404|400|not found|unsupported|model/i.test(audioErrorMessage(error))) throw error
     }
   }
-  throw lastError instanceof Error ? lastError : new Error("Gemini: لم يُرجع نموذج الصوت نتيجة")
+  throw lastError instanceof Error ? lastError : new Error("Gemini: لم يُرجع موذج الصوت نتيجة")
 }
 
 async function runText(prompt: string, system: string, temperature: number) {
@@ -387,7 +386,7 @@ async function runAudio(prompt: string, system: string, temperature: number, aud
       const transcript = await groqTranscribe(audio)
       const biometricMode = /بصمة صوتية|هوية المتحدث|خصائص الصوت نفسه|الصوت فقط/.test(system)
       const fallbackSystem = biometricMode
-        ? `أنت بديل نصي آمن لخدمة تحقق صوتي غير متاحة. لا يمكن استنتاج البصمة أو هوية المتحدث من التفريغ النصي. أعد JSON فقط: ${system.includes("sameSpeaker") ? '{"sameSpeaker":false,"matchPercent":0,"confidence":"low","quality":"too-short","reason":"تعذر إجراء مقارنة بيومترية للصوت عبر المزوّد الاحتياطي","profile":{"gender":"unknown","pitch":"medium","pitchHz":0,"timbre":"غير متاح","speed":"medium"}}' : '{"speaker":{"gender":"unknown","ageRange":"unknown","pitch":"medium","pitchHz":0,"timbre":"غير متاح","speed":"medium","nasality":"low","breathiness":"low","accent":"غير متاح","distinctiveTraits":[]},"quality":"too-short","usable":false,"reason":"تعذر إنشاء بصمة بيومترية عبر المزوّد الاحتياطي"}'}`
+        ? `أنت بديل نصي آمن لخدمة تحقق صوتي غير متاحة. لا يمكن استنتاج البصمة أو هوية المتحدث من التفريغ النصي. أعد JSON فقط: ${system.includes("sameSpeaker") ? '{"sameSpeaker":false,"matchPercent":0,"confidence":"low","quality":"too-short","reason":"تعذر إجراء مقارنة بيومترية للصوت عبر المزوّد الاحتياطي","profile":{"gender":"unknown","pitch":"medium","pitchHz":0,"timbre":"غير متاح","speed":"medium"}}' : '{"speaker":{"gender":"unknown","ageRange":"unknown","pitch":"medium","pitchHz":0,"timbre":"غير متاح","speed":"medium","nasality":"low","breathiness":"low","accent":"غير متاح","distinctiveTraits":[]},"quality":"too-short","usable":false,"reason":"تعذر إ��شاء بصمة بيومترية عبر المزوّد الاحتياطي"}'}`
         : system
       const fallbackPrompt = `${prompt}\n\nهذا هو التفريغ الصوتي من Groq Whisper:\n${transcript}`
       const text = await groqText(fallbackPrompt, fallbackSystem, temperature)
@@ -417,8 +416,8 @@ const SYS_VOICE_PRINT = `أنت محرك بصمة صوتية. تستمع إلى 
 أعد JSON فقط بلا markdown:
 {"speaker":{"gender":"male|female|unknown","ageRange":"child|teen|adult|senior|unknown","pitch":"very-low|low|medium|high|very-high","pitchHz":number,"timbre":"وصف موجز","speed":"slow|medium|fast","nasality":"low|medium|high","breathiness":"low|medium|high","accent":"وصف موجز","distinctiveTraits":["سمات مميزة موجزة"]},"quality":"good|noisy|too-short","usable":true/false,"reason":"سبب موجز بالعربية"}`
 
-const SYS_VOICE_MATCH = `أنت محرك تحقق من هوية المتحدث بالبصمة الصوتية. لديك تسجيل صوتي حديث، ووصف بصمة صوتية مرجعية محفوظة لنفس الشخص المتوقع (referenceProfile)، وقد يصلك تسجيل مرجعي أيضاً.
-حلّل خصائص الصوت في التسجيل الحديث ثم قارنها بالمرجع: الطبقة، اللون الصوتي، الجرس، الأنفية، السرعة، اللكنة.
+const SYS_VOICE_MATCH = `أنت محرك تحقق من هوية المتحدث بالبصمة الصوتية. لديك تسجيل صوتي حديث، ووصف بصمة ص��تية مرجعية محفوظة لنفس الشخص المتوقع (referenceProfile)، وقد يصلك تسجيل مرجعي أيضاً.
+حلّل خصائص الصوت في التسجيل الحديث ثم قارنها بالمرجع: الطبقة، الون الصوتي، الجرس، الأنفية، السرعة، اللكنة.
 تجاهل اختلاف الكلمات أو النص المقرءءء تماماً؛ المقارنة على الصوت فقط. راعِ اختلاف الميكروفون والضجيج.
 أعد JSON فقط بلا markdown:
 {"sameSpeaker":true/false,"matchPercent":number,"confidence":"low|medium|high","quality":"good|noisy|too-short","reason":"سبب موجز بالعربية","profile":{"gender":"male|female|unknown","pitch":"very-low|low|medium|high|very-high","pitchHz":number,"timbre":"وصف موجز","speed":"slow|medium|fast"}}`
@@ -456,11 +455,11 @@ const SYS_EXAM = `أنت خبير متخصص في القرآن الكريم وا
 - أعد مصفوفة JSON فقط، دون Markdown أو شرح.
 
 شكل كل عنصر:
-{"type":"mcq|truefalse|complete|audio","level":"easy|medium|hard","surah":"اسم السورة","prompt":"نص السؤال","stem":"","options":[],"correct":"الإجابة الصحيحة","from":1,"to":1,"timeLimit":60,"completeAyahs":1,"reciteAyahs":1,"points":1}
+{"type":"mcq|truefalse|complete|audio","level":"easy|medium|hard","surah":"اسم السورة","prompt":"نص السؤال","stem":"","options":[],"correct":"الإجابة ��لصحيحة","from":1,"to":1,"timeLimit":60,"completeAyahs":1,"reciteAyahs":1,"points":1}
 
-تحقق قبل الإخراج من أن عدد العناصر لكل plan يساوي count تماماً، وأن كل سؤال يخدم topic، وأن الآيات المستخدمة موجودة فعلاً في sourceSurahs، وأن لكل سؤال إجابة واحدة قطعية.`
+تحقق قبل الإ��راج من أن عدد العناصر لكل plan يساوي count تماماً، وأن كل سؤال يخدم topic، وأن الآيات المستخدمة موجودة فعلاً في sourceSurahs�� وأن لكل سؤال إجابة واحدة قطعية.`
 
-const SYS_GRADE_TEXT = `أنت مصحّح متسامح لاختبارات حفظ القرآن. صحّح إجابة الطالب في نوع "أكمل".
+const SYS_GRADE_TEXT = `أنت مصحّح متسامح لاخت��ارات حفظ القرآن. صحّح إجابة الطالب في نوع "أكمل".
 كن متساهلاً مع الأخطاء الميسورة: الأخطاء الإملائية البسيطة، اختلاف التشكيل، الهمزات، التاء المربوطة/المفتوحة، حذف/إضافة الألف. هذه لا تُنقص الدرجة.
 احسب matchedPercent (0-100) لمدى مطابقة المعنى والألفاظ للنص المرجعي.
 score: 1 إذا كان صحيحاً (ولو بأخطاء ميسورة)، 0.5 إذا نصت آية واحدة أو خطأ جوهي بسيط، 0 إذا كان مختلفاً أو ناقصاً كثيراً.
@@ -517,7 +516,7 @@ const SYS_DEV_ASSISTANT = `أنت مهندس برمجيات Senior ومساعد 
 {
  "understanding": "إعادة صياغة موجزة لفهمك للطلب",
  "feasible": true/false,
- "summary": "ملخص عام للخطة في جملة أو جملتين",
+ "summary": "ملخص عام للخطة ��ي جملة أو جملتين",
  "files": [ { "path": "مسار الملف", "action": "modify"|"create", "reason": "لماذا يُعدّل هذا الملف", "changes": ["تغيير مقترح 1","تغيير مقترح 2"] } ],
  "steps": ["خطوة تنفيذ 1","خطوة 2"],
  "risks": ["مخاطرة أو أثر جانبي محتمل"],
@@ -737,6 +736,7 @@ function safeProjectPath(path: string) {
   const normalized = String(path || "").replace(/\\/g, "/").replace(/^\/+/, "")
   if (!normalized || normalized.includes("..") || normalized.startsWith(".git/")) return false
   if (normalized === ".env" || normalized.startsWith(".env.") && !normalized.endsWith(".example")) return false
+  if (normalized.startsWith(".github/workflows/") || normalized === "vercel.json" || normalized === "next.config.js" || normalized === "next.config.mjs" || normalized === "next.config.ts") return false
   return true
 }
 
@@ -758,7 +758,7 @@ async function buildDevPatches(request: string, plan: any, files: Array<{path:st
 - لا تُرجع ملفاً لم يتغير فعلاً.
 - لا تُرجع أي مسار غير موجود في الملفات المعطاة إلا إذا كانت الخطة تقول create وكان إنشاء الملف ضرورياً.
 - لا تنشئ أو تعل ملفات الأسرار مثل .env.
-- إذا كان الطلب غير آمن أو غير واضح أو يخالف القيود، أعد patches=[] واشرح السبب في summary.
+- إذا كان الطلب غير آمن أو غير واض أو يخالف القيود، أعد patches=[] واشرح السبب في summary.
 
 أعد JSON فقط بالشكل التالي (بدون أي نص خارجه):
 {"summary":"وصف عربي واضح لما تم تعديله فعلياً وكيف","patches":[{"path":"...","content":"المحتوى الكامل الجديد للملف","reason":"سبب التعديل وما تغيّر في هذا الملف بالتحديد"}],"tests":["ملاحظة تحقق أو خطوة اختبار يدوي مقترحة"]}`
@@ -847,6 +847,10 @@ async function autoApplyDevRequest(request: string, plan: any) {
 }
 
 export async function POST(req: Request) {
+  const originError = rejectCrossOrigin(req)
+  if (originError) return originError
+  const auth = await requireUser(req)
+  if (auth.response) return auth.response
   let body: any = {}
   const requestId = crypto.randomUUID()
   safeAudioLog("request started", { requestId })
@@ -887,7 +891,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    // 1) وضع لنص الحر (صندوق اختبار الذاء الاصطناعي)
+    // 1) وضع لنص الحر (صندوق اختبار الذاء الا��طناعي)
     if (typeof body.prompt === "string" && body.prompt.trim() && !body.mode) {
       const prompt = body.prompt.trim().slice(0, 6000)
       const reference = await getReferenceContext(prompt).catch(() => "")
@@ -902,15 +906,19 @@ export async function POST(req: Request) {
     const mode = body.mode as string
     const payload = body.payload || {}
     const temperature = typeof body.temperature === "number" ? body.temperature : 0.15
+    if (mode === "admin_assistant" || mode === "dev_assistant" || mode === "github_sync") {
+      const admin = await requireAdmin(req)
+      if (admin.response) return admin.response
+    }
 
-    // 1.ب) المساعد الذكي للالب/ولي الأمر (ص حر مع سياق بيانات الطالب)
+    // 1.ب) المساعد الذكي للالب/ولي الأمر (ص حر مع سياق ب��انات الطالب)
     if (mode === "assistant") {
       const prompt = typeof body.prompt === "string" ? body.prompt.trim() : ""
       if (!prompt) return json({ error: "لم يصل نص السؤال", diagnostics }, 400)
       const reference = await getReferenceContext(prompt).catch(() => "")
       const text = await runText(
         `${reference ? `${reference}\n\n` : ""}السؤال:\n${prompt.slice(0, 6000)}`,
-        "أنت مساعد المنصة الذكي، مساعد عربي طبيعي ودقيق. أجب عن أي سؤال مسموح داخل المنصة أو خارجها، وأعط الأولوية لبيانات المنصة فقط عندما تكون ذات صلة. اجعل طول الجواب على قدر السؤال: جواب مباشر وقصير للسؤال البسيط، وتفصيل منظم فقط عند طلبه. تعامل مع التحيات والعبارات الاجتماعية بصورة طبيعية؛ مثال: إذا قال المستخدم السلام عليكم فرد: وعليكم السلام ورحمة الله وبركاته 🥰 هل لديك سؤال؟ أنا في خدمتك! استخدم الرموز التعبيرية باعتدال في الحديث الودي فقط، وتجنبها في الإجابات العلمية أو الحساسة. استخدم لغة عربية بسيطة واحترافية ولا تكرر السؤال. في القرآن والمتشابهات استخدم مقتطفات المرجعين للتحقق عند توفها، لكن لا تحصر معرفتك فيهما، ولا تختلق آية أو معلومة.",
+        "أنت مساعد المنصة الذكي، مساعد عر��ي طبيعي ودقيق. أجب عن أي سؤال مسموح داخل المنصة أو خارجها، وأعط الأولوية لبيانات المنصة فقط عندما تكون ذات صلة. اجعل طول الجواب على قدر السؤال: جواب مباشر وقصير للسؤال البسيط، وتفصيل منظم فقط عند طلبه. تعامل مع التحيات والعبارات الاجتماعية بصورة طبيعية؛ مثال: إذا قال المستخدم السلام عليكم فرد: وعليكم السلام ورحمة الله وبركاته 🥰 هل لديك سؤال؟ أنا في خدمتك! استخدم الرموز التعبيرية باعتدال في الحديث الودي فقط، وتجنبها في الإجابات العلمية أو الحساسة. استخدم لغة عربية بسيطة واحترافية ولا تكرر السؤال. في القرآن والمتشابهات استخدم مقتطفات المرجعين للتحقق عند توفها، لكن لا تحصر معرفتك فيهما، ولا تختلق آية أو معلومة.",
         typeof body.temperature === "number" ? body.temperature : 0.35,
       )
       return json({ result: text.trim(), diagnostics })
@@ -976,10 +984,10 @@ export async function POST(req: Request) {
         const from = Math.max(1, Math.min(source.verses.length, Number(question?.from) || 1))
         const to = Math.max(from, Math.min(source.verses.length, Number(question?.to) || from))
         const type = ["mcq", "truefalse", "complete", "audio"].includes(question?.type) ? question.type : "mcq"
-        const complete = type === "complete"
-        const correct = complete
-          ? source.verses.slice(from - 1, to).map((verse: { text: string }) => verse.text).join(" ")
-          : String(question?.correct || "")
+        const referenceAnswer = source.verses.slice(from - 1, to).map((verse: { text: string }) => verse.text).join(" ")
+        const correct = type === "complete" || type === "audio"
+          ? referenceAnswer
+          : String(question?.correct || "").trim()
         const defaultPrompts: Record<string, string> = {
           mcq: "اختر الإجابة الصحيحة اعتماداً على المقطع المصور من المصحف",
           truefalse: "حدّد ما إذا كانت العبارة صحيحة أم خاطئة اعتماداً على المقطع المصوّر من المصحف",
@@ -1008,8 +1016,17 @@ export async function POST(req: Request) {
           const expectedOptions = Math.max(2, Math.min(6, Number(plan[questionIndex]?.optionsCount) || 4))
           options = options.slice(0, expectedOptions)
           if (options.length !== expectedOptions || !correct || options.filter((option: string) => option === correct).length !== 1) return null
+          const normalizedSurah = normalizeQuranText(source.surah)
+          const answerIsReferenced = normalizedCorrect === normalizedSurah || source.verses.some((verse: { text: string }) => {
+            const normalizedVerse = normalizeQuranText(verse.text)
+            return normalizedVerse === normalizedCorrect || normalizedVerse.includes(normalizedCorrect) || normalizedCorrect.includes(normalizedVerse)
+          })
+          if (!answerIsReferenced) return null
         }
+        if (type === "truefalse" && !options.includes(correct)) return null
         if (!prompt || from > to || !correct) return null
+        const fingerprint = [type, source.surahNumber, from, to, normalizeQuranText(prompt), normalizeQuranText(correct)].join("|")
+        if (previousQuestionFingerprints.includes(fingerprint)) return null
 
         return {
           ...question,
@@ -1026,6 +1043,8 @@ export async function POST(req: Request) {
           source: sourceFile ? "file" : "مرجع قرآني موثوق",
           sourceFileId: sourceFile?.id || "",
           sourceFileName: sourceFile?.name || "",
+          fingerprint,
+          validated: true,
         }
       }).filter(Boolean)
       if (!safeQuestions.length) return json({ error: "لم تجتز الأسئلة فحص الجودة والوضوح. جرّب توسيع النطاق أو زيادة دقة الموضوع.", diagnostics }, 502)
@@ -1271,7 +1290,7 @@ detectedLanguage يجب أن تكون ar أو en أو mixed. subjects مصفوف
         "app/globals.css", "next.config.mjs", "package.json", "components/ui/button.tsx",
         "lib/utils.ts", ".env.example", "DEPLOY.md",
       ] }
-      const userPrompt = `بنية المشروع الحالية:\n${PROJECT_MANIFEST}\n\nقائمة الملفات الفعلية في المسودع:\n${tree.files.join("\n")}\n\nطلب المسؤول:\n${request}\n\nحلّل الطلب وأعد خطة التعديل بصيغة JSON فقط كما هو محدد. اختر الملفات الفعلية من قائمة المستودع كلما أمكن.`
+      const userPrompt = `بنية المشروع الحالية:\n${PROJECT_MANIFEST}\n\nقائمة الملفات الفعلية في المسودع:\n${tree.files.join("\n")}\n\nطلب المسؤول:\n${request}\n\nحلّل الطلب وأعد خطة ا��تعديل بصيغة JSON فقط كما هو محدد. اختر الملفات الفعلية من قائمة المستودع كلما أمكن.`
       const text = await runText(userPrompt, SYS_DEV_ASSISTANT, 0.2)
       const parsed = extractJson(text)
       if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.files)) {

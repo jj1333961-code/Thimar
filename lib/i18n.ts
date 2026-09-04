@@ -55,8 +55,20 @@ export const translations = {
   'تحديث': 'Refresh',
   'تسجيل الدخول': 'Log in',
   'تسجيل الخروج': 'Log out',
+  'إنشاء حساب جديد': 'Create account',
+  'ليس لديك حساب؟': "Don't have an account?",
   'اسم المستخدم': 'Username',
   'الرقم السري': 'Password',
+  'إظهار الرقم السري': 'Show password',
+  'إخفاء الرقم السري': 'Hide password',
+  'هل نسيت الرقم السري؟': 'Forgot your password?',
+  'تغيير اللغة / Change language': 'Change language',
+  'أدخل الرقم السري': 'Enter your password',
+  'أدخل اسم المستخدم والرقم السري': 'Enter your username and password',
+  'الرئيسية': 'Home',
+  'الصفحة الرئيسية': 'Home',
+  'فتح قائمة الأدوات': 'Open tools menu',
+  'إغلاق القائمة': 'Close menu',
 } as const
 
 export const arabicToEnglish: Record<string, string> = translations

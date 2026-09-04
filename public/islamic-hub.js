@@ -180,14 +180,6 @@
       if (btn && host.contains(btn)) openSection(btn.getAttribute("data-isl-open"));
     });
     paintCards();
-    // تحميل المصحف مسبقًا في الخلفية حتى يكون جاهزًا فور ال��خول دون انتظار
-    scheduleWarmMushaf();
-  }
-
-  function scheduleWarmMushaf() {
-    var run = function () { try { warmMushaf(); } catch (e) {} };
-    if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(run, { timeout: 2500 });
-    else setTimeout(run, 1200);
   }
 
   function mountAll() {
@@ -855,7 +847,7 @@
             "<b>" + f.t + " " + f.mer + "</b></div>"
           );
         }).join("")
-      : '<p class="isl-note">حدّد موقعك أولًا لعرض الموا��يت.</p>';
+      : '<p class="isl-note">حدّد موقعك أولًا لعرض الموايت.</p>';
 
     var head = state.next
       ? '<p class="isl-note">الصلاة القادمة: <strong>' + esc(state.next.name) + "</strong> — متبقٍ " + remainText(state.next.at) + "</p>"
@@ -1044,7 +1036,7 @@
     if (id === "qibla") return openQibla();
   }
 
-  /* ---------------- تحديد المو���ع تلقائيًا ---------------- */
+  /* ---------------- تحديد الموع تلقائيًا ---------------- */
   function autoLocate() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -1066,6 +1058,8 @@
 
   /* ---------------- التهيئة ---------------- */
   async function boot() {
+    var lockScreen = document.getElementById('lockScreen');
+    if (lockScreen && !lockScreen.classList.contains('hidden')) return;
     mountAll();
     if (state.loc) {
       try {

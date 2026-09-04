@@ -17,6 +17,10 @@
     holdTimer: 0,
     activePointers: new Set(),
     stableSince: 0,
+    retryTimer: 0,
+    retryCount: 0,
+    restarting: false,
+    intentionallyStopped: false,
     checks: { camera: false, frame: false, face: false, light: false, eyes: false, pose: false, touch: false },
   };
 
@@ -26,7 +30,13 @@
   function cameraError(error) {
     const name = error && error.name;
     if (!window.isSecureContext) return 'الموقع غير آمن. افتح الصفحة عبر HTTPS.';
-    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') return 'الكاميرا غير مسموح بها. اسمح بها من إعدادات الموقع ثم أعد المحاولة.';
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+      const framed = window.self !== window.top;
+      const policyBlocked = framed && document.permissionsPolicy && !document.permissionsPolicy.allowsFeature('camera');
+      if (policyBlocked) return 'الإطار أو التطبيق المضيف لا يسمح باستخدام الكاميرا. يجب إضافة camera إلى Permissions Policy.';
+      if (state.permission === 'denied') return 'تم رفض صلاحية الكاميرا. اسمح بها من إعدادات الموقع ثم أعد المحاولة.';
+      return 'تعذر منح صلاحية الكاميرا. تحقق من إذن المتصفح أو إعداد WebChromeClient في التطبيق المضيف.';
+    }
     if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return 'لا يوجد جهاز كاميرا متاح.';
     if (name === 'NotReadableError' || name === 'TrackStartError') return 'الكاميرا مستخدمة من تطبيق آخر أو تعذر على النظام تشغيلها.';
     if (name === 'OverconstrainedError') return 'الكاميرا لا تدعم إعدادات التصوير المطلوبة.';
@@ -85,8 +95,11 @@
     } else state.stableSince = 0;
   }
 
-  function stopV2Camera() {
+  function stopV2Camera(intentional) {
     state.generation += 1;
+    state.intentionallyStopped = intentional !== false;
+    state.restarting = false;
+    clearTimeout(state.retryTimer);
     state.frameCount = 0;
     state.frameReady = false;
     state.playSucceeded = false;
@@ -135,13 +148,15 @@
     return function () { stopV2Camera(); return original.apply(this, arguments); };
   })(window.proctorStopCamera);
 
-  window.startProctorScan = async function startProctorScanV2() {
-    const generation = ++state.generation;
+  window.startProctorScan = async function startProctorScanV2(options) {
+    if (state.restarting) return;
+    stopV2Camera(false);
+    state.restarting = true;
+    const generation = state.generation;
+    state.intentionallyStopped = false;
     const video = byId('proctorVideo');
     const button = byId('proctorScanBtn');
     const status = byId('proctorCameraStatus');
-    stopV2Camera();
-    state.generation = generation;
     if (button) button.disabled = true;
     if (status) { status.hidden = false; status.textContent = 'جارٍ طلب الكاميرا…'; }
     text('proctorHelp', 'يتم التحقق من الإذن ثم البث ثم مسار الفيديو ثم وصول الإطارات الفعلية.');
@@ -161,6 +176,8 @@
       try { await video.play(); state.playSucceeded = true; } catch (error) { throw Object.assign(error || new Error('play-failed'), { name: 'VideoPlaybackError' }); }
       await waitForFrames(video, generation);
       state.checks.camera = true;
+      state.retryCount = 0;
+      state.restarting = false;
       if (status) status.hidden = true;
       video.classList.add('is-live');
       if ('FaceDetector' in window) {
@@ -177,6 +194,7 @@
       await diagnostics(); updateReadyState();
     } catch (error) {
       if (generation !== state.generation) return;
+      state.restarting = false;
       state.error = String(error && (error.name || error.message) || error);
       if (window.proctor.stream) { window.proctor.stream.getTracks().forEach((track) => track.stop()); window.proctor.stream = null; }
       if (video) { video.srcObject = null; video.classList.remove('is-live'); }
@@ -189,10 +207,27 @@
 
   function failLiveCamera(message) {
     state.checks.camera = false; state.checks.frame = false;
-    text('proctorHelp', message + ' استخدم زر إعادة تشغيل الكاميرا.');
+    text('proctorHelp', message + ' ستتم محاولة الاستعادة تلقائيًا.');
     const status = byId('proctorCameraStatus'); if (status) { status.hidden = false; status.textContent = message; }
     const button = byId('proctorScanBtn'); if (button) { button.disabled = false; button.textContent = 'إعادة تشغيل الكاميرا'; }
     updateReadyState(); void diagnostics(new Error(message));
+    if (!state.intentionallyStopped && !document.hidden && state.retryCount < 3) {
+      clearTimeout(state.retryTimer);
+      const delay = Math.min(6000, 800 * (2 ** state.retryCount++));
+      state.retryTimer = setTimeout(() => { if (!document.hidden && !state.intentionallyStopped) void window.startProctorScan({ recovery: true }); }, delay);
+    }
+  }
+
+  function liveTrack() {
+    return window.proctor && window.proctor.stream && window.proctor.stream.getVideoTracks().find((track) => track.readyState === 'live');
+  }
+
+  function restoreAfterForeground() {
+    if (document.hidden || state.intentionallyStopped || state.restarting) return;
+    const track = liveTrack();
+    const video = byId('proctorVideo');
+    if (!track || track.muted || !video || video.videoWidth === 0) void window.startProctorScan({ recovery: true });
+    else if (video.paused) void video.play().catch(() => failLiveCamera('تعذر استئناف عرض الكاميرا بعد العودة إلى الصفحة.'));
   }
 
   window.proctorAnalyzeFrame = async function analyzeFrameV2() {
@@ -252,6 +287,11 @@
     }
     const diagnostic = byId('proctorDiagnostics');
     if (diagnostic) diagnostic.hidden = !(location.hostname === 'localhost' || location.hostname.endsWith('.vercel.app') || new URLSearchParams(location.search).has('proctorDebug'));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(restoreAfterForeground, 300); });
+    window.addEventListener('pageshow', () => { state.intentionallyStopped = false; setTimeout(restoreAfterForeground, 300); });
+    window.addEventListener('pagehide', () => { state.intentionallyStopped = true; clearTimeout(state.retryTimer); if (window.proctorStopCamera) window.proctorStopCamera(); });
+    window.addEventListener('focus', () => setTimeout(restoreAfterForeground, 300));
+    if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', restoreAfterForeground);
     void diagnostics(); updateReadyState();
   });
 })();

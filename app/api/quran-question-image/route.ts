@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { createCanvas, loadImage, type Image } from "@napi-rs/canvas"
+import { requireUser } from "@/lib/server-auth"
 
 export const runtime = "nodejs"
 export const maxDuration = 30
@@ -86,6 +87,8 @@ async function printOnFrame(ayah: ReturnType<typeof createCanvas>) {
 }
 
 export async function GET(request: Request) {
+  const auth = await requireUser(request)
+  if (auth.response) return auth.response
   try {
     const url = new URL(request.url)
     const surah = Number(url.searchParams.get("surah"))

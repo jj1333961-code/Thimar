@@ -2,6 +2,8 @@
   "use strict";
 
   var activeContact = { admin: null, student: null, parent: null };
+  var cloudIdentity = null;
+  var cloudLoadPromise = null;
 
   function esc(value) {
     return String(value == null ? "" : value).replace(/[&<>"']/g, function (char) {
@@ -9,11 +11,104 @@
     });
   }
 
+  function formatCloudTime(value) {
+    var date = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value || "") : date.toLocaleString("ar-EG");
+  }
+
+  function cloudMessageToLocal(message) {
+    return {
+      id: message.id,
+      cloudId: message.id,
+      type: message.senderRole,
+      sender: message.senderName,
+      senderId: String(message.senderId),
+      senderRole: message.senderRole,
+      receiverType: message.recipientRole,
+      receiverId: message.recipientId,
+      receiverName: message.recipientName,
+      recipientId: message.recipientId,
+      recipientName: message.recipientName,
+      recipientRole: message.recipientRole,
+      text: message.body,
+      time: formatCloudTime(message.createdAt),
+      read: Boolean(message.readAt),
+      approved: true,
+      cloudPersisted: true,
+    };
+  }
+
+  function mergeCloudMessages(remoteMessages) {
+    var local = getData("messages") || [];
+    remoteMessages.forEach(function (remote) {
+      var normalizedRemote = cloudMessageToLocal(remote);
+      var existing = local.find(function (message) {
+        return String(message.cloudId || message.id) === String(normalizedRemote.id);
+      });
+      if (existing) {
+        var attachment = existing.attachment;
+        Object.assign(existing, normalizedRemote);
+        if (attachment) existing.attachment = attachment;
+      } else {
+        local.push(normalizedRemote);
+      }
+    });
+    setData("messages", local);
+    return local;
+  }
+
+  function roleForCurrentUser() {
+    return typeof currentType === "string" && ["admin", "student", "parent"].indexOf(currentType) >= 0 ? currentType : null;
+  }
+
+  async function loadCloudMessages() {
+    if (cloudLoadPromise) return cloudLoadPromise;
+    cloudLoadPromise = fetch("/api/messages", { cache: "no-store", credentials: "same-origin" })
+      .then(function (response) {
+        return response.json().then(function (payload) {
+          if (!response.ok) throw new Error(payload.error || "messages-unavailable");
+          return payload;
+        });
+      })
+      .then(function (payload) {
+        cloudIdentity = payload.identity || null;
+        if (Array.isArray(payload.messages)) mergeCloudMessages(payload.messages);
+        window.dispatchEvent(new Event("cloudmessagesready"));
+        var role = roleForCurrentUser();
+        if (role) render(role);
+        return true;
+      })
+      .catch(function () {
+        return false;
+      })
+      .finally(function () {
+        cloudLoadPromise = null;
+      });
+    return cloudLoadPromise;
+  }
+
+  function currentActor(role) {
+    var ids = [], names = [];
+    if (role === "admin") {
+      ids.push("admin");
+      names.push("المسؤول");
+    } else if (role === "student") {
+      ids.push(String(currentUser.id));
+      names.push(String(currentUser.name || ""));
+    } else {
+      var parentName = currentUser && currentUser[0] ? currentUser[0].parent : "ولي الأمر";
+      ids.push(String(parentName));
+      names.push(String(parentName));
+    }
+    if (cloudIdentity && cloudIdentity.id) ids.push(String(cloudIdentity.id));
+    if (cloudIdentity && cloudIdentity.name) names.push(String(cloudIdentity.name));
+    return { id: ids[0], ids: ids, role: role, name: names[0], names: names };
+  }
+
   function actor(role) {
-    if (role === "admin") return { id: "admin", role: "admin", name: "المسؤول" };
-    if (role === "student") return { id: String(currentUser.id), role: "student", name: currentUser.name };
-    var parentName = currentUser && currentUser[0] ? currentUser[0].parent : "ولي الأمر";
-    return { id: parentName, role: "parent", name: parentName };
+    if (role === "admin") return currentActor("admin");
+    if (role === "student") return currentActor("student");
+    return currentActor("parent");
   }
 
   function contacts(role) {
@@ -41,25 +136,6 @@
     })) }];
   }
 
-  function normalized(message) {
-    var fromRole = message.senderRole || message.type || "admin";
-    var fromId = message.senderId != null ? String(message.senderId) : (fromRole === "admin" ? "admin" : String(message.sender || ""));
-    var toRole = message.recipientRole || message.receiverType || (fromRole === "admin" ? "student" : "admin");
-    var toId = message.recipientId != null ? String(message.recipientId) : message.receiverId != null ? String(message.receiverId) : message.receiverName ? String(message.receiverName) : (toRole === "admin" ? "admin" : "");
-    if (fromRole === "parent" && (!fromId || fromId === "0")) fromId = String(message.sender || "");
-    return { raw: message, fromRole: fromRole, fromId: fromId, toRole: toRole, toId: toId };
-  }
-
-  function isBetween(message, me, contact) {
-    var item = normalized(message);
-    return (item.fromRole === me.role && item.fromId === me.id && item.toRole === contact.role && item.toId === contact.id) ||
-      (item.fromRole === contact.role && item.fromId === contact.id && item.toRole === me.role && item.toId === me.id);
-  }
-
-  function allContacts(role) {
-    return contacts(role).reduce(function (list, group) { return list.concat(group.items); }, []);
-  }
-
   function contactButton(item, role) {
     var selected = activeContact[role] && activeContact[role].role === item.role && activeContact[role].id === item.id;
     return '<button type="button" class="messenger-contact'+(selected ? ' active' : '')+'" data-chat-role="'+esc(role)+'" data-contact-role="'+esc(item.role)+'" data-contact-id="'+esc(item.id)+'">'+
@@ -77,6 +153,7 @@
     bind(host, role);
     scrollThread(host);
     updateBadges();
+    if (window.__thimarCloudDataReady && !cloudIdentity) loadCloudMessages();
   }
 
   function voiceAudioHTML(message) {
@@ -121,10 +198,46 @@
     showToast(status === "approved" ? "تم قبول الملف وإرسال إشعار للطالب" : "تم رفض الملف وإرسال إشعار للطالب", status === "approved" ? "success" : "error");
   }
 
+  function endpointMatches(id, name, expected) {
+    return expected.ids.some(function (value) { return String(id) === String(value); }) || expected.names.some(function (value) { return value && String(name || "") === String(value); });
+  }
+
+  function normalized(message) {
+    var fromRole = message.senderRole || message.type || "admin";
+    var fromId = message.senderId != null ? String(message.senderId) : (fromRole === "admin" ? "admin" : String(message.sender || ""));
+    var toRole = message.recipientRole || message.receiverType || (fromRole === "admin" ? "student" : "admin");
+    var toId = message.recipientId != null ? String(message.recipientId) : message.receiverId != null ? String(message.receiverId) : message.receiverName ? String(message.receiverName) : (toRole === "admin" ? "admin" : "");
+    if (fromRole === "parent" && (!fromId || fromId === "0")) fromId = String(message.sender || "");
+    return { raw: message, fromRole: fromRole, fromId: fromId, toRole: toRole, toId: toId };
+  }
+
+  function isBetween(message, me, contact) {
+    var item = normalized(message);
+    return (item.fromRole === me.role && endpointMatches(item.fromId, message.senderName || message.sender, me) && item.toRole === contact.role && item.toId === contact.id) ||
+      (item.fromRole === contact.role && item.fromId === contact.id && item.toRole === me.role && endpointMatches(item.toId, message.recipientName, me));
+  }
+
+  function allContacts(role) {
+    return contacts(role).reduce(function (list, group) { return list.concat(group.items); }, []);
+  }
+
+  function markCloudMessagesRead(ids) {
+    var validIds = ids.map(function (id) { return Number(id); }).filter(function (id) { return Number.isSafeInteger(id) && id > 0; });
+    if (!validIds.length) return;
+    fetch("/api/messages", { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ ids: validIds }) }).catch(function () {});
+  }
+
   function markVisibleMessagesRead(role, contact) {
-    var me = actor(role), messages = getData("messages") || [], changed = false;
-    messages.forEach(function (message) { if (isBetween(message, me, contact) && normalized(message).toRole === me.role && !message.read) { message.read = true; changed = true; } });
+    var me = actor(role), messages = getData("messages") || [], changed = false, cloudIds = [];
+    messages.forEach(function (message) {
+      if (isBetween(message, me, contact) && normalized(message).toRole === me.role && !message.read) {
+        message.read = true;
+        changed = true;
+        if (message.cloudPersisted || (message.cloudId && Number.isSafeInteger(Number(message.cloudId)))) cloudIds.push(message.cloudId || message.id);
+      }
+    });
     if (changed) setData("messages", messages);
+    if (cloudIds.length) markCloudMessagesRead(cloudIds);
   }
 
   function updateBadges() {
@@ -143,10 +256,21 @@
     var messages = (getData("messages") || []).filter(function (message) { return isBetween(message, me, contact); });
     var thread = messages.length ? messages.map(function (message) {
       var item = normalized(message);
-      var sent = item.fromRole === me.role && item.fromId === me.id;
+      var sent = item.fromRole === me.role && endpointMatches(item.fromId, message.senderName || message.sender, me);
       return '<article class="messenger-bubble '+(sent ? 'sent' : 'received')+'">'+(message.text ? '<p>'+esc(message.text)+'</p>' : '')+voiceAudioHTML(message)+attachmentHTML(message, role)+'<time>'+esc(message.time || "")+'</time></article>';
     }).join("") : '<div class="messenger-empty">لا توجد رسائل بعد. ابدأ المحادثة الآن.</div>';
     return '<header class="messenger-chat-head"><button type="button" class="messenger-back" aria-label="العودة إلى المحادثات">رجوع</button><span class="messenger-avatar" aria-hidden="true">'+esc(contact.name.charAt(0))+'</span><div><strong>'+esc(contact.name)+'</strong><div class="messenger-contact-role">'+esc(contact.subtitle)+'</div></div></header><div class="messenger-thread" aria-live="polite">'+thread+'</div><div class="messenger-preview" hidden></div><div class="messenger-composer"><label class="messenger-icon-button" title="إرفاق ملف"><input class="messenger-file" type="file" hidden>إرفاق</label><button type="button" class="messenger-record" title="تسجيل صوتي">تسجيل صوتي</button><textarea rows="1" aria-label="نص الرسالة" placeholder="اكتب رسالة..."></textarea><button type="button" class="messenger-send">إرسال</button></div>';
+  }
+
+  function persistCloudMessage(message) {
+    return fetch("/api/messages", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(message) })
+      .then(function (response) {
+        return response.json().then(function (payload) {
+          if (!response.ok || !payload.saved || !payload.message) throw new Error(payload.error || "message-not-saved");
+          return payload.message;
+        });
+      })
+      .catch(function () { return null; });
   }
 
   function bind(host, role) {
@@ -199,7 +323,7 @@
     }).catch(function () { showToast("تعذر الوصول إلى الميكروفون", "error"); });
   }
 
-  function sendDirect(role, textarea, attachment, fileInput) {
+  async function sendDirect(role, textarea, attachment, fileInput) {
     var text = textarea ? textarea.value.trim() : "";
     var contact = activeContact[role];
     if ((!text && !attachment) || !contact) return;
@@ -208,15 +332,23 @@
       return;
     }
     var me = actor(role);
-    var messages = getData("messages") || [];
-    messages.push({
+    var cloudMessage = !attachment ? await persistCloudMessage({
+      recipientId: contact.id,
+      recipientName: contact.name,
+      recipientRole: contact.role,
+      senderRole: me.role,
+      text: text,
+    }) : null;
+    var localMessage = cloudMessage ? cloudMessageToLocal(cloudMessage) : {
       id: "chat-"+Date.now()+"-"+Math.random().toString(16).slice(2),
       type: me.role, sender: me.name, senderId: me.id, senderRole: me.role,
       receiverType: contact.role, receiverId: contact.role === "parent" ? undefined : contact.id,
       receiverName: contact.role === "parent" ? contact.id : undefined,
       recipientRole: contact.role, recipientId: contact.id, recipientName: contact.name,
       text: text, attachment: attachment || null, attachmentStatus: attachment && me.role === "student" ? "pending" : "approved", time: new Date().toLocaleString("ar-EG"), read: false, approved: !(attachment && me.role === "student")
-    });
+    };
+    var messages = getData("messages") || [];
+    messages.push(localMessage);
     try {
       setData("messages", messages);
     } catch (error) {
@@ -224,7 +356,7 @@
       showToast("تعذر إرسال الملف: مساحة التخزين المحلية ممتلئة. احذف بعض الرسائل أو اختر ملفًا أصغر", "error");
       return;
     }
-    textarea.value = "";
+    if (textarea) textarea.value = "";
     if (fileInput) fileInput.value = "";
     render(role);
     showToast("تم إرسال الرسالة", "success");
@@ -235,5 +367,7 @@
     if (thread) thread.scrollTop = thread.scrollHeight;
   }
 
+  window.addEventListener("clouddataready", function () { loadCloudMessages(); });
   window.renderUnifiedMessenger = render;
+  window.loadCloudMessages = loadCloudMessages;
 })();
