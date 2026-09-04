@@ -929,6 +929,11 @@ tr:hover { background: var(--table-hover); }
 <div id="signupStep2" class="page hidden" style="max-width:720px; margin:40px auto;">
   <div class="page-header"><h2>📝 بيانات طلب الانضمام</h2><button class="btn btn-secondary" onclick="showPage('signupStep1')">رجوع</button></div>
   <div id="signupStep2Alert"></div>
+  <div class="alert alert-info">سيتم إنشاء حساب آمن عبر Supabase Auth. لا تحفظ كلمة المرور في بيانات الطلب.</div>
+  <div class="form-row">
+    <div class="form-group"><label for="signupEmail">البريد الإلكتروني *</label><input type="email" id="signupEmail" autocomplete="email" placeholder="name@example.com"></div>
+    <div class="form-group"><label for="signupPassword">كلمة المرور *</label><input type="password" id="signupPassword" autocomplete="new-password" minlength="8" placeholder="8 أحرف على الأقل"></div>
+  </div>
   <div class="alert alert-success" id="signupVerifiedNote">✅ تم التحقق من هويتك بنجاح.</div>
   <div class="form-row">
     <div class="form-group"><label>نوع الحساب *</label><select id="signupRole" onchange="syncSignupRelationshipField()"><option value="student">طالب</option><option value="parent">ولي أمر</option></select></div>
@@ -1161,7 +1166,7 @@ tr:hover { background: var(--table-hover); }
     <div class="form-group"><label>اسم المستخدم *</label><input type="text" id="stUsername" placeholder="اسم المستخدم لتسجيل الد��ول"></div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label>كود الهوية أو جواز السفر *</label><div class="country-input-row"><select id="stIdentityCountry" data-country-selector data-identity-id="stNational" aria-label="دولة الهوية"><option value="EG">مصر (+20)</option></select><input type="text" id="stNational" data-identity-input autocomplete="off" placeholder="أدخل هوية الدولة أو رقم جواز السفر"></div><small id="stNationalHint" class="country-hint"></small></div></div>
+    <div class="form-group"><label>كود الهوية أو جواز السفر *</label><div class="country-input-row"><select id="stIdentityCountry" data-country-selector data-identity-id="stNational" aria-label="دولة ا��هوية"><option value="EG">مصر (+20)</option></select><input type="text" id="stNational" data-identity-input autocomplete="off" placeholder="أدخل هوية الدولة أو رقم جواز السفر"></div><small id="stNationalHint" class="country-hint"></small></div></div>
     <div class="form-group"><label>الدولة ورقم الهاتف</label><div style="display:flex;gap:8px;direction:ltr;"><select id="stPhoneCountry" data-country-selector data-phone-id="stPhone" aria-label="اختر الدولة" style="max-width:180px;"><option value="20">مصر (+20)</option></select><input type="tel" id="stPhone" data-phone-input class="phone-input" autocomplete="tel" placeholder="الرقم المحلي بدون رمز الدولة" style="flex:1;"></div></div>
   </div>
   <div class="form-row">
@@ -1257,7 +1262,7 @@ tr:hover { background: var(--table-hover); }
   </div>
   <div id="recordElementsContainer"></div>
   <div class="page" style="margin:15px 0;border:2px dashed var(--info);">
-    <h4 style="color:var(--info)">🖼️ تعديل اللوح/الصورة يدوياً</h4>
+    <h4 style="color:var(--info)">🖼️ تعديل اللوح/الصو��ة يدوياً</h4>
     <p style="color:var(--text-light)">الاختيار التلقائي للسورة والآيات يظل كما هو، ويمكن للمسؤول تعديل اللوح والصورة يدوياً دون تعطيل الاختيار التلقائي.</p>
     <div class="form-row">
       <div class="form-group"><label>نص اللوح/التعديل اليدوي</label><textarea id="manualBoardText" rows="3" placeholder="اكتب التعديل المطلوب..."></textarea></div>
@@ -1277,7 +1282,7 @@ tr:hover { background: var(--table-hover); }
  <div class="form-group"><label for="examLastSurah">نهاية الماضي (اختياري)</label><select id="examLastSurah" onchange="syncExamSurahRange()"><option value="">سورة اناس تلقائياً</option></select><small style="color:var(--text-light)">يمكن تضييق نطاق الماضي يدويا قبل ءءقسيمه.</small></div>
  <div class="form-group"><label for="examDeadline">موعد انتهاء الإتاحة</label><input id="examDeadline" type="datetime-local"></div>
  <div class="form-group"><label for="examSourceMode">المرجع الأساسي</label><select id="examSourceMode" onchange="updateExamSourceDistribution()"><option value="ai">الذكاء الاصطناعي</option><option value="file">من الملفات</option></select><small id="examSourceDistribution" style="color:var(--text-light)">توليد ذكي مع التحقق من النص القرآني والمراجع الموثوقة.</small></div>
- <div class="form-group" id="examFileSourceGroup" style="display:none"><label for="examFileSource">ملف المرجع</label><select id="examFileSource"><option value="">اختر مرجعً...</option></select><small style="color:var(--text-light)">يجب اختيار ملف عند استخدام «من الملفات».</small></div>
+ <div class="form-group" id="examFileSourceGroup" style="display:none"><label for="examFileSource">مل�� المرجع</label><select id="examFileSource"><option value="">اختر مرجعً...</option></select><small style="color:var(--text-light)">يجب اختيار ملف عند استخدام «من الملفات».</small></div>
  </div>
  <div class="alert alert-info"><strong>مصدر حصري وواضح:</strong> اختر الذكاء الاصطناعي لأسئلة قرآنية صعبة ومتنوعة، أو اختر ملفاً واحداً ليكون مصدر الدفعة كاملة. كل ضغطة توليد تض��ف أسئلة جديدة ولا تمسح السابقة.</div>
     <div id="examPlanRows"></div>
