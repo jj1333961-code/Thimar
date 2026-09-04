@@ -24,8 +24,8 @@ function sign(value: string, key: string) {
   return createHmac("sha256", key).update(value).digest("base64url")
 }
 
-function makeSession(email: string, name: string, key: string) {
-  const payload = Buffer.from(JSON.stringify({ email, name, issuedAt: Date.now() })).toString("base64url")
+function makeSession(email: string, name: string, key: string, role: string, accountId: string, accountName: string) {
+  const payload = Buffer.from(JSON.stringify({ email, name, role, accountId, accountName, issuedAt: Date.now() })).toString("base64url")
   return `${payload}.${sign(payload, key)}`
 }
 
@@ -60,11 +60,14 @@ export async function POST(request: NextRequest) {
     const matched = admin || student || parent
     if (!matched) return response({ error: "اسم المستخدم أو الرقم السري غير صحيح" }, 401)
 
+    const role = admin ? "admin" : parent ? "parent" : "student"
     const email = normalize(matched.email || matched.googleEmail || matched.parentEmail || matched.parentGoogleEmail || matched.parent || matched.username || matched.mobile)
     if (!email) return response({ error: "الحساب لا يملك معرفاً صالحاً" }, 422)
     const name = String(matched.name || matched.parent || matched.username || matched.mobile || "")
-    const result = response({ authenticated: true, role: admin ? "admin" : parent ? "parent" : "student" })
-    result.cookies.set(COOKIE, makeSession(email, name, key), { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: MAX_AGE })
+    const accountId = String(matched.id || "")
+    const accountName = role === "parent" ? String(matched.parent || username) : String(matched.username || matched.mobile || "")
+    const result = response({ authenticated: true, role })
+    result.cookies.set(COOKIE, makeSession(email, name, key, role, accountId, accountName), { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: MAX_AGE })
     return result
   } catch (error) {
     console.error("[v0] POST /api/auth/password failed", error)
