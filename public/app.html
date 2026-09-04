@@ -135,7 +135,7 @@ button:active { transform:scale(.98); }
 #lockScreen .page-header { align-items:flex-start; }
 #lockScreen .page-header h2 { font-size:clamp(1.35rem, 3vw, 1.8rem); letter-spacing:-.02em; }
 #lockScreen::before { content:'ثمار'; display:block; color:var(--primary); font-size:clamp(2rem, 6vw, 3.2rem); font-weight:800; letter-spacing:.04em; margin-bottom:8px; }
-#lockScreen::after { content:'تعلمٌ هادئ، ونموٌ ثابت'; display:block; color:var(--text-light); font-size:.92rem; margin-top:-20px; margin-bottom:22px; }
+#lockScreen::after { content:'تعلمٌ هادئ، ونموٌ ثاب��'; display:block; color:var(--text-light); font-size:.92rem; margin-top:-20px; margin-bottom:22px; }
 .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; border-bottom:2px solid var(--border); padding-bottom:15px; flex-wrap:wrap; gap:10px; }
 .page-header h2 { color: var(--primary); }
 .btn { padding:10px 22px; border:none; border-radius:10px; cursor:pointer; font-size:1rem; transition:0.2s; }
@@ -1368,9 +1368,6 @@ tr:hover { background: var(--table-hover); }
 <div id="studentDashboard" class="page hidden">
   <div class="page-header">
     <h2>👨‍🎓 صفحة الطالب</h2>
-  <div>
-  <button class="btn btn-outline" onclick="logout()">خروج</button>
-  </div>
   </div>
   <button type="button" class="side-fab" onclick="openRoleSidebar('student')" aria-label="فتح قائمة الأدوات" aria-controls="sidebar-student" aria-expanded="false"><span></span><span></span><span></span></button>
   <div id="sidebar-student" class="side-sidebar-wrap">
@@ -1459,9 +1456,6 @@ tr:hover { background: var(--table-hover); }
 <div id="parentDashboard" class="page hidden">
   <div class="page-header">
     <h2>👨‍👩‍👧 متابعة الأبناء</h2>
-  <div>
-  <button class="btn btn-outline" onclick="logout()">خروج</button>
-  </div>
   </div>
   <button type="button" class="side-fab" onclick="openRoleSidebar('parent')" aria-label="فتح قائمة الأدوات" aria-controls="sidebar-parent" aria-expanded="false"><span></span><span></span><span></span></button>
   <div id="sidebar-parent" class="side-sidebar-wrap">
