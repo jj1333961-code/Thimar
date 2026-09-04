@@ -871,7 +871,7 @@ tr:hover { background: var(--table-hover); }
           <input type="password" id="unifiedPass" placeholder="الرقم السري" autocomplete="current-password" onkeypress="if(event.key==='Enter'&&!event.nativeEvent?.isComposing&&event.keyCode!==229)unifiedLogin()">
           <button type="button" id="unifiedPassToggle" class="thimar-password-toggle" onclick="toggleUnifiedPassword()" aria-label="إظهار الرقم السري" aria-pressed="false"><span class="thimar-eye-icon" aria-hidden="true"></span></button>
         </div>
-        <button type="button" class="thimar-forgot" onclick="openAccountRecovery()">هل نسيت الرقم السري؟</button>
+        <button type="button" class="thimar-forgot" onclick="openAccountRecovery()">هل نسي�� الرقم السري؟</button>
       </div>
       <button class="btn btn-primary thimar-btn thimar-btn-gold" onclick="unifiedLogin()">تسجيل الدخول</button>
       <div class="thimar-signup-row">
@@ -929,6 +929,11 @@ tr:hover { background: var(--table-hover); }
 <div id="signupStep2" class="page hidden" style="max-width:720px; margin:40px auto;">
   <div class="page-header"><h2>📝 بيانات طلب الانضمام</h2><button class="btn btn-secondary" onclick="showPage('signupStep1')">رجوع</button></div>
   <div id="signupStep2Alert"></div>
+  <div class="alert alert-info">سيتم إنشاء حساب آمن عبر Supabase Auth. لا تحفظ كلمة المرور في بيانات الطلب.</div>
+  <div class="form-row">
+    <div class="form-group"><label for="signupEmail">البريد الإلكتروني *</label><input type="email" id="signupEmail" autocomplete="email" placeholder="name@example.com"></div>
+    <div class="form-group"><label for="signupPassword">كلمة المرور *</label><input type="password" id="signupPassword" autocomplete="new-password" minlength="8" placeholder="8 أحرف على الأقل"></div>
+  </div>
   <div class="alert alert-success" id="signupVerifiedNote">✅ تم التحقق من هويتك بنجاح.</div>
   <div class="form-row">
     <div class="form-group"><label>نوع الحساب *</label><select id="signupRole" onchange="syncSignupRelationshipField()"><option value="student">طالب</option><option value="parent">ولي أمر</option></select></div>
@@ -1073,7 +1078,7 @@ tr:hover { background: var(--table-hover); }
   <div class="form-row" style="margin-bottom:20px; border:2px solid var(--primary); border-radius:12px; padding:15px; background:var(--table-header);">
     <div class="form-group" style="margin-bottom:0;">
       <label>رقم واتساب المسؤول لاستلام طلبات الامام</label>
-      <div class="country-input-row"><select id="adminWhatsappCountry" data-country-selector data-phone-id="adminWhatsInput" aria-label="دولة رقم الواتساب"><option value="EG">مصر (+20)</option></select><input type="tel" id="adminWhatsInput" data-phone-input class="phone-input" placeholder="الرقم ال��حلي بدون رمز الدولة" autocomplete="tel"></div>
+      <div class="country-input-row"><select id="adminWhatsappCountry" data-country-selector data-phone-id="adminWhatsInput" aria-label="دولة رقم الواتس��ب"><option value="EG">مصر (+20)</option></select><input type="tel" id="adminWhatsInput" data-phone-input class="phone-input" placeholder="الرقم ال��حلي بدون رمز الدولة" autocomplete="tel"></div>
       <small style="color:var(--text-light)">يُستخدم لإرسال طلبات الحساات الجديدة على واتساب (بصغة الدولة، مثال: 201554542019)</small>
     </div>
     <div class="form-group" style="display:flex; align-items:flex-end; margin-bottom:0;">
@@ -1257,7 +1262,7 @@ tr:hover { background: var(--table-hover); }
   </div>
   <div id="recordElementsContainer"></div>
   <div class="page" style="margin:15px 0;border:2px dashed var(--info);">
-    <h4 style="color:var(--info)">🖼️ تعديل اللوح/الصورة يدوياً</h4>
+    <h4 style="color:var(--info)">🖼️ ت��ديل اللوح/الصورة يدوياً</h4>
     <p style="color:var(--text-light)">الاختيار التلقائي للسورة والآيات يظل كما هو�� ويمكن للمسؤول تعديل اللوح والصورة يدوياً دون تعطيل الاختيار التلقائي.</p>
     <div class="form-row">
       <div class="form-group"><label>نص اللوح/التعديل اليدوي</label><textarea id="manualBoardText" rows="3" placeholder="اكتب التعديل المطلوب..."></textarea></div>

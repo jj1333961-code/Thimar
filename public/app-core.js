@@ -1202,6 +1202,7 @@ function handleGoogleCredential(resp) {
   box.innerHTML = '';
   document.getElementById('signupVerifiedNote').innerHTML = '✅ تم التحقق من هويتك عبر جوجل — ' + payload.email;
   if(payload.name) { const n = document.getElementById('signupName'); if(n && !n.value) n.value = payload.name; }
+  const emailField = document.getElementById('signupEmail'); if(emailField && !emailField.value) emailField.value = payload.email;
   initSignupJuzSelect();
   showPage('signupStep2');
 }
@@ -1411,7 +1412,7 @@ function updateSignupSurahSelect() {
   quranData[juz].forEach(function(s){ html += '<option value="' + s + '">' + s + '</option>'; });
   select.innerHTML = html;
 }
-function submitSignupRequest() {
+async function submitSignupRequest() {
   const box = document.getElementById('signupStep2Alert');
   if(!signupState.verified) { box.innerHTML = '<div class="alert alert-danger">❌ يجب التحقق من الهوية أولاً</div>'; return; }
   const role = document.getElementById('signupRole').value;
@@ -1424,6 +1425,10 @@ function submitSignupRequest() {
   const juz = document.getElementById('signupJuz').value;
   const surah = document.getElementById('signupSurah').value;
   const notes = document.getElementById('signupNotes').value.trim();
+  const email = (document.getElementById('signupEmail')?.value || '').trim().toLowerCase();
+  const password = document.getElementById('signupPassword')?.value || '';
+  if(!/^\S+@\S+\.\S+$/.test(email)) { box.innerHTML = '<div class="alert alert-danger">❌ أدخل بريدًا إلكترونيًا صالحًا.</div>'; return; }
+  if(password.length < 8) { box.innerHTML = '<div class="alert alert-danger">❌ يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.</div>'; return; }
   const signupValidation = validateCountryFields('signupIdentityCountry','signupNid','signupPhoneCountry','signupPhone');
   if(!name || !relationshipName || !signupValidation.identityValid || !signupValidation.phoneValid) { box.innerHTML = '<div class="alert alert-danger">❌ أدخل الاسم والبيانات المطلوبة وفق صيغة الدولة المختارة.</div>'; return; }
   const roleLabel = role === 'student' ? 'طالب' : 'ولي أمر';
@@ -1440,6 +1445,18 @@ function submitSignupRequest() {
     + 'السورة: ' + (surah || 'غير محددة') + '\n'
     + 'ملاحظات: ' + (notes || 'لا يوجد') + '\n'
     + 'وقت الطلب: ' + time;
+
+  box.innerHTML = '<div class="alert alert-info">جارٍ إنشاء حساب Supabase الآمن...</div>';
+  try {
+    const authResponse = await fetch('/api/auth/supabase', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'signup', email:email, password:password, name:name, role:role }) });
+    const authBody = await authResponse.json().catch(function(){ return {}; });
+    if(!authResponse.ok) { console.error('[v0] Supabase signup failed', authBody); throw new Error(authBody.error || 'تعذر إنشاء حساب Supabase'); }
+    if(authBody.pendingEmailConfirmation) { box.innerHTML = '<div class="alert alert-success">✅ تم إنشاء الحساب بنجاح. تحقق من بريدك الإلكتروني لتفعيل الحساب، ثم استخدم البريد وكلمة المرور لتسجيل الدخول.</div>'; return; }
+  } catch(error) {
+    console.error('[v0] Supabase signup request failed', error);
+    box.innerHTML = '<div class="alert alert-danger">' + escapeHtml(error.message || 'تعذر إنشاء الحساب') + '</div>';
+    return;
+  }
 
   const requests = getData('joinRequests');
   requests.push({ id: 'jr' + Date.now(), role: role, name: name, guardianName: role === 'student' ? relationshipName : '', studentName: role === 'parent' ? relationshipName : '', relationshipName: relationshipName, nid: nid, identityCountry: identityCountry, nationalCountry: identityCountry, phone: phone, phoneCountry: phoneCountry, whats: signupState.whats, whatsCountry: signupState.whatsCountry || 'EG', email: signupState.email, method: signupState.method, juz: juz, surah: surah, notes: notes, status: 'pending', time: time });
@@ -1768,6 +1785,27 @@ async function unifiedLogin() {
   const box = document.getElementById('unifiedLoginAlert');
   box.innerHTML = '';
   if(!u || !p) { box.innerHTML = '<div class="alert alert-danger">❌ أدخل اسم المستخدم والرقم السري</div>'; return; }
+  if(u.includes('@')) {
+    box.innerHTML = '<div class="alert alert-info">جارٍ التحقق من Supabase Auth...</div>';
+    try {
+      const response = await fetch('/api/auth/supabase', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'login', email:u, password:p }) });
+      const body = await response.json().catch(function(){ return {}; });
+      if(!response.ok) { console.error('[v0] Supabase login failed', body); throw new Error(body.error || 'تعذر تسجيل الدخول عبر Supabase'); }
+      if(!neonDataReady) { neonHydrationPromise = hydrateDataFromNeon(); if(!await neonHydrationPromise) throw new Error('cloud-load-failed'); }
+      const email = String(body.user?.email || u).toLowerCase();
+      const adminAccount = getData('admins').find(a => String(a.email || a.googleEmail || '').toLowerCase() === email);
+      const studentAccount = getData('students').find(a => String(a.email || a.googleEmail || '').toLowerCase() === email);
+      const parentAccounts = getData('students').filter(a => String(a.parentEmail || a.parentGoogleEmail || '').toLowerCase() === email);
+      if(adminAccount) { currentUser=adminAccount; currentType='admin'; currentAdminId=adminAccount.id; pageHistory=[]; saveSessionState(); showPage('adminDashboard'); showToast('✅ تم تسجيل الدخول عبر Supabase','success'); document.getElementById('unifiedPass').value=''; return; }
+      if(studentAccount) { currentUser=studentAccount; currentType='student'; currentAdminId=null; pageHistory=[]; saveSessionState(); showPage('studentDashboard'); showToast('✅ تم تسجيل الدخول عبر Supabase','success'); document.getElementById('unifiedPass').value=''; return; }
+      if(parentAccounts.length) { currentUser=parentAccounts; currentType='parent'; currentAdminId=null; pageHistory=[]; saveSessionState(); showPage('parentDashboard'); showToast('✅ تم تسجيل الدخول عبر Supabase','success'); document.getElementById('unifiedPass').value=''; return; }
+      throw new Error('تم تسجيل الدخول في Supabase، لكن البريد غير مرتبط بحساب داخل المنصة بعد.');
+    } catch(error) {
+      console.error('[v0] Supabase login request failed', error);
+      box.innerHTML = '<div class="alert alert-danger">'+escapeHtml(error.message || 'تعذر تسجيل الدخول')+'</div>';
+      return;
+    }
+  }
   if(!neonDataReady) {
   box.innerHTML = '<div class="alert alert-info">جارٍ التحقق من بيانات الدخول...</div>';
   try {
@@ -2866,7 +2904,7 @@ async function generateExamQuestions(){
       raw=await generateLocalQuranQuestions(range.start,range.end,expandedPlans);showExamAlert('استخدم النظام المولد القرآني الاحتياطي بعد تعذر مزودي الذكاء الاصطناعي.','warning')
     }
     const unique=[];for(const q of raw.map(cleanExamQuestion).filter(q=>q.prompt&&q.correct!==undefined)){const fingerprint=examQuestionFingerprint(q);if(existingSet.has(fingerprint))continue;existingSet.add(fingerprint);unique.push(q);if(unique.length===requestedTotal)break}
-    if(!unique.length)throw new Error('لم تُنتج ادفعة أسئلة جديدة ��ير مكررة. غيّر النطاق أو الخطة ثم أعد المحاولة.');
+    if(!unique.length)throw new Error('لم تُنتج ادفعة أسئلة جديدة ����ير مكررة. غيّر النطاق أو الخطة ثم أعد المحاولة.');
     const stamp=Date.now(),added=unique.map((q,index)=>{const plan=expandedPlans[index]||normalizedPlans[0];return {id:'exam_'+stamp+'_'+index,type:plan.type,level:plan.level,surah:q.surah||base,prompt:q.prompt||'',stem:q.stem||'',options:Array.isArray(q.options)?q.options:[],correct:q.correct||'',from:parseInt(q.from)||1,to:parseInt(q.to)||parseInt(q.from)||1,surahNumber:parseInt(q.surahNumber)||0,timeLimit:plan.timeLimit,completeAyahs:plan.completeAyahs,reciteAyahs:plan.reciteAyahs,audioShareWithParent:plan.audioShareWithParent!==false,proctorEnabled:plan.proctorEnabled!==false,points:typeof q.points==='number'?q.points:1,rejected:false,weakened:false,source:q.source||(sourceMode==='file'?'file':'ai-verified'),sourceFileId:q.sourceFileId||'',sourceFileName:q.sourceFileName||'',questionImage:q.questionImage||'',optionsCount:plan.optionsCount||4,pastScope:range.scope}});
     const previousCount=examQuestions.length;examQuestions=examQuestions.concat(added);examEditorActiveIndex=previousCount;
     const now=Date.now(),historyByFingerprint=new Map(savedHistory.map(item=>[String(item.fingerprint),item]));
@@ -3769,7 +3807,7 @@ function renderDevPlan(plan){
     resultBox.innerHTML =
       '<div style="background:#fdecea; color:#b02a37; padding:15px; border-radius:10px;">'+
       '<div style="font-weight:bold; margin-bottom:6px;">🚫 لا يمكن تنفيذ هذا الطلب</div>'+
-      '<div style="line-height:1.8;">'+esc(plan.summary || 'الطلب يخالف ��يود المشروع.')+'</div></div>';
+      '<div style="line-height:1.8;">'+esc(plan.summary || 'الطلب يخالف ��يود الم��روع.')+'</div></div>';
     return;
   }
 
@@ -4707,7 +4745,7 @@ async function verifyAndSubmitRecitation(taskIdx, blob, dataUrl, transcript, aiB
     if(statusEl) statusEl.textContent = 'مرفوض — أعد الرفع ❌';
     if(aiBox) aiBox.innerHTML = '<div class="alert alert-danger"><strong>🚫 قرر الذكاء ااصطناعي — المحتوى غير مطابق:</strong><br>' +
       'المطلوب: <strong>' + targetTxt + '</strong><br>' +
-      'نسبة مطابقة المحتوى: <strong>' + rec.pct + '%</strong> (الحد الأدنى ' + RECITATION_MIN_PCT + '%)' + (rec.txtPct !== null && rec.txtPct !== undefined ? ' | مطابقة النص المنطوق: ' + rec.txtPct + '%' : '') + '<br>' +
+      'نسبة مطابقة المحتوى: <strong>' + rec.pct + '%</strong> (الحد الأدنى ' + RECITATION_MIN_PCT + '%)' + (rec.txtPct !== null && rec.txtPct !== undefined ? ' | مطابقة النص ال��نطوق: ' + rec.txtPct + '%' : '') + '<br>' +
       (rec.reason ? 'السبب: ' + rec.reason + '<br>' : '') +
       '✋ لم تُرسل الرسالة لمسؤول — يرجى راءة المقطع المطلوب نفسه ورفع ملف تسجيل آخر.</div>';
     return false;
@@ -5602,7 +5640,7 @@ function generateWelcomeMessages(student) {
   const dayOfWeek = new Date().getDay();
   const templates = [
     {title: 'هلاً بك يا '+student.name+'! 🌟', body: 'يوم جديد، فرصة جديدة للتقرب من كتاب الله. اجعل لنفسك ورداً يومياً لا يفوتك، فالقرآن نور يُهدى به الله من شيء.'},
-    {title: 'صباح التفاؤل يا '+student.name+'! ☀️', body: 'تذكر ن كل حرف تقرأه في كتاب الله له أجر عظيم. لا تستهن بمراجعة صفحة واحدة، فالقليل الدائم خير من الكثير المنقطع.'},
+    {title: 'صباح التفاؤل يا '+student.name+'! ☀️', body: 'تذكر ن كل حرف تقرأه في كتاب الله له أجر عظيم. لا تستهن بمراجعة صفحة واحدة، فالقل��ل الدائم خير من الكثير المنقطع.'},
     {title: 'مرحباً يا '+student.name+'! 📖', body: 'القرآن كلام الله، فاجعل له قلباً خاشعاً ولساناً رطباً. ابدأ يومك بآية، وانتهِ به بآية وسترى الفرق في حياتك.'},
     {title: 'مساء الخير يا '+student.name+'! 🌙', body: 'اللهم اجعل القرآن ربيع قلبك. خصص وقتاً للمراجعة قبل النوم، فإنها تثبت الحفظ وتجعله متياً.'},
     {title: 'يوم مبارك يا '+student.name+'! ✨', body: 'حافظ على الاستمرارية في الحفظ، فالقرآن يُحفظ بالتكرار والمراجعة. ثق بالله، فهو معك في كل خطوة.'}
@@ -5690,7 +5728,7 @@ function generateAIResponse(text, student) {
     return r;
   }
   // الآيات ء��الصور
-  if(has('اية','آية','ايات','آيات','صورة','اقرأ','مصحف')) {
+  if(has('اية','آية','ايات','��يات','صورة','اقرأ','مصحف')) {
     return '���� لعرض الآيات المطلوبة منك:<br>1. افتح <strong>المهام المطلوبة</strong> في صفحتك.<br>2. اضغط <strong>📖 عرض الآيات بحجم كبير</strong> في المهمة.<br>3. استخدم زرار ➕ / ➖ للتكبير والتصغير حتى تصل لأوءءح حجم لعينيك.<br><br>ءءلآيات تُع��ض بارم العثمانءء المشكَّل كصورة مطابقة تما��اً لمحف.';
   }
   // البصمة الصوتية

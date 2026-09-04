@@ -919,6 +919,11 @@ tr:hover { background: var(--table-hover); }
 <div id="signupStep2" class="page hidden" style="max-width:720px; margin:40px auto;">
   <div class="page-header"><h2>📝 بيانات طلب الانضمام</h2><button class="btn btn-secondary" onclick="showPage('signupStep1')">رجوع</button></div>
   <div id="signupStep2Alert"></div>
+  <div class="alert alert-info">سيتم إنشاء حساب آمن عبر Supabase Auth. لا تحفظ كلمة المرور في بيانات الطلب.</div>
+  <div class="form-row">
+    <div class="form-group"><label for="signupEmail">البريد الإلكتروني *</label><input type="email" id="signupEmail" autocomplete="email" placeholder="name@example.com"></div>
+    <div class="form-group"><label for="signupPassword">كلمة المرور *</label><input type="password" id="signupPassword" autocomplete="new-password" minlength="8" placeholder="8 أحرف على الأقل"></div>
+  </div>
   <div class="alert alert-success" id="signupVerifiedNote">✅ تم التحقق من هويتك بنجاح.</div>
   <div class="form-row">
     <div class="form-group"><label>نوع الحساب *</label><select id="signupRole" onchange="syncSignupRelationshipField()"><option value="student">طالب</option><option value="parent">ولي أمر</option></select></div>
@@ -1174,7 +1179,7 @@ tr:hover { background: var(--table-hover); }
     </div>
     <small id="juzBoundaryHint" style="display:block;color:var(--text-light);margin-top:6px">سيظهر هنا نطاق الآيات الحقيقي للجزء.</small>
     <div class="form-group">
-      <label>البصمة الصوتية للطالب (اختياري — تسجيل صوتي للتحقق من الهوية - 20 ثانية)</label>
+      <label>ال��صمة الصوتية للطالب (اختياري — تسجيل صوتي للتحقق من الهوية - 20 ثانية)</label>
       <div style="display:flex; gap:10px; align-items:center; margin-top:8px;">
         <button id="voiceRecordBtn" class="voice-record-btn" onclick="toggleVoiceRecord()">🎙️</button>
         <span id="voiceRecordStatus">اضغط للتسجيل (20 ثانية)</span>
