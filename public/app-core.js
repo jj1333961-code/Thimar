@@ -650,6 +650,7 @@ if(!runtimeData.initialized_v7) {
   let restoredSessionPage = null;
   // يحتفظ المسؤول بجلسة الدخول الأصلية أثناء زيارة حساب طالب أو ولي أمر.
   let adminVisitState = null;
+  let logoutGate = null;
  let voiceBlob = null, voiceChunks = [], mediaRecorder = null;
 let voiceFingerprint = null, voiceDataUrl = null, voiceProfileGemini = null;
 let recordElements = [], homeworkItems = [], readingItems = [];
@@ -696,9 +697,9 @@ function finishGoogleLogin(user){
   const admin=admins.find(a=>String(a.email||a.googleEmail||'').trim().toLowerCase()===email);
   if(admin){currentUser=admin;currentType='admin';currentAdminId=admin.id;pageHistory=[];saveSessionState();showPage('adminDashboard');showToast('مرحباً بك في لوحة المسؤول','success');return true}
   const student=students.find(s=>String(s.email||s.googleEmail||'').trim().toLowerCase()===email);
-  if(student){currentUser=student;currentType='student';currentAdminId=null;pageHistory=[];saveSessionState();showPage('studentDashboard');showToast('مرحباً بك في منصة ثمار','success');return true}
+  if(student){completeUserLogin(student,'student','studentDashboard','مرحباً بك في منصة ثمار');return true}
   const children=students.filter(s=>String(s.parentEmail||s.parentGoogleEmail||'').trim().toLowerCase()===email);
-  if(children.length){currentUser=children;currentType='parent';currentAdminId=null;pageHistory=[];saveSessionState();showPage('parentDashboard');showToast('مرحباً بك في صفحة ولي الأمر','success');return true}
+  if(children.length){completeUserLogin(children,'parent','parentDashboard','مرحباً بك في صفحة ولي الأمر');return true}
   signupState.method='google';signupState.email=email;signupState.name=user.name||'';signupState.whats='';signupState.verified=true;try{sessionStorage.setItem('thimar_pending_google_signup',JSON.stringify({email:signupState.email,name:signupState.name,verified:true}));}catch(e){}const note=document.getElementById('signupVerifiedNote');if(note)note.innerHTML='تم التحقق من هويتك عبر Google — '+escapeHtml(email);const name=document.getElementById('signupName');if(name&&!name.value)name.value=user.name||'';initSignupJuzSelect();showPage('signupStep2');return false;
 }
 function restorePendingGoogleSignup(){try{const raw=sessionStorage.getItem('thimar_pending_google_signup');if(!raw)return false;const pending=JSON.parse(raw);if(!pending?.email)return false;signupState.method='google';signupState.email=String(pending.email).trim().toLowerCase();signupState.name=String(pending.name||'');signupState.whats='';signupState.verified=true;const note=document.getElementById('signupVerifiedNote');if(note)note.innerHTML='تم التحقق من هويتك عبر Google — '+escapeHtml(signupState.email);const name=document.getElementById('signupName');if(name&&!name.value)name.value=signupState.name;initSignupJuzSelect();showPage('signupStep2');return true}catch(e){try{sessionStorage.removeItem('thimar_pending_google_signup')}catch(ignore){}return false}}
@@ -753,18 +754,19 @@ function saveSessionState() {
   recordCurrentDevice();
   try {
     if(currentUser && currentType) {
-      const session = { user: currentUser, type: currentType, adminId: currentAdminId || null, adminVisitState: adminVisitState || null, page: document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)')?.id || defaultPageForRole(currentType), savedAt: Date.now() };
+      const session = { user: currentUser, type: currentType, adminId: currentAdminId || null, adminVisitState: adminVisitState || null, logoutGate: logoutGate || null, page: document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)')?.id || defaultPageForRole(currentType), savedAt: Date.now() };
       sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
       sessionStorage.setItem('currentType', currentType);
       sessionStorage.setItem('currentAdminId', currentAdminId || '');
-      sessionStorage.setItem('pageHistory', JSON.stringify(pageHistory));
-      if (window.ThimarOfflineSession) window.ThimarOfflineSession.save(session);
+  sessionStorage.setItem('pageHistory', JSON.stringify(pageHistory));
+  sessionStorage.setItem('logoutGate', JSON.stringify(logoutGate || null));
+  if (window.ThimarOfflineSession) window.ThimarOfflineSession.save(session);
     }
   } catch(e) { console.error('saveSessionState error:', e); }
 }
 function applySavedSession(saved) {
   if(!saved || !saved.user || !saved.type) return false;
-  currentUser = saved.user; currentType = saved.type; currentAdminId = saved.adminId || null; adminVisitState = saved.adminVisitState || null;
+  currentUser = saved.user; currentType = saved.type; currentAdminId = saved.adminId || null; adminVisitState = saved.adminVisitState || null; logoutGate = saved.logoutGate || null;
   restoredSessionPage = saved.page || defaultPageForRole(saved.type);
   return true;
 }
@@ -772,8 +774,9 @@ function restoreSession() {
   try {
     const savedUser = sessionStorage.getItem('currentUser');
     const savedType = sessionStorage.getItem('currentType');
-    const savedHistory = sessionStorage.getItem('pageHistory');
-    if(savedUser && savedType && applySavedSession({ user: JSON.parse(savedUser), type: savedType, adminId: sessionStorage.getItem('currentAdminId') || null })) {
+const savedHistory = sessionStorage.getItem('pageHistory');
+    const savedLogoutGate = sessionStorage.getItem('logoutGate');
+  if(savedUser && savedType && applySavedSession({ user: JSON.parse(savedUser), type: savedType, adminId: sessionStorage.getItem('currentAdminId') || null, logoutGate: savedLogoutGate ? JSON.parse(savedLogoutGate) : null })) {
       if(savedHistory) pageHistory = JSON.parse(savedHistory);
       return true;
     }
@@ -792,6 +795,7 @@ function clearSession() {
     sessionStorage.removeItem('currentType');
     sessionStorage.removeItem('currentAdminId');
     sessionStorage.removeItem('pageHistory');
+    sessionStorage.removeItem('logoutGate');
     if (window.ThimarOfflineSession) window.ThimarOfflineSession.clear().catch(function(){});
     pageHistory = [];
   } catch(e) { console.error('clearSession error:', e); }
@@ -836,6 +840,7 @@ function roleShellPath(role) {
 
 function showPage(id, options = {}) {
   // كل الأدوار موجودة داخل shell واحد؛ التنقل بينها محلي بلا إعادة تحميل.
+  if(id !== 'lockScreen' && isLogoutPendingForCurrentUser()) id = 'lockScreen';
   const dashboardRole = id === 'adminDashboard' ? 'admin' : id === 'studentDashboard' ? 'student' : id === 'parentDashboard' ? 'parent' : null;
   const currentVisible = document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)');
   const currentId = currentVisible ? currentVisible.id : null;
@@ -864,6 +869,7 @@ function showPage(id, options = {}) {
   checkAndFinalizeDrafts();
   updateBackButton();
   renderAdminVisitBanner();
+  renderLogoutGateBanner();
 
   if(id === 'adminDashboard') { renderAdminStats(); updateMsgBadge(); renderActiveDrafts(); }
   if(id === 'studentsList') renderStudents();
@@ -1358,13 +1364,99 @@ function submitAccountRecovery() {
   box.innerHTML='<div class="alert alert-success">تم إرسال طلب استرجاع الحساب إلى المسؤول. <a href="'+link+'" target="_blank" rel="noopener noreferrer"><strong>فتح الرسالة الجاهزة على واتساب</strong></a></div>';
   if(link) window.open(link,'_blank','noopener');
 }
+function logoutAccountForUser(user) {
+  return Array.isArray(user) ? user[0] : user;
+}
+function getLogoutRequestForUser(role, user) {
+  const account = logoutAccountForUser(user);
+  const accountId = String(account?.id || '');
+  return getData('notifications', []).filter(function(item) {
+    return item && item.type === 'logout_request' && item.role === role && String(item.userId || '') === accountId;
+  }).sort(function(a, b) { return String(b.createdAt || '').localeCompare(String(a.createdAt || '')); })[0] || null;
+}
+function getCurrentDeviceId() {
+  try { return localStorage.getItem('thimar_device_id') || ''; } catch(e) { return ''; }
+}
+function isLogoutPendingForCurrentUser() {
+  if(currentType !== 'student' && currentType !== 'parent') return false;
+  return getLogoutRequestForUser(currentType, currentUser)?.status === 'pending';
+}
+function prepareApprovedLogoutGate(role, user) {
+  const request = getLogoutRequestForUser(role, user);
+  if(request?.status === 'approved') {
+    logoutGate = { requestId: request.id || request.requestId, targetPage: request.requestedFromPage || defaultPageForRole(role) };
+    return logoutGate;
+  }
+  logoutGate = null;
+  return null;
+}
+function renderLogoutGateBanner() {
+  const old = document.getElementById('logoutGateBanner');
+  if(old) old.remove();
+  if(!logoutGate || !currentUser || (currentType !== 'student' && currentType !== 'parent')) return;
+  const banner = document.createElement('div');
+  banner.id = 'logoutGateBanner';
+  banner.className = 'logout-gate-banner';
+  banner.setAttribute('role', 'status');
+  banner.innerHTML = '<span>تم قبول طلب تسجيل الخروج. يمكنك الآن إنهاء الجلسة.</span><button type="button" class="btn btn-danger btn-sm" onclick="completeApprovedLogout()">الخروج الآن</button>';
+  document.body.prepend(banner);
+}
+async function requestLogout() {
+  if(currentType !== 'student' && currentType !== 'parent') return;
+  if(isLogoutPendingForCurrentUser()) { showToast('تم إرسال طلب الخروج بالفعل، بانتظار موافقة المسؤول','info'); return; }
+  const visible = document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)');
+  const page = visible?.id || defaultPageForRole(currentType);
+  try {
+    const response = await fetch('/api/data', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'request_logout', page, deviceId:getCurrentDeviceId() }) });
+    const body = await response.json().catch(function(){ return {}; });
+    if(!response.ok) throw new Error(body.error || 'تعذر إرسال طلب الخروج');
+    if(body.request) { const notifications=getData('notifications',[]); notifications.unshift(body.request); runtimeData.notifications = notifications.slice(0,500); }
+    logoutGate = null;
+    neonDataReady = false;
+    currentUser = null; currentType = null; currentAdminId = null;
+    clearSession();
+    showPage('lockScreen');
+    showToast('تم إرسال طلب الخروج إلى المسؤول. يمكنك تسجيل الدخول مجدداً بعد الموافقة.','success');
+  } catch(error) { showToast(error.message || 'تعذر إرسال طلب الخروج','error'); }
+}
+async function completeApprovedLogout() {
+  if(!logoutGate) return;
+  logoutGate = null;
+  await logout();
+}
+function completeUserLogin(user, role, dashboard, message) {
+  currentUser = user; currentType = role; currentAdminId = null; pageHistory = [];
+  const request = getLogoutRequestForUser(role, user);
+  if(request?.status === 'pending') {
+    clearSession();
+    showPage('lockScreen');
+    showToast('طلب الخروج قيد المراجعة. انتظر موافقة المسؤول ثم أعد تسجيل الدخول.','info');
+    return false;
+  }
+  prepareApprovedLogoutGate(role, user);
+  saveSessionState();
+  showPage(logoutGate?.targetPage || dashboard);
+  showToast(message,'success');
+  return true;
+}
 function getUnreadNotificationsCount() { return getData('notifications', []).filter(function(item){return !item.read}).length; }
 function updateNotificationBadges() {
   const count=getUnreadNotificationsCount();
   document.querySelectorAll('[data-notification-count]').forEach(function(badge){ badge.textContent=String(count); badge.hidden=count===0; });
 }
 function notificationTypeLabel(type) {
-  return {account_recovery:'استرجاع حساب',false_alarm:'إنذار خاطئ',violation:'مخالفة',general:'تنبيه عام'}[type] || 'تنبيه عام';
+  return {account_recovery:'استرجاع حساب',logout_request:'تسجيل الخروج',false_alarm:'إنذار خاطئ',violation:'مخالفة',general:'تنبيه عام'}[type] || 'تنبيه عام';
+}
+async function resolveLogoutRequest(id, status) {
+  try {
+    const response = await fetch('/api/data', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'resolve_logout_request', requestId:id, status }) });
+    const body = await response.json().catch(function(){ return {}; });
+    if(!response.ok) throw new Error(body.error || 'تعذر تحديث الطلب');
+    const item = getData('notifications', []).find(function(entry){ return entry.id === id; });
+    if(item) { item.status=status; item.read=true; }
+    renderNotifications();
+    showToast(status === 'approved' ? 'تم قبول طلب تسجيل الخروج' : 'تم رفض طلب تسجيل الخروج','success');
+  } catch(error) { showToast(error.message || 'تعذر تحديث الطلب','error'); }
 }
 function renderNotifications() {
   const list=document.getElementById('notificationsList'); if(!list) return;
@@ -1372,8 +1464,9 @@ function renderNotifications() {
   updateNotificationBadges();
   if(!notifications.length) { list.innerHTML='<div class="alert alert-info">لا توجد تنبيهات حتى الآن.</div>'; return; }
   list.innerHTML=notifications.map(function(item){
-    const details=item.type==='account_recovery' ? '<dl class="notification-details"><div><dt>نوع الحساب</dt><dd>'+escapeHtml(item.roleLabel||'')+'</dd></div><div><dt>الاسم</dt><dd>'+escapeHtml(item.name||'')+'</dd></div><div><dt>الرقم القومي</dt><dd>'+escapeHtml(item.nationalId||'')+'</dd></div><div><dt>الهاتف</dt><dd dir="ltr">+'+escapeHtml(item.phone||'')+'</dd></div></dl>' : '';
-    return '<article class="notification-card '+(item.read?'is-read':'is-unread')+'"><div class="notification-card-head"><div><span class="badge badge-primary">'+notificationTypeLabel(item.type)+'</span><h3>'+escapeHtml(item.title||'تنبيه')+'</h3></div><span class="notification-status">'+(item.read?'مقروء':'غير مقروء')+'</span></div><p>'+escapeHtml(item.message||'')+'</p>'+details+'<div class="notification-card-footer"><time>'+escapeHtml(item.time||'')+'</time>'+(item.read?'':'<button class="btn btn-xs btn-outline" onclick="markNotificationRead(\''+item.id+'\')">تحديد كمقروء</button>')+'</div></article>';
+    const details=item.type==='account_recovery' ? '<dl class="notification-details"><div><dt>نوع الحساب</dt><dd>'+escapeHtml(item.roleLabel||'')+'</dd></div><div><dt>الاسم</dt><dd>'+escapeHtml(item.name||'')+'</dd></div><div><dt>الرقم القومي</dt><dd>'+escapeHtml(item.nationalId||'')+'</dd></div><div><dt>الهاتف</dt><dd dir="ltr">+'+escapeHtml(item.phone||'')+'</dd></div></dl>' : item.type==='logout_request' ? '<dl class="notification-details"><div><dt>نوع الحساب</dt><dd>'+escapeHtml(item.roleLabel||'')+'</dd></div><div><dt>الاسم</dt><dd>'+escapeHtml(item.name||'')+'</dd></div><div><dt>الصفحة المطلوبة</dt><dd>'+escapeHtml(item.requestedFromPage||'الرئيسية')+'</dd></div><div><dt>الحالة</dt><dd>'+escapeHtml(item.status==='approved'?'مقبول':item.status==='rejected'?'مرفوض':'بانتظار المراجعة')+'</dd></div></dl>' : '';
+    const actions=item.type==='logout_request' && item.status==='pending' ? '<div class="notification-actions"><button class="btn btn-sm btn-success" onclick="resolveLogoutRequest(\''+item.id+'\',\'approved\')">قبول</button><button class="btn btn-sm btn-danger" onclick="resolveLogoutRequest(\''+item.id+'\',\'rejected\')">رفض</button></div>' : '';
+    return '<article class="notification-card '+(item.read?'is-read':'is-unread')+'"><div class="notification-card-head"><div><span class="badge badge-primary">'+notificationTypeLabel(item.type)+'</span><h3>'+escapeHtml(item.title||'تنبيه')+'</h3></div><span class="notification-status">'+(item.read?'مقروء':'غير مقروء')+'</span></div><p>'+escapeHtml(item.message||'')+'</p>'+details+actions+'<div class="notification-card-footer"><time>'+escapeHtml(item.time||'')+'</time>'+(item.read?'':'<button class="btn btn-xs btn-outline" onclick="markNotificationRead(\''+item.id+'\')">تحديد كمقروء</button>')+'</div></article>';
   }).join('');
 }
 function openNotifications() { showPage('notificationsPage'); renderNotifications(); }
@@ -1417,7 +1510,7 @@ function sendSignupCode() {
   const whatsRaw = document.getElementById('signupWhats').value.trim();
   const whatsCountry = selectedCountryIso('signupWhatsCountry');
   const whats = getInternationalNumber('signupWhats','signupWhatsCountry');
-  if(signupState.method !== 'phone') { box.innerHTML = '<div class="alert alert-danger">❌ اختر التسجيل برقم ال��اتف أولاً</div>'; return; }
+  if(signupState.method !== 'phone') { box.innerHTML = '<div class="alert alert-danger">❌ اختر التسجيل برقم ال����اتف أولاً</div>'; return; }
   if(!whatsRaw || !validatePhoneField('signupWhatsCountry','signupWhats',true)) { box.innerHTML = '<div class="alert alert-danger">❌ أدخل رقم واتساب صحيح وفق الدولة المختارة</div>'; return; }
   signupState.email = '';
   signupState.whats = whats;
@@ -1651,7 +1744,7 @@ function microphoneErrorMessage(error){
   if(!window.isSecureContext)return 'يلزم فتح الموقع عبر اتصال آمن HTTPS لاستخدام الميكروفون.';
   if(error&&['NotAllowedError','SecurityError'].includes(error.name))return 'تم رفض إذن الميكروفون. اسمح بالوصول من إعدادات المتصفح ثم أعد المحاولة.';
   if(error&&error.name==='NotFoundError')return 'لم يتم العثور على ميكروفون متصل بالجهاز.';
-  if(error&&error.name==='NotReadableError')return 'الميكروفون مستخدم في تطبي�� آخر أو تعذر تشغيله.';
+  if(error&&error.name==='NotReadableError')return 'الميكروفون مستخدم في تط��ي�� آخر أو تعذر تشغيله.';
   return 'تعذر تشغيل الميكروفون. تحقق من الإذن ثم أعد المحاولة.';
 }
 async function toggleStudentIntakeRecord(){
@@ -1857,8 +1950,8 @@ async function unifiedLogin() {
       const studentAccount = getData('students').find(a => String(a.email || a.googleEmail || '').toLowerCase() === email);
       const parentAccounts = getData('students').filter(a => String(a.parentEmail || a.parentGoogleEmail || '').toLowerCase() === email);
       if(adminAccount) { currentUser=adminAccount; currentType='admin'; currentAdminId=adminAccount.id; pageHistory=[]; saveSessionState(); showPage('adminDashboard'); showToast('✅ تم تسجيل الدخول عبر Supabase','success'); document.getElementById('unifiedPass').value=''; return; }
-      if(studentAccount) { currentUser=studentAccount; currentType='student'; currentAdminId=null; pageHistory=[]; saveSessionState(); showPage('studentDashboard'); showToast('✅ تم تسجيل الدخول عبر Supabase','success'); document.getElementById('unifiedPass').value=''; return; }
-      if(parentAccounts.length) { currentUser=parentAccounts; currentType='parent'; currentAdminId=null; pageHistory=[]; saveSessionState(); showPage('parentDashboard'); showToast('✅ تم تسجيل الدخول عبر Supabase','success'); document.getElementById('unifiedPass').value=''; return; }
+  if(studentAccount) { completeUserLogin(studentAccount,'student','studentDashboard','✅ تم تسجيل الدخول عبر Supabase'); document.getElementById('unifiedPass').value=''; return; }
+  if(parentAccounts.length) { completeUserLogin(parentAccounts,'parent','parentDashboard','✅ تم تسجيل الدخول عبر Supabase'); document.getElementById('unifiedPass').value=''; return; }
       throw new Error('تم تسجيل الدخول في Supabase، لكن البريد غير مرتبط بحساب داخل المنصة بعد.');
     } catch(error) {
       console.error('[v0] Supabase login request failed', error);
@@ -1904,14 +1997,8 @@ async function unifiedLogin() {
   // 2) طالب
   const st = students.find(x => x.username === u && x.studentPass === p);
   if(st) {
-    currentUser = st; currentType = 'student'; currentAdminId = null;
-    pageHistory = []; saveSessionState();
-    const devices = getData('devices');
-    devices.push({type:'student', user:st.name, time:new Date().toLocaleString('ar-EG'), agent:navigator.userAgent});
-    setData('devices', devices);
-    renderStudentDashboard(); showPage('studentDashboard');
+    completeUserLogin(st,'student','studentDashboard','✅ مرحباً ' + st.name);
     document.getElementById('unifiedPass').value = '';
-    showToast('✅ مرحباً ' + st.name, 'success');
     return;
   }
 
@@ -1924,14 +2011,8 @@ async function unifiedLogin() {
     return (x.parent === u || parentPhone === inputPhone || studentPhone === inputPhone) && x.parentPass === p;
   });
   if(kids.length > 0) {
-    currentUser = kids; currentType = 'parent'; currentAdminId = null;
-    pageHistory = []; saveSessionState();
-    const devices = getData('devices');
-    devices.push({type:'parent', user:u, time:new Date().toLocaleString('ar-EG'), agent:navigator.userAgent});
-    setData('devices', devices);
-    renderParentDashboard(); showPage('parentDashboard');
+    completeUserLogin(kids,'parent','parentDashboard','✅ مرحباً بك في صفحة ولي الأمر');
     document.getElementById('unifiedPass').value = '';
-    showToast('✅ مرحباً بك في صفحة ولي الأمر', 'success');
     return;
   }
 
@@ -2374,7 +2455,7 @@ function openRecord(id) {
   const s = students.find(x => x.id === id);
   if(!s) return;
   const isQuran = s.subjects && s.subjects.some(sub => sub.name.includes('قرآن'));
-  if(!isQuran) { alert('التسميع متاح فقط طلاب القرآن الكريم'); return; }
+  if(!isQuran) { alert('التسميع متاح فقط طلا�� القرآن الكريم'); return; }
 
   document.getElementById('recordStudentId').value = id;
   document.getElementById('recordName').value = s.name;
@@ -2897,7 +2978,7 @@ async function generateLocalQuranQuestions(base,lastSurah,plans){
     if(plan.type==='mcq'){const options=shuffled([src.surah].concat(shuffled(range.filter(s=>s!==src.surah)).slice(0,plan.optionsCount-1)));q.prompt='إلى أي سورة ينتمي المقطع المصور؟';q.options=options;q.correct=src.surah}
     else if(plan.type==='truefalse'){const truth=Math.random()>.5,shown=truth?src.surah:(shuffled(range.filter(s=>s!==src.surah))[0]||src.surah);q.prompt='هل المقطع المصور من سورة '+shown+'؟';q.options=['صح','خطأ'];q.correct=truth?'صح':'خطأ'}
     else if(plan.type==='complete'){const words=ayah.split(/\s+/),cut=Math.max(2,Math.floor(words.length*.55));q.prompt='أكمل المقطع المخفي في صورة المصحف';q.correct=words.slice(cut).join(' ')||next}
-    else {q.prompt='سجّل تلاوة المقطع المعروض من المصحف';q.correct=src.ayahs.slice(from-1,q.to).join(' ')}
+    else {q.prompt='سجّل تلاوة المقطع المعروض م�� المصحف';q.correct=src.ayahs.slice(from-1,q.to).join(' ')}
     q.stem='';q.questionImage='/api/quran-question-image?surah='+(ALL_SURAHS_ORDERED.indexOf(src.surah)+1)+'&ayah='+from+'&to='+q.to+'&type='+plan.type;
     out.push(cleanExamQuestion(q));}}
   return out;
@@ -3164,7 +3245,7 @@ async function submitStudentExam(auto){
       result=audio&&audio.aiResult?audio.aiResult:{accepted:false,score:0,reason:'لم يتم تسجيل إجابة صوتية',matchedPercent:0};
       a=audio&&audio.transcript?audio.transcript:'';
     }
-    // الدرجة النهائية تعتمد على عدد الآيات المطلوبة والناقصة، لا على حكم النموذج وحده.
+    // الدرجة النهائية تعتمد على عدد الآيات الم��لوبة والناقصة، لا على حكم النموذج وحده.
     if((q.type==='complete'||q.type==='audio') && Array.isArray(result.missingAyahs)){
       const totalAyahs=Math.max(1,parseInt(q.completeAyahs)||((parseInt(q.to)||parseInt(q.from)||1)-(parseInt(q.from)||1)+1));
       const missing=Math.min(totalAyahs,result.missingAyahs.length);
@@ -3444,7 +3525,7 @@ function openFullChart() {
   }
   const finalizedSessions = s.sessions.filter(sess => !sess.isDraft);
   if(finalizedSessions.length === 0) {
-    alert('لا توجد تسميعات نهائية للعرض بءءد'); return;
+    alert('لا توجد تسميعات نهائية للعرض ب��ءد'); return;
   }
   showPage('fullChartPage');
   const canvasId = 'fullChartCanvas';
@@ -4793,7 +4874,7 @@ async function analyzeRecitationContent(blob, task, transcript) {
     for(let i=0;i+win<data.length;i+=win){let e=0;for(let j=0;j<win;j++)e+=data[i+j]*data[i+j];e=Math.sqrt(e/win);frames++;if(e>.012)voiced++}
     voicedRatio=frames?voiced/frames:0;await ctx.close();
   }catch(e){/* نكمل حتى لو تعذّر التحليل المحلي، لأن الخادم هو المصدر الأساسي */}
-  // Gemini على الخادم هو المصدر الوحيد لتفريغ الصوت وتصحيحه.
+  // Gemini على الخادم هو المصدر الوحيد ل��فريغ الصوت وتصحيحه.
   let aiResult=await serverRecitationAnalysis(blob, task);
   const serverError=aiResult&&aiResult.analysisError?aiResult.analysisError:'';
   if(serverError||!aiResult){
@@ -5662,7 +5743,7 @@ function renderUserFiles(role) {
     html += '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;"><span class="badge badge-secondary">' + sizeMB + ' MB</span><span class="badge badge-primary">من المسؤل</span></div>';
     html += '<p style="color:var(--text-light); font-size:0.8rem; margin-bottom:12px;">🕐 ' + f.uploadedAt + '</p>';
     html += '<div style="display:flex; gap:8px;">';
-    html += '<a href="' + f.data + '" download="' + f.name + '" class="btn btn-sm btn-success" style="text-decoration:none;">⬇️ تمي��</a>';
+    html += '<a href="' + f.data + '" download="' + f.name + '" class="btn btn-sm btn-success" style="text-decoration:none;">⬇️ تمي����</a>';
     html += '<button class="btn btn-sm btn-primary" onclick="viewFile(' + f.id + ')">👁️ عر</button>';
     html += '</div></div>';
   });
@@ -5768,7 +5849,7 @@ function generateParentWelcome(student) {
   const templates = [
     {title: 'أهلاً بك! 🌟', body: 'ابنك '+student.name+' يخطو خطوات جميلة في رحل��ه مع القرآن. دعمه وتحفي��ه هما سر التقدم.'},
     {title: 'تقرير يومي! 📊', body: 'متابعة ابنك تُثمر بالخر. احرص على سؤاله عن حفظه يومياً، فالاهتمام يُشعره بأهمية ما يفعله.'},
-    {title: 'مساء الخير! 🌙', body: 'القرآن غذاء الروح. شجع ابنك '+student.name+' لى الاستمرار، وذكّه بأ الله يُضاعف الأجر لمن يتب في سبيله.'}
+    {title: 'مساء الخير! 🌙', body: 'القرآن غذاء ا��روح. شجع ابنك '+student.name+' لى الاستمرار، وذكّه بأ الله يُضاعف الأجر لمن يتب في سبيله.'}
   ];
   const base = templates[Math.floor(Math.random() * templates.length)];
   if(last) {

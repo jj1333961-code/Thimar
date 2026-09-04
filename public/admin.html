@@ -1657,7 +1657,7 @@ window.alert = function(m){ showToast(m); };
     if (corePromise) return corePromise;
     corePromise = new Promise(function(resolve, reject){
       const s = document.createElement('script');
-      s.src = '/app-core.js?v=20260903';
+      s.src = '/app-core.js?v=20260905';
       s.async = false;
       s.onload = function(){ window.__thimarAppCoreLoaded = true; const p=document.createElement('script'); p.src='/proctoring-v2.js'; p.onload=resolve; p.onerror=reject; document.head.appendChild(p); };
       s.onerror = function(){ corePromise = null; reject(new Error('تعذر تحميل ملفات النظام.')); };

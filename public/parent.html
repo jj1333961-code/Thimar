@@ -543,6 +543,8 @@ tr:hover { background: var(--table-hover); }
   .role-nav-item { display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border:1px solid var(--border); border-radius:12px; background:var(--table-header); color:var(--text); cursor:pointer; font-weight:700; font-size:.92rem; transition:border-color .15s ease, color .15s ease, background .15s ease; }
   .role-nav-item:hover, .role-nav-item:focus-visible { border-color:var(--primary); color:var(--primary); background:var(--input-bg); outline:none; }
   .role-nav-item .role-nav-icon { font-size:1.05rem; }
+  .logout-request-item { color:var(--danger)!important; border-color:color-mix(in srgb, var(--danger) 35%, var(--border))!important; }
+  .logout-gate-banner { position:sticky; top:0; z-index:1040; display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; padding:10px 14px; background:var(--table-header); border-bottom:1px solid var(--border); color:var(--text); font-weight:700; }
   @media(max-width:520px){ .role-nav-item { flex:1 1 calc(50% - 10px); justify-content:center; } }
   /* شريط جانبي منزلق للأدوات الثانوية داخل لوحات الأدوار فقط */
   .side-fab { position:fixed; top:18px; right:18px; z-index:1050; width:50px; height:50px; min-width:50px; border-radius:50%; border:1px solid var(--border); background:var(--card-bg); color:var(--primary); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; box-shadow:0 8px 24px rgba(33,86,57,.16); }
@@ -676,6 +678,7 @@ tr:hover { background: var(--table-hover); }
   .notifications-grid { display:grid; gap:14px; }
   .notification-card { padding:18px; border:1px solid var(--border); border-radius:14px; background:var(--card-bg); box-shadow:var(--shadow); }
   .notification-card.is-unread { border-color:var(--primary); }
+  .notification-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
   .notification-card-head,.notification-card-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .notification-card h3 { margin:8px 0 0; color:var(--text); }
   .notification-card p { margin:14px 0; color:var(--text-light); }
@@ -1057,7 +1060,7 @@ tr:hover { background: var(--table-hover); }
   <!-- حذف ملف بتأكيد صريح -->
   <div id="githubDeleteBox" style="display:none; background:rgba(220,53,69,0.08); border:1px solid #dc3545; border-radius:10px; padding:14px 16px;">
     <h3 style="margin:0 0 8px; color:#dc3545;">🗑️ حذف ملف من المستودع</h3>
-    <p style="color:var(--text-light); font-size:0.88rem; margin-bottom:10px;">ءءُءءشئ الحذف Commit في مستودعك ويحافظ على الإصدارات السابقة في السجل. الملفات الأساية للمشروع محمية ولا يمكن حذفها. يتطلب الحذف تأ����داً صري����اً.</p>
+    <p style="color:var(--text-light); font-size:0.88rem; margin-bottom:10px;">ءءُءءشئ الحذف Commit في مستودعك ويحافظ على الإصدارات السابقة في السجل. الملفات الأساية للمشروع محمية ولا يمكن حذفها. يتطلب الحذف تأ����داً صري������اً.</p>
     <div class="form-group"><label>مسر المل�� المراد حذفه</label><input id="githubDeletePath" placeholder="مثال: public/old-file.js" /></div>
     <label style="display:flex; gap:8px; align-items:center; font-size:0.88rem; margin-bottom:10px;"><input type="checkbox" id="githubDeleteConfirm" style="width:auto;" /> أؤكد أنني أريد حذف هذا الملف نهائياً من المستودع</label>
     <button class="btn" style="background:#dc3545; color:#fff;" onclick="deleteGithubFile()">حذف الملف</button>
@@ -1071,7 +1074,7 @@ tr:hover { background: var(--table-hover); }
   <div id="notificationsList" class="notifications-grid" aria-live="polite"></div>
 </div>
 
-<!-- إدارة المسؤ���لين -->
+<!-- إدارة المس�����لين -->
 <div id="adminsPage" class="page hidden">
   <div class="page-header"><h2>👨‍💼 إدارة المسؤولين</h2></div>
   <div id="adminsAlert"></div>
@@ -1220,7 +1223,7 @@ tr:hover { background: var(--table-hover); }
     <div class="form-group"><label>السن</label><input type="number" id="editAge" readonly style="background:var(--table-header)"></div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label>الرقم ا��سري للطالب</label><div style="position:relative;"><input type="password" id="editStudentPass" style="padding-left:45px;"><span onclick="togglePassVisibility('editStudentPass', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span></div><label style="font-weight:normal; margin-top:6px; display:block;"><input type="checkbox" id="editSamePass" onchange="syncStudentPass('edit')"> نفس الرقم السري لولي الأمر</label></div>
+    <div class="form-group"><label>ال��قم ا��سري للطالب</label><div style="position:relative;"><input type="password" id="editStudentPass" style="padding-left:45px;"><span onclick="togglePassVisibility('editStudentPass', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span></div><label style="font-weight:normal; margin-top:6px; display:block;"><input type="checkbox" id="editSamePass" onchange="syncStudentPass('edit')"> نفس الرقم السري لولي الأمر</label></div>
     <div class="form-group"><label>اسم ولي الأمر</label><input type="text" id="editParent"></div>
   </div>
   <div class="form-row">
@@ -1483,6 +1486,7 @@ tr:hover { background: var(--table-hover); }
         <button type="button" class="role-nav-item" onclick="showPage('parentFilesPage')"><span class="role-nav-icon" aria-hidden="true">📁</span><span>الملفات</span></button>
         <button type="button" class="role-nav-item" onclick="showPage('parentAIChat')"><span class="role-nav-icon" aria-hidden="true">✦</span><span>مساعد الذكا الاصطناعي</span></button>
         <button type="button" class="role-nav-item" onclick="showPage('parentChartPage')"><span class="role-nav-icon" aria-hidden="true">📈</span><span>المخطط</span></button>
+  <button type="button" class="role-nav-item logout-request-item" onclick="requestLogout()"><span class="role-nav-icon" aria-hidden="true">↪</span><span>تسجيل الخروج</span></button>
       </div>
     </aside>
   </div>
@@ -1519,7 +1523,7 @@ tr:hover { background: var(--table-hover); }
 <!-- صفحة سجلات الطال لولي الأمر -->
 <div id="parentRecordsPage" class="page hidden">
   <div class="page-header">
-    <h2>📋 سجلات التسميعات النهائية</h2>
+    <h2>📋 سجل��ت التسميعات النهائية</h2>
     
   </div>
   <div id="parentRecordsContent"></div>
@@ -1654,7 +1658,7 @@ window.alert = function(m){ showToast(m); };
     if (corePromise) return corePromise;
     corePromise = new Promise(function(resolve, reject){
       const s = document.createElement('script');
-      s.src = '/app-core.js?v=20260903';
+      s.src = '/app-core.js?v=20260905';
       s.async = false;
       s.onload = function(){ window.__thimarAppCoreLoaded = true; const p=document.createElement('script'); p.src='/proctoring-v2.js'; p.onload=resolve; p.onerror=reject; document.head.appendChild(p); };
       s.onerror = function(){ corePromise = null; reject(new Error('تعذر تحميل ملفات النظام.')); };
