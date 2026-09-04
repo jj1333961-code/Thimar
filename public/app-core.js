@@ -1417,7 +1417,7 @@ function sendSignupCode() {
   const whatsRaw = document.getElementById('signupWhats').value.trim();
   const whatsCountry = selectedCountryIso('signupWhatsCountry');
   const whats = getInternationalNumber('signupWhats','signupWhatsCountry');
-  if(signupState.method !== 'phone') { box.innerHTML = '<div class="alert alert-danger">❌ اختر التسجيل برقم الهاتف أولاً</div>'; return; }
+  if(signupState.method !== 'phone') { box.innerHTML = '<div class="alert alert-danger">❌ اختر التسجيل برقم ال��اتف أولاً</div>'; return; }
   if(!whatsRaw || !validatePhoneField('signupWhatsCountry','signupWhats',true)) { box.innerHTML = '<div class="alert alert-danger">❌ أدخل رقم واتساب صحيح وفق الدولة المختارة</div>'; return; }
   signupState.email = '';
   signupState.whats = whats;
@@ -1651,7 +1651,7 @@ function microphoneErrorMessage(error){
   if(!window.isSecureContext)return 'يلزم فتح الموقع عبر اتصال آمن HTTPS لاستخدام الميكروفون.';
   if(error&&['NotAllowedError','SecurityError'].includes(error.name))return 'تم رفض إذن الميكروفون. اسمح بالوصول من إعدادات المتصفح ثم أعد المحاولة.';
   if(error&&error.name==='NotFoundError')return 'لم يتم العثور على ميكروفون متصل بالجهاز.';
-  if(error&&error.name==='NotReadableError')return 'الميكروفون مستخدم في تطبيق آخر أو تعذر تشغيله.';
+  if(error&&error.name==='NotReadableError')return 'الميكروفون مستخدم في تطبي�� آخر أو تعذر تشغيله.';
   return 'تعذر تشغيل الميكروفون. تحقق من الإذن ثم أعد المحاولة.';
 }
 async function toggleStudentIntakeRecord(){
@@ -1876,7 +1876,7 @@ async function unifiedLogin() {
     const ready = await neonHydrationPromise;
     if(!ready) throw new Error('cloud-load-failed');
   } catch(error) {
-    const message = error && error.message === 'cloud-load-failed' ? 'تعذر تحميل بيانات الحساب من Neon. تحقق من الاتصال ثم أعد المحاولة.' : (error && error.message ? error.message : 'تعذر تسجيل الدخول');
+    const message = error && error.message === 'cloud-load-failed' ? 'تعذر تحميل بيانات الحساب من Neon. تحقق من الاتصال ثم أعد ��لمحاولة.' : (error && error.message ? error.message : 'تعذر تسجيل الدخول');
     box.innerHTML = '<div class="alert alert-danger">'+message+'</div>';
     return;
   }
@@ -2028,7 +2028,7 @@ function renderActiveDrafts() {
       const timeLeft = Math.max(0, 24 - ((Date.now() - draft.draftCreatedAt) / (60 * 60 * 1000)));
       draftsHtml += '<div style="background:var(--table-header); padding:15px; border-radius:10px; margin-bottom:10px; border-right:4px solid var(--warning); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">';
       draftsHtml += '<div><strong>'+s.name+'</strong> - تسميع بتاريخ '+draft.date+'<br><small style="color:var(--text-light)">متبقي '+timeLeft.toFixed(1)+' ساعة للإغلاق التلقائي</small></div>';
-      draftsHtml += '<div><button class="btn btn-sm btn-success" onclick="openRecord('+s.id+')">تعديل التسميع</button></div>';
+      draftsHtml += '<div><button class="btn btn-sm btn-success" onclick="openRecord('+s.id+')">تعديل الت��ميع</button></div>';
       draftsHtml += '</div>';
     });
   });
@@ -2132,7 +2132,7 @@ async function saveStudent() {
 
   const subjects = getData('subjects');
   const selectedSubData = selectedSubjects.map(id => subjects.find(s => s.id === id)).filter(Boolean);
-  const isQuran = selectedSubData.some(s => s.name.includes('قرآن'));
+  const isQuran = selectedSubData.some(s => s.name.includes('ق��آن'));
 
   const printVec = null;
   let voiceData = voiceDataUrl;
@@ -2313,8 +2313,11 @@ function exitAdminVisit() {
 function renderAdminVisitBanner() {
   const old = document.getElementById('adminVisitBanner'); if(old) old.remove();
   if(!adminVisitState || !currentUser) return;
-  const banner = document.createElement('div'); banner.id='adminVisitBanner'; banner.setAttribute('role','status'); banner.style.cssText='position:sticky;top:0;z-index:9000;margin:0 auto;padding:12px 18px;background:var(--primary);color:#fff;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.18);font-weight:600;';
-  banner.innerHTML='<strong>وضع المسؤول:</strong> أنت تعدل صفحة '+(adminVisitState.targetRole === 'parent' ? 'ولي الأمر' : 'الطالب')+' نيابةً عن المسؤول. <button type="button" class="btn btn-sm btn-warning" onclick="exitAdminVisit()">العودة لقائمة الطلاب</button>';
+  const banner = document.createElement('div');
+  banner.id = 'adminVisitBanner';
+  banner.setAttribute('role', 'status');
+  banner.style.cssText = 'display:flex;justify-content:center;align-items:center;width:100%;margin:8px auto 0;padding:4px 12px;background:transparent;color:var(--primary);font-size:.82rem;font-weight:600;text-align:center;';
+  banner.innerHTML = '<button type="button" style="border:0;background:transparent;color:inherit;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:2px 6px;" onclick="exitAdminVisit()">الخروج من وضع المسؤول</button>';
   document.body.prepend(banner);
 }
 
@@ -2796,7 +2799,7 @@ async function uploadExamFile(input){const file=input.files&&input.files[0];if(!
 async function deleteExamFile(id){const file=examFilesCache.find(f=>f.id===id);if(!file||!confirm('هل تريد حذف هذا الملف نهائياً؟'))return;try{const res=await fetch('/api/exam-files',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({pathname:file.pathname,metadataPathname:file.metadataPathname})});await readApiJson(res,'تعذر حذف الملف');await loadExamFiles()}catch(e){alert(e.message||'تعذر الحذف')}}
 function toggleExamSource(){loadExamFiles().catch(e=>showExamAlert(e.message,'danger'))}
 function shuffled(values){return values.slice().sort(()=>Math.random()-.5)}
-function generateLocalFileQuestions(file,plans){const sentences=String(file.text||'').split(/[.!؟\n]+/).map(s=>s.trim()).filter(s=>s.length>=25&&s.length<=260);if(sentences.length<6)throw new Error('لا يحتوي الملف على جمل كافية لإنشاء اختبار متنوع.');const words=shuffled(Array.from(new Set(sentences.join(' ').split(/\s+/).filter(w=>w.length>4))));let cursor=0;const output=[];plans.forEach(plan=>{for(let i=0;i<plan.count;i++){const sentence=sentences[(cursor++)%sentences.length],type=plan.type;let q={id:'file_'+Date.now()+'_'+output.length,type,level:plan.level,surah:'',prompt:'',stem:sentence,options:[],correct:'',from:1,to:1,timeLimit:plan.timeLimit,completeAyahs:1,reciteAyahs:1,audioShareWithParent:false,points:1,rejected:false,weakened:false,source:'file',sourceFileId:file.id,sourceFileName:file.name,optionsCount:plan.optionsCount||4};if(type==='truefalse'){const truthful=Math.random()>.5;q.prompt='صح أ�� خطأ: هل العبارة المعرو��ة مطابقة ��ما ورد في الملف؟';q.stem=truthful?sentence:sentences[(cursor+2)%sentences.length].split(' ').reverse().join(' ');q.options=['صح','خطأ'];q.correct=truthful?'صح':'خطأ'}else if(type==='complete'){const candidates=sentence.split(/\s+/).filter(w=>w.length>4);const answer=candidates[Math.floor(Math.random()*candidates.length)]||words[0];q.prompt='أكمل الجزء الاقص اعتماداً علئ النص المثبت';q.correct=answer;q.stem=sentence.replace(answer,'_____')}else if(type==='audio'){q.prompt='اقرأ النص المعروض بصوت واضح';q.correct=sentence;q.audioShareWithParent=plan.audioShareWithParent!==false}else{const correct=(sentence.split(/\s+/).filter(w=>w.length>4)[0]||words[0]);q.prompt='اختر الكلمة ��لتي وردت في النص لمعروض';q.correct=correct;q.options=shuffled([correct].concat(words.filter(w=>w!==correct).slice(0,Math.max(1,(plan.optionsCount||4)-1))))}output.push(q)}});return output}
+function generateLocalFileQuestions(file,plans){const sentences=String(file.text||'').split(/[.!؟\n]+/).map(s=>s.trim()).filter(s=>s.length>=25&&s.length<=260);if(sentences.length<6)throw new Error('لا يحتوي الملف على جمل كافية لإنشاء اختبار متنوع.');const words=shuffled(Array.from(new Set(sentences.join(' ').split(/\s+/).filter(w=>w.length>4))));let cursor=0;const output=[];plans.forEach(plan=>{for(let i=0;i<plan.count;i++){const sentence=sentences[(cursor++)%sentences.length],type=plan.type;let q={id:'file_'+Date.now()+'_'+output.length,type,level:plan.level,surah:'',prompt:'',stem:sentence,options:[],correct:'',from:1,to:1,timeLimit:plan.timeLimit,completeAyahs:1,reciteAyahs:1,audioShareWithParent:false,points:1,rejected:false,weakened:false,source:'file',sourceFileId:file.id,sourceFileName:file.name,optionsCount:plan.optionsCount||4};if(type==='truefalse'){const truthful=Math.random()>.5;q.prompt='صح أ�� خطأ: هل العبارة المعرو��ة مطابقة ��ما ورد في الملف؟';q.stem=truthful?sentence:sentences[(cursor+2)%sentences.length].split(' ').reverse().join(' ');q.options=['صح','خطأ'];q.correct=truthful?'صح':'خطأ'}else if(type==='complete'){const candidates=sentence.split(/\s+/).filter(w=>w.length>4);const answer=candidates[Math.floor(Math.random()*candidates.length)]||words[0];q.prompt='أكمل ا��جزء الاقص اعتماداً علئ النص المثبت';q.correct=answer;q.stem=sentence.replace(answer,'_____')}else if(type==='audio'){q.prompt='اقرأ النص المعروض بصوت واضح';q.correct=sentence;q.audioShareWithParent=plan.audioShareWithParent!==false}else{const correct=(sentence.split(/\s+/).filter(w=>w.length>4)[0]||words[0]);q.prompt='اختر الكلمة ��لتي وردت في النص لمعروض';q.correct=correct;q.options=shuffled([correct].concat(words.filter(w=>w!==correct).slice(0,Math.max(1,(plan.optionsCount||4)-1))))}output.push(q)}});return output}
 
 function localSmartChatReply(message,role){
   const q=normalizeAr(String(message||'')).toLowerCase(),students=getData('students',[]),messages=getData('messages',[]);
@@ -3698,7 +3701,7 @@ async function refreshGithubSync(){
     html += '<div>📦 المستودع: <b>'+escapeHtmlAi(st.repo)+'</b></div>';
     html += '<div>🌿 الفرع: <b>'+escapeHtmlAi(st.branch)+'</b></div>';
     html += '<div>✍️ صلاحية الكتابة (Push): <b>'+(st.canWrite ? 'متاحة ✅' : 'غير متاحة ❌')+'</b></div>';
-    html += '<div>⚡ الدفع التلقائي عند التعديل: <b>'+(st.autoSync ? 'مفعّءء ✅' : 'غير مفعّل (اضبط DEV_ASSISTANT_AUTO_APPLY=true)')+'</b></div>';
+    html += '<div>⚡ الدفع ا��تلقائي عند التعديل: <b>'+(st.autoSync ? 'مفعّءء ✅' : 'غير مفعّل (اضبط DEV_ASSISTANT_AUTO_APPLY=true)')+'</b></div>';
     if(lc){
       html += '<div style="margin-top:6px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.15);">آخر Commit:</div>';
       html += '<div>🔖 <code>'+escapeHtmlAi(lc.sha)+'</code> — '+escapeHtmlAi((lc.message||'').split('\n')[0])+'</div>';
