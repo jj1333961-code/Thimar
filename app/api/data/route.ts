@@ -99,6 +99,7 @@ export async function POST(request: Request) {
         email: String(auth.user?.email || '').slice(0, 240).toLowerCase(),
         name: String(auth.user?.name || auth.user?.accountName || '').slice(0, 160),
         requestedFromPage: String(body?.page || '').slice(0, 120),
+        parentName: String(body?.parentName || '').slice(0, 160),
         deviceId: String(body?.deviceId || '').slice(0, 120),
         status: 'pending',
         time: now.toLocaleString('ar-EG'),
@@ -112,6 +113,23 @@ export async function POST(request: Request) {
       return response({ saved: true, request: item })
     }
 
+    if (body?.action === 'consume_logout_request') {
+      const role = String(auth.user?.role || '').toLowerCase()
+      if (role !== 'student' && role !== 'parent') return response({ error: 'غير مصرح' }, 403)
+      const requestId = String(body?.requestId || '')
+      const notifications = Array.isArray(existingData.notifications) ? existingData.notifications.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
+      const target = notifications.find((item) => String(item.id || item.requestId || '') === requestId && item.type === 'logout_request' && String(item.userId || '') === String(auth.user?.accountId || ''))
+      if (!target || target.status !== 'approved') return response({ error: 'طلب الخروج غير معتمد' }, 409)
+      Object.assign(target, { status: 'completed', completedAt: new Date().toISOString(), lockedPage: '', deviceId: String(body?.deviceId || '').slice(0, 120) })
+      const devices = Array.isArray(existingData.devices) ? existingData.devices.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
+      const deviceId = String(body?.deviceId || '')
+      const device = devices.find((item) => String(item.deviceId || '') === deviceId)
+      if (device) Object.assign(device, { lockedPage: '', currentPage: '', loggedOutAt: new Date().toISOString() })
+      const mergedData = { ...existingData, notifications, devices }
+      await db.insert(appSnapshots).values({ id: SNAPSHOT_ID, data: mergedData, updatedAt: new Date() }).onConflictDoUpdate({ target: appSnapshots.id, set: { data: mergedData, updatedAt: new Date() } })
+      return response({ saved: true, lockedPage: body?.lockedPage || null })
+    }
+
     if (body?.action === 'resolve_logout_request') {
       const admin = await requireAdmin(request)
       if (admin.response) return admin.response
@@ -121,8 +139,28 @@ export async function POST(request: Request) {
       const notifications = Array.isArray(existingData.notifications) ? existingData.notifications.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
       const target = notifications.find((item) => String(item.id || item.requestId || '') === requestId && item.type === 'logout_request')
       if (!target) return response({ error: 'لم يتم العثور على طلب الخروج' }, 404)
-      Object.assign(target, { status, read: true, reviewedAt: new Date().toISOString(), reviewedBy: admin.user?.email || admin.user?.id || null })
-      const mergedData = { ...existingData, notifications }
+      const reviewedAt = new Date().toISOString()
+      Object.assign(target, { status, read: true, reviewedAt, reviewedBy: admin.user?.email || admin.user?.id || null })
+      const messages = Array.isArray(existingData.messages) ? existingData.messages.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
+      const isParent = target.role === 'parent'
+      const decisionText = status === 'approved'
+        ? 'تم قبول طلبك في تسجيل الخروج. تم تسجيل خروج هذا الجهاز وإلغاء تقييده بهذه الصفحة.'
+        : 'تم رفض طلبك في تسجيل الخروج من المسؤول.'
+      messages.unshift({
+        id: `m_logout_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        type: 'admin',
+        sender: 'المسؤول',
+        senderId: admin.user?.id || 0,
+        receiverType: isParent ? 'parent' : 'student',
+        receiverId: isParent ? undefined : target.userId,
+        receiverName: isParent ? String(target.parentName || target.name || '') : undefined,
+        text: decisionText,
+        time: new Date().toLocaleString('ar-EG'),
+        approved: true,
+        read: false,
+        logoutRequestId: target.id || target.requestId,
+      })
+      const mergedData = { ...existingData, notifications, messages }
       await db.insert(appSnapshots)
         .values({ id: SNAPSHOT_ID, data: mergedData, updatedAt: new Date() })
         .onConflictDoUpdate({ target: appSnapshots.id, set: { data: mergedData, updatedAt: new Date() } })
@@ -140,6 +178,8 @@ export async function POST(request: Request) {
       userId: auth.user?.id || null,
       userName: String(device.userName || '').slice(0, 160),
       lastSeenAt: new Date().toISOString(),
+      currentPage: String(device.currentPage || '').slice(0, 120),
+      lockedPage: String(device.lockedPage || '').slice(0, 120),
       userAgent: String(device.userAgent || '').slice(0, 240),
     }
     const withoutCurrent = devices.filter((item) => item.deviceId !== safeDevice.deviceId)
