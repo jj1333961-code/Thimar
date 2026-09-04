@@ -8,7 +8,7 @@
 <meta name="referrer" content="no-referrer-when-downgrade">
   <link rel="manifest" href="/manifest.webmanifest">
   <script src="/capacitor-runtime.js" defer></script>
-  <script src="/offline-runtime.js" defer></script>
+  <script src="/offline-runtime.js?v=20260905-2" defer></script>
   <link rel="preload" href="/quran/quran.pdf" as="fetch" type="application/pdf" crossorigin fetchpriority="high">
   <script src="/islamic-data.js" defer></script>
   <script src="/country-data.js" defer></script>
@@ -997,7 +997,7 @@ tr:hover { background: var(--table-hover); }
     <div class="stat-box" onclick="showPage('studentsList')" title="عرض قائمة الطلاب"><div class="num" id="statStudents">0</div><div class="label">عدد الطلاب</div><button class="stat-action" onclick="event.stopPropagation();showPage('addStudent')">➕ إضافة طالب جديد</button></div>
     <div class="stat-box"><div class="num" id="statTeachers">0</div><div class="label">عدد المعلمين</div><button class="stat-action" onclick="showPage('subjectsPage')">📚 المواد والمعلمين</button></div>
     <div class="stat-box"><div class="num" id="statAdmins">0</div><div class="label">المسؤولين</div><button class="stat-action" onclick="showPage('adminsPage')">👨‍💼 إدارة المسؤولين</button></div>
-    <div class="stat-box" style="background:linear-gradient(135deg,#ffc107,#ff9800)"><div class="num" id="statDrafts">0</div><div class="label">تسميعات نشطة</div></div>
+    <div class="stat-box" style="background:linear-gradient(135deg,#ffc107,#ff9800)"><div class="num" id="statDrafts">0</div><div class="label">تسميع��ت نشطة</div></div>
   </div>
   <div id="activeDraftsSection"></div>
 
@@ -1280,7 +1280,7 @@ tr:hover { background: var(--table-hover); }
 <div class="form-group"><label for="examBaseSurah">آخر سورة محفوظة للطالب</label><select id="examBaseSurah" onchange="syncExamSurahRange()"></select><small style="color:var(--text-light)">يُبنى الماضي من السور التي تسبقها في المراجعة حتى سورة الاس.</small></div>
  <div class="form-group"><label for="examPastScope">نوع الماضي</label><select id="examPastScope" onchange="syncExamSurahRange()"><option value="both">الماضي القريب والبعيد</option><option value="near">اماضي القريب</option><option value="far">الماضي البعيد</option></select><small id="examPastScopeHelp" style="color:var(--text-light)">يُقسم الماضي إلى نصف قيب ونص بعيد.</small></div>
  <div class="form-group"><label for="examLastSurah">نهاية الماضي (اختياري)</label><select id="examLastSurah" onchange="syncExamSurahRange()"><option value="">سورة اناس تلقائياً</option></select><small style="color:var(--text-light)">يمكن تضييق نطاق الماضي يدويا قبل ءءقسيمه.</small></div>
- <div class="form-group"><label for="examDeadline">موعد انتهاء الإتاحة</label><input id="examDeadline" type="datetime-local"></div>
+ <div class="form-group"><label for="examDeadline">موعد انتهاء الإتاح��</label><input id="examDeadline" type="datetime-local"></div>
  <div class="form-group"><label for="examSourceMode">المرجع الأساسي</label><select id="examSourceMode" onchange="updateExamSourceDistribution()"><option value="ai">الذكاء الاصطناعي</option><option value="file">من الملفات</option></select><small id="examSourceDistribution" style="color:var(--text-light)">توليد ذكي مع التحقق من النص القرآني والمراجع الموثوقة.</small></div>
  <div class="form-group" id="examFileSourceGroup" style="display:none"><label for="examFileSource">مل�� المرجع</label><select id="examFileSource"><option value="">اختر مرجعً...</option></select><small style="color:var(--text-light)">يجب اختيار ملف عند استخدام «من الملفات».</small></div>
  </div>
@@ -1447,7 +1447,7 @@ tr:hover { background: var(--table-hover); }
 
 <!-- إعدادات الطالب -->
 <div id="studentSettings" class="page hidden" style="max-width:500px;">
-  <div class="page-header"><h2>⚙️ تغيير الرقم السري</h2></div>
+  <div class="page-header"><h2>⚙️ ��غيير الرقم السري</h2></div>
   <div id="studentSettingsAlert"></div>
   <div class="form-group"><label>الرقم السري الحالي</label><input type="password" id="currentStudentPass" placeholder="أدخل الرقم السري الحالي"></div>
   <div class="form-group"><label>الرقم السي الجديد</label><input type="password" id="newStudentPass" placeholder="أدخل الرقم السري لجديد"></div>
@@ -1601,7 +1601,7 @@ tr:hover { background: var(--table-hover); }
   </div>
 </div>
   <div id="proctorWarning" class="proctor-warning hidden" role="alert" aria-live="assertive"></div>
-  <div id="proctorBlock" class="proctor-gate hidden" role="alertdialog" aria-modal="true" aria-labelledby="proctorBlockTitle"><div class="proctor-panel"><h2 id="proctorBlockTitle">تم إيقاف التحكم مؤقتاً</h2><p id="proctorBlockMessage">نحتاج إلى عودة الإشارات الطبيعية قبل استكمال المهمة. لا تُنهى المحاولة بسبب هذا التنبيه.</p><div class="proctor-checks"><div id="proctorBlockStatus" class="proctor-check bad">! جارٍ استعادة الفحص</div></div></div></div>
+  <div id="proctorBlock" class="proctor-gate hidden" role="alertdialog" aria-modal="true" aria-labelledby="proctorBlockTitle"><div class="proctor-panel"><h2 id="proctorBlockTitle">تم إيقاف التحكم مؤقتاً</h2><p id="proctorBlockMessage">نحتاج إلى عودة الإشارات الطبيعية قبل استكمال المهمة. لا تُنهى المحاولة بسبب هذا التنبيه.</p><div class="proctor-checks"><div id="proctorBlockStatus" class="proctor-check bad">! جا��ٍ استعادة الفحص</div></div></div></div>
 <div id="studentWorkModal" class="student-work-modal hidden" role="dialog" aria-modal="true" aria-labelledby="studentWorkModalTitle" onclick="if(event.target===this)closeStudentWorkModal()">
   <div class="student-work-dialog">
     <div class="student-work-dialog-header"><h3 id="studentWorkModalTitle">المطلوب</h3><button type="button" class="btn btn-secondary" onclick="closeStudentWorkModal()" aria-label="إغلاق النافذة">إغلاق</button></div>
