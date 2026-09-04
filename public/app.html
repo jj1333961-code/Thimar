@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#1f5845">
 <meta name="description" content="ثمار — منصة قرآنية هادئة للتسميع والاختبارات والمهام والنمو العلمي.">
 <meta name="referrer" content="no-referrer-when-downgrade">
+<link rel="manifest" href="/manifest.webmanifest">
+<script src="/capacitor-runtime.js" defer></script>
   <script src="/islamic-data.js" defer></script>
   <script src="/country-data.js" defer></script>
   <link rel="stylesheet" href="/islamic-hub.css">
@@ -1155,7 +1157,7 @@ tr:hover { background: var(--table-hover); }
     <div class="form-group"><label>السن (يحسب تلقائياً)</label><input type="number" id="stAge" readonly style="background:var(--table-header)"></div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label>الرقم السري للطالب *</label><input type="password" id="stStudentPass" placeholder="رقم سري لتسجيل دخول الطالب"><label style="font-weight:normal; margin-top:6px; display:block;"><input type="checkbox" id="stSamePass" onchange="syncStudentPass('st')"> استخدام نفس الرقم السري لولي الأمر</label></div>
+    <div class="form-group"><label>الرقم السري للطالب *</label><input type="password" id="stStudentPass" placeholder="رقم سري لتسجيل دخول الطالب"><label style="font-weight:normal; margin-top:6px; display:block;"><input type="checkbox" id="stSamePass" onchange="syncStudentPass('st')"> ا��تخدام نفس الرقم السري لولي الأمر</label></div>
     <div class="form-group"><label>اسم ولي الأمر *</label><input type="text" id="stParent"></div>
   </div>
   <div class="form-row">
@@ -1409,7 +1411,7 @@ tr:hover { background: var(--table-hover); }
 
 <!-- صندوق رسائل الطالب -->
 <div id="studentInbox" class="page hidden">
-  <div class="page-header"><h2>الرسائل</h2></div>
+  <div class="page-header"><h2>ال��سائل</h2></div>
   <div id="studentInboxList"></div>
 </div>
 
