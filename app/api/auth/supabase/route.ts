@@ -24,13 +24,17 @@ function publicError(error: unknown) {
   return value || 'تعذر إكمال عملية المصادقة'
 }
 
-async function ensureProfile(supabase: ReturnType<typeof createSupabaseServerClient>, user: { id: string }) {
-  const { error } = await supabase.from('profiles').upsert({ id: user.id }, { onConflict: 'id' })
+async function loadProfile(supabase: ReturnType<typeof createSupabaseServerClient>, userId: string) {
+  const { data, error } = await supabase.from('profiles').select('id, role, display_name').eq('id', userId).maybeSingle()
   if (error) {
-    console.error('[v0] Supabase profile upsert failed:', error)
-    return { profileReady: false, profileError: publicError(error) }
+    console.error('[v0] Supabase profile load failed:', error)
+    return { profileReady: false, profileError: publicError(error), profile: null }
   }
-  return { profileReady: true, profileError: null }
+  if (!data) {
+    console.error('[v0] Supabase profile missing for auth user:', userId)
+    return { profileReady: false, profileError: 'لم يتم العثور على profile لهذا الحساب. طبّق migration الخاصة بـ Supabase.', profile: null }
+  }
+  return { profileReady: true, profileError: null, profile: data }
 }
 
 export async function POST(request: NextRequest) {
@@ -47,9 +51,9 @@ export async function POST(request: NextRequest) {
       ? await supabase.auth.signUp({ email, password, options: { data: { display_name: String(body?.name || '').trim().slice(0, 120) } } })
       : await supabase.auth.signInWithPassword({ email, password })
     if (result.error) return json({ error: publicError(result.error), code: result.error.code || null }, result.error.status || 400)
-    if (action === 'signup' && !result.data.session) return applyCookies(json({ ok: true, pendingEmailConfirmation: true, email, profileReady: false }))
-    const profile = result.data.user ? await ensureProfile(supabase, result.data.user) : { profileReady: false, profileError: null }
-    return applyCookies(json({ ok: true, authenticated: true, ...profile, user: result.data.user ? { id: result.data.user.id, email: result.data.user.email } : null }))
+    if (action === 'signup' && !result.data.session) return applyCookies(json({ ok: true, pendingEmailConfirmation: true, email, profileReady: 'trigger-required' }))
+    const profile = result.data.user ? await loadProfile(supabase, result.data.user.id) : { profileReady: false, profileError: null, profile: null }
+    return applyCookies(json({ ok: true, authenticated: true, ...profile, role: profile.profile?.role || null, user: result.data.user ? { id: result.data.user.id, email: result.data.user.email } : null }))
   } catch (error) {
     return json({ error: publicError(error) }, 503)
   }
@@ -61,7 +65,8 @@ export async function GET(request: NextRequest) {
     const { supabase, applyCookies } = authClient(request)
     const { data, error } = await supabase.auth.getUser()
     if (error) return json({ authenticated: false, error: publicError(error) }, 401)
-    return applyCookies(json({ authenticated: true, user: { id: data.user.id, email: data.user.email } }))
+    const profile = await loadProfile(supabase, data.user.id)
+    return applyCookies(json({ authenticated: true, ...profile, role: profile.profile?.role || null, user: { id: data.user.id, email: data.user.email } }))
   } catch (error) {
     return json({ authenticated: false, error: publicError(error) }, 401)
   }

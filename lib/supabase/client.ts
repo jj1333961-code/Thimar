@@ -9,19 +9,15 @@ export type SupabaseCookieAdapter = {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
-if (!supabaseUrl) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL is not configured')
+function requireSupabaseConfig() {
+  if (!supabaseUrl) throw new Error('NEXT_PUBLIC_SUPABASE_URL is not configured')
+  if (!supabasePublishableKey) throw new Error('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is not configured')
+  return { url: supabaseUrl, key: supabasePublishableKey }
 }
-
-if (!supabasePublishableKey) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is not configured')
-}
-
-const configuredSupabaseUrl = supabaseUrl as string
-const configuredSupabasePublishableKey = supabasePublishableKey as string
 
 export function createSupabaseClient(options?: Parameters<typeof createClient>[2]) {
-  return createClient(configuredSupabaseUrl, configuredSupabasePublishableKey, {
+  const config = requireSupabaseConfig()
+  return createClient(config.url, config.key, {
     ...options,
     auth: {
       persistSession: true,
@@ -32,10 +28,9 @@ export function createSupabaseClient(options?: Parameters<typeof createClient>[2
   })
 }
 
-export const supabase = createSupabaseClient()
-
 export function createSupabaseServerClient(cookies: SupabaseCookieAdapter) {
-  return createServerClient(configuredSupabaseUrl, configuredSupabasePublishableKey, {
+  const config = requireSupabaseConfig()
+  return createServerClient(config.url, config.key, {
     cookies: {
       getAll: cookies.getAll,
       setAll: cookies.setAll,
