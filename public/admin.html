@@ -8,7 +8,7 @@
 <meta name="referrer" content="no-referrer-when-downgrade">
   <link rel="manifest" href="/manifest.webmanifest">
   <script src="/capacitor-runtime.js" defer></script>
-  <script src="/offline-runtime.js?v=20260905-2" defer></script>
+  <script src="/offline-runtime.js?v=20260905-3" defer></script>
   <link rel="preload" href="/quran/quran.pdf" as="fetch" type="application/pdf" crossorigin fetchpriority="high">
   <script src="/islamic-data.js" defer></script>
   <script src="/country-data.js" defer></script>
@@ -944,7 +944,7 @@ tr:hover { background: var(--table-hover); }
     <input type="text" id="signupRelationshipName" placeholder="اكتب اسم ولي الأمر بالكامل">
   </div>
   <div class="form-row">
-    <div class="form-group"><label for="signupNid">كود الهوية أو جواز السفر *</label><div class="country-input-row"><select id="signupIdentityCountry" data-country-selector data-identity-id="signupNid" aria-label="دولة الهوية"><option value="EG">مصر (+20)</option></select><input type="text" id="signupNid" data-identity-input autocomplete="off" placeholder="أدخل هوية الدولة أو رقم جواز السفر"></div><small id="signupNidHint" class="country-hint" style="color:var(--text-light)"></small></div>
+    <div class="form-group"><label for="signupNid">كود الهوية أو جواز السفر *</label><div class="country-input-row"><select id="signupIdentityCountry" data-country-selector data-identity-id="signupNid" aria-label="دولة اله��ية"><option value="EG">مصر (+20)</option></select><input type="text" id="signupNid" data-identity-input autocomplete="off" placeholder="أدخل هوية الدولة أو رقم جواز السفر"></div><small id="signupNidHint" class="country-hint" style="color:var(--text-light)"></small></div>
     <div class="form-group"><label>رقم الهاتف *</label><div class="country-input-row"><select id="signupPhoneCountry" data-country-selector data-phone-id="signupPhone" aria-label="كود دولة الهاتف"><option value="EG">مصر (+20)</option></select><input type="tel" id="signupPhone" data-phone-input class="phone-input" inputmode="numeric" autocomplete="tel" placeholder="الرقم المحلي بدون رمز الدولة" style="flex:1; direction:ltr;"></div><small id="signupPhoneInternational" style="color:var(--text-light)">الرقم الدولي: +20</small></div>
   </div>
   <div class="form-row">
