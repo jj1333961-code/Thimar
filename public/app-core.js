@@ -842,7 +842,7 @@ function roleShellPath(role) {
 
 function showPage(id, options = {}) {
   // كل الأدوار موجودة داخل shell واحد؛ التنقل بينها محلي بلا إعادة تحميل.
-  if(id !== 'lockScreen' && logoutGate?.status === 'pending') id = 'lockScreen';
+  if(id !== 'lockScreen' && ['pending','rejected'].includes(logoutGate?.status)) id = logoutGate.targetPage || defaultPageForRole(currentType);
 
   const dashboardRole = id === 'adminDashboard' ? 'admin' : id === 'studentDashboard' ? 'student' : id === 'parentDashboard' ? 'parent' : null;
   const currentVisible = document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)');
@@ -1404,8 +1404,10 @@ function renderLogoutGateBanner() {
   banner.setAttribute('role', 'status');
   if(logoutGate.status === 'pending') {
     banner.innerHTML = '<span>تم إرسال طلب تسجيل الخروج إلى المسؤول. لا يمكن تغيير الصفحة حتى تتم المراجعة.</span>';
+  } else if(logoutGate.status === 'rejected') {
+    banner.innerHTML = '<span>تم رفض طلب تسجيل الخروج. سيبقى هذا الجهاز مقيدًا بهذه الصفحة.</span>';
   } else if(logoutGate.status === 'approved') {
-    banner.innerHTML = '<span>وافق المسؤول على تسجيل الخروج.</span><button type="button" class="btn btn-danger btn-sm" onclick="completeApprovedLogout()">الخروج</button>';
+    banner.innerHTML = '<span>وافق المسؤول على تسجيل الخروج. جارٍ إنهاء الجلسة...</span>';
   } else return;
   document.body.prepend(banner);
 }
@@ -1422,13 +1424,14 @@ async function pollLogoutApproval() {
     if(request.status === 'approved') {
       logoutGate.status = 'approved';
       saveSessionState();
-      showPage(logoutGate.targetPage || defaultPageForRole(currentType), { fromBrowser:true });
-      showToast('تمت الموافقة. افتح الشريط الجانبي واضغط تسجيل الخروج.','success');
+      showToast('تمت الموافقة على الطلب وسيتم تسجيل خروج الجهاز.','success');
+      await completeApprovedLogout();
     } else if(request.status === 'rejected') {
-      logoutGate = null;
+      logoutGate.status = 'rejected';
       saveSessionState();
-      showPage(defaultPageForRole(currentType), { fromBrowser:true });
-      showToast('تم رفض طلب تسجيل الخروج من المسؤول.','error');
+      renderLogoutGateBanner();
+      showPage(logoutGate.targetPage || defaultPageForRole(currentType), { fromBrowser:true });
+      showToast('تم رفض طلب تسجيل الخروج. سيبقى الجهاز مقيدًا بهذه الصفحة.','error');
     }
   } catch(error) { console.warn('[v0] logout approval polling skipped', error); }
 }
@@ -1440,7 +1443,7 @@ function startLogoutApprovalPolling() {
 }
 async function requestLogout() {
   if(currentType !== 'student' && currentType !== 'parent') return;
-  if(isLogoutPendingForCurrentUser()) { showToast('تم إرسال طلب الخروج بالفعل، بانتظار موافقة المسؤول','info'); return; }
+  if(isLogoutPendingForCurrentUser() || logoutGate?.status === 'rejected') { showToast(logoutGate?.status === 'rejected' ? 'تم رفض الطلب وسيبقى الجهاز مقيدًا بهذه الصفحة' : 'تم إرسال طلب الخروج بالفعل، بانتظار موافقة المسؤول','info'); return; }
   const visible = document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)');
   const page = visible?.id || defaultPageForRole(currentType);
   try {
@@ -1450,7 +1453,7 @@ async function requestLogout() {
     if(body.request) { const notifications=getData('notifications',[]); notifications.unshift(body.request); runtimeData.notifications = notifications.slice(0,500); }
     logoutGate = { requestId: body.request?.id || body.request?.requestId, status: body.request?.status || 'pending', targetPage: page };
     saveSessionState();
-    showPage('lockScreen');
+    showPage(page, { fromBrowser:true });
     renderLogoutGateBanner();
     startLogoutApprovalPolling();
     showToast('تم إرسال الطلب. انتظر موافقة المسؤول؛ لن يتم تسجيل الخروج تلقائياً.','success');
@@ -1643,7 +1646,7 @@ async function submitSignupRequest() {
     const authBody = await authResponse.json().catch(function(){ return {}; });
     if(!authResponse.ok) { console.error('[v0] Supabase signup failed', authBody); throw new Error(authBody.error || 'تعذر إنشاء حساب Supabase'); }
     if(authBody.profileReady === false && authBody.profileError) console.error('[v0] Supabase profile was not created', authBody.profileError);
-    if(authBody.pendingEmailConfirmation) { box.innerHTML = '<div class="alert alert-success">✅ تم إنشاء الحساب بنجاح. تحقق من بريدك الإلكتروني لتفعيل الحساب، ثم استخدم البريد وكلمة المرور لتسجيل الدخول.</div>'; return; }
+    if(authBody.pendingEmailConfirmation) { box.innerHTML = '<div class="alert alert-success">✅ تم إنشاء الحساب بنجاح. تحقق من ��ريدك الإلكتروني لتفعيل الحساب، ثم استخدم البريد وكلمة المرور لتسجيل الدخول.</div>'; return; }
   } catch(error) {
     console.error('[v0] Supabase signup request failed', error);
     box.innerHTML = '<div class="alert alert-danger">' + escapeHtml(error.message || 'تعذر إنشاء الحساب') + '</div>';
@@ -3388,7 +3391,7 @@ function saveSession(isFinal) {
     homeworkItems.forEach(h=>students[idx].tasks.push({type:'homework',text:h.text,approved:false,rejected:false,submitted:false,date,sentAt:Date.now(),originalTaskIndex:taskCounter++}));
     readingItems.forEach(r=>students[idx].tasks.push({type:'reading',text:r.text,surah:r.surah,from:r.from,to:r.to,showAyat:!!r.showAyat,audio:r.audio||'',approved:false,rejected:false,submitted:false,date,sentAt:Date.now(),originalTaskIndex:taskCounter++}));
     setData('students',students);
-    sendSystemSessionMessage(students[idx], 'تم حفظ تسميع '+students[idx].name+' بتاريخ '+date+' كمسودة. المهام الحالية ما زالت اهرة للطالب.');
+    sendSystemSessionMessage(students[idx], 'تم حف�� تسميع '+students[idx].name+' بتاريخ '+date+' كمسودة. المهام الحالية ما زالت اهرة للطالب.');
     showToast('💾 ءءم الحفظ كمسودة والمهام ما زالت متاحة للطالب', 'success');
     return;
   }
