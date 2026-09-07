@@ -144,7 +144,7 @@ export interface Recitation {
   surah_to?: number
   ayah_from?: number
   ayah_to?: number
-  type?: 'recitation' | 'memorization' | 'review' 'reading'
+  type?: 'recitation' | 'memorization' | 'review' | 'reading'
   grade?: 'excellent' | 'very_good' | 'good' | 'acceptable' | 'needs_work'
   score?: number
   evaluator_notes?: string

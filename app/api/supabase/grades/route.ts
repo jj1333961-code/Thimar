@@ -58,8 +58,7 @@ export async function POST(request: NextRequest) {
   const originError = rejectCrossOrigin(request)
   if (originError) return originError
   
-  const auth = requireAdmin
-  if (auth) {
+  if (typeof requireAdmin === 'function') {
     const adminAuth = await requireAdmin(request)
     if (adminAuth.response) return adminAuth.response
   }
