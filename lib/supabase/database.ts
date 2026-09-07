@@ -74,7 +74,7 @@ export interface Exam {
   total_marks?: number
   passing_marks?: number
   questions?: ExamQuestion[]
-  answers?: Record<string, string>
+  answers?: Record<string, unknown>
   exam_type?: 'quiz' | 'midterm' | 'final' | 'practice'
   status?: 'draft' | 'published' | 'archived'
   shuffle_questions?: boolean
@@ -236,6 +236,7 @@ export interface JoinRequest {
   phone?: string
   grade_level?: string
   status?: 'pending' | 'approved' | 'rejected'
+  requested_by?: string
   reviewed_by?: string
   reviewed_at?: string
   rejection_reason?: string
@@ -1150,7 +1151,7 @@ export const joinRequestsDb = {
     }
   },
 
-  async updateStatus(id: string, status: 'approved' | 'rejected', reviewedBy: string, rejectionReason?: string): Promise<JoinRequest> {
+  async updateStatus(id: string, status: 'approved' | 'rejected', reviewedBy?: string, rejectionReason?: string): Promise<JoinRequest> {
     try {
       const supabase = createSupabaseAdmin()
       const updates: Partial<JoinRequest> = {
