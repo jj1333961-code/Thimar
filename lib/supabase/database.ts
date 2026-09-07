@@ -1,12 +1,45 @@
 /**
  * Supabase Database Integration Layer
- * 
+ *
  * This module provides type-safe database operations for the teacher platform.
  * All functions are designed to work with the server-side admin client for
  * full database access, while maintaining proper security through RLS policies.
+ *
+ * When Supabase is not configured, falls back to in-memory storage so the
+ * application continues to work without a database connection.
  */
 
-import { createSupabaseAdmin } from './server'
+import { createSupabaseAdmin, isServerSupabaseConfigured } from './server'
+
+// In-memory fallback store when Supabase is not configured
+const memoryStore: Map<string, { data: Record<string, unknown>; updated_at: string }> = new Map()
+
+function getMemoryData(key: string): Record<string, unknown> {
+  const entry = memoryStore.get(key)
+  return entry?.data ?? {}
+}
+
+function setMemoryData(key: string, data: Record<string, unknown>): void {
+  memoryStore.set(key, { data, updated_at: new Date().toISOString() })
+}
+
+function getMemoryUpdatedAt(key: string): string | null {
+  return memoryStore.get(key)?.updated_at ?? null
+}
+
+// Simple in-memory collections keyed by table name for non-snapshot tables
+const memoryTables: Map<string, Map<string, Record<string, unknown>>> = new Map()
+
+function getMemoryTable(table: string): Map<string, Record<string, unknown>> {
+  if (!memoryTables.has(table)) {
+    memoryTables.set(table, new Map())
+  }
+  return memoryTables.get(table)!
+}
+
+function generateId(): string {
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+}
 
 // ============================================================
 // Type Definitions
@@ -273,8 +306,12 @@ function handleError(error: unknown, operation: string): never {
 
 export const studentsDb = {
   async getAll(): Promise<Student[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('students')
+      return Array.from(table.values()) as Student[]
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('students')
         .select('*')
@@ -287,8 +324,11 @@ export const studentsDb = {
   },
 
   async getById(id: string): Promise<Student | null> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return (getMemoryTable('students').get(id) as Student) || null
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('students')
         .select('*')
@@ -305,8 +345,14 @@ export const studentsDb = {
   },
 
   async create(student: Omit<Student, 'id' | 'created_at' | 'updated_at'>): Promise<Student> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const now = new Date().toISOString()
+      const row: Student = { ...student, id: generateId(), created_at: now, updated_at: now }
+      getMemoryTable('students').set(row.id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('students')
         .insert(student)
@@ -320,8 +366,16 @@ export const studentsDb = {
   },
 
   async update(id: string, updates: Partial<Student>): Promise<Student> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('students')
+      const existing = table.get(id)
+      if (!existing) throw new Error('Student not found')
+      const row = { ...existing, ...updates, updated_at: new Date().toISOString() } as Student
+      table.set(id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('students')
         .update(updates)
@@ -336,8 +390,12 @@ export const studentsDb = {
   },
 
   async delete(id: string): Promise<void> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      getMemoryTable('students').delete(id)
+      return
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { error } = await supabase
         .from('students')
         .delete()
@@ -349,8 +407,14 @@ export const studentsDb = {
   },
 
   async search(query: string): Promise<Student[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const q = query.toLowerCase()
+      return Array.from(getMemoryTable('students').values()).filter((s) => {
+        return [s.name, s.username, s.email].some((field) => String(field || '').toLowerCase().includes(q))
+      }) as Student[]
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('students')
         .select('*')
@@ -370,8 +434,11 @@ export const studentsDb = {
 
 export const subjectsDb = {
   async getAll(): Promise<Subject[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('subjects').values()) as Subject[]
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('subjects')
         .select('*')
@@ -384,8 +451,14 @@ export const subjectsDb = {
   },
 
   async create(subject: Omit<Subject, 'id' | 'created_at' | 'updated_at'>): Promise<Subject> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const now = new Date().toISOString()
+      const row: Subject = { ...subject, id: generateId(), created_at: now, updated_at: now }
+      getMemoryTable('subjects').set(row.id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('subjects')
         .insert(subject)
@@ -399,8 +472,16 @@ export const subjectsDb = {
   },
 
   async update(id: string, updates: Partial<Subject>): Promise<Subject> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('subjects')
+      const existing = table.get(id)
+      if (!existing) throw new Error('Subject not found')
+      const row = { ...existing, ...updates, updated_at: new Date().toISOString() } as Subject
+      table.set(id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('subjects')
         .update(updates)
@@ -415,8 +496,12 @@ export const subjectsDb = {
   },
 
   async delete(id: string): Promise<void> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      getMemoryTable('subjects').delete(id)
+      return
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { error } = await supabase
         .from('subjects')
         .delete()
@@ -434,8 +519,11 @@ export const subjectsDb = {
 
 export const gradesDb = {
   async getByStudent(studentId: string): Promise<Grade[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('grades').values()).filter((g) => g.student_id === studentId) as Grade[]
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('grades')
         .select('*')
@@ -449,8 +537,11 @@ export const gradesDb = {
   },
 
   async getBySubject(subjectId: string): Promise<Grade[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('grades').values()).filter((g) => g.subject_id === subjectId) as Grade[]
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('grades')
         .select('*')
@@ -464,8 +555,14 @@ export const gradesDb = {
   },
 
   async create(grade: Omit<Grade, 'id' | 'created_at' | 'updated_at'>): Promise<Grade> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const now = new Date().toISOString()
+      const row: Grade = { ...grade, id: generateId(), created_at: now, updated_at: now }
+      getMemoryTable('grades').set(row.id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('grades')
         .insert(grade)
@@ -479,8 +576,16 @@ export const gradesDb = {
   },
 
   async update(id: string, updates: Partial<Grade>): Promise<Grade> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('grades')
+      const existing = table.get(id)
+      if (!existing) throw new Error('Grade not found')
+      const row = { ...existing, ...updates, updated_at: new Date().toISOString() } as Grade
+      table.set(id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('grades')
         .update(updates)
@@ -495,8 +600,12 @@ export const gradesDb = {
   },
 
   async delete(id: string): Promise<void> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      getMemoryTable('grades').delete(id)
+      return
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { error } = await supabase
         .from('grades')
         .delete()
@@ -514,8 +623,11 @@ export const gradesDb = {
 
 export const examsDb = {
   async getAll(): Promise<Exam[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('exams').values()) as Exam[]
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('exams')
         .select('*')
@@ -528,8 +640,11 @@ export const examsDb = {
   },
 
   async getById(id: string): Promise<Exam | null> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return (getMemoryTable('exams').get(id) as Exam) || null
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('exams')
         .select('*')
@@ -546,8 +661,14 @@ export const examsDb = {
   },
 
   async create(exam: Omit<Exam, 'id' | 'created_at' | 'updated_at'>): Promise<Exam> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const now = new Date().toISOString()
+      const row: Exam = { ...exam, id: generateId(), created_at: now, updated_at: now }
+      getMemoryTable('exams').set(row.id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('exams')
         .insert(exam)
@@ -561,8 +682,16 @@ export const examsDb = {
   },
 
   async update(id: string, updates: Partial<Exam>): Promise<Exam> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('exams')
+      const existing = table.get(id)
+      if (!existing) throw new Error('Exam not found')
+      const row = { ...existing, ...updates, updated_at: new Date().toISOString() } as Exam
+      table.set(id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('exams')
         .update(updates)
@@ -577,8 +706,12 @@ export const examsDb = {
   },
 
   async delete(id: string): Promise<void> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      getMemoryTable('exams').delete(id)
+      return
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { error } = await supabase
         .from('exams')
         .delete()
@@ -590,8 +723,11 @@ export const examsDb = {
   },
 
   async getPublished(): Promise<Exam[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('exams').values()).filter((e) => e.status === 'published') as Exam[]
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('exams')
         .select('*')
@@ -611,8 +747,11 @@ export const examsDb = {
 
 export const examAttemptsDb = {
   async getByStudent(studentId: string): Promise<ExamAttempt[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('exam_attempts').values()).filter((a) => a.student_id === studentId) as ExamAttempt[]
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('exam_attempts')
         .select('*')
@@ -626,8 +765,11 @@ export const examAttemptsDb = {
   },
 
   async getByExam(examId: string): Promise<ExamAttempt[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('exam_attempts').values()).filter((a) => a.exam_id === examId) as ExamAttempt[]
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('exam_attempts')
         .select('*')
@@ -641,8 +783,14 @@ export const examAttemptsDb = {
   },
 
   async create(attempt: Omit<ExamAttempt, 'id' | 'started_at' | 'updated_at'>): Promise<ExamAttempt> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const now = new Date().toISOString()
+      const row: ExamAttempt = { ...attempt, id: generateId(), started_at: now, updated_at: now }
+      getMemoryTable('exam_attempts').set(row.id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('exam_attempts')
         .insert(attempt)
@@ -656,8 +804,16 @@ export const examAttemptsDb = {
   },
 
   async update(id: string, updates: Partial<ExamAttempt>): Promise<ExamAttempt> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('exam_attempts')
+      const existing = table.get(id)
+      if (!existing) throw new Error('Exam attempt not found')
+      const row = { ...existing, ...updates, updated_at: new Date().toISOString() } as ExamAttempt
+      table.set(id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('exam_attempts')
         .update(updates)
@@ -672,8 +828,23 @@ export const examAttemptsDb = {
   },
 
   async submit(id: string, score: number, timeSpentSeconds: number): Promise<ExamAttempt> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('exam_attempts')
+      const existing = table.get(id)
+      if (!existing) throw new Error('Exam attempt not found')
+      const row = {
+        ...existing,
+        completed: true,
+        score,
+        time_spent_seconds: timeSpentSeconds,
+        submitted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as ExamAttempt
+      table.set(id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('exam_attempts')
         .update({
@@ -699,8 +870,14 @@ export const examAttemptsDb = {
 
 export const attendanceDb = {
   async getByStudent(studentId: string, fromDate?: string, toDate?: string): Promise<Attendance[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      let records = Array.from(getMemoryTable('attendance').values()).filter((a) => a.student_id === studentId) as Attendance[]
+      if (fromDate) records = records.filter((r) => r.date >= fromDate)
+      if (toDate) records = records.filter((r) => r.date <= toDate)
+      return records
+    }
     try {
-      const supabase = createSupabaseAdmin()
       let query = supabase
         .from('attendance')
         .select('*')
@@ -722,8 +899,11 @@ export const attendanceDb = {
   },
 
   async getByDate(date: string): Promise<Attendance[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('attendance').values()).filter((a) => a.date === date) as Attendance[]
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('attendance')
         .select('*')
@@ -736,14 +916,29 @@ export const attendanceDb = {
   },
 
   async markAttendance(attendance: Omit<Attendance, 'id' | 'recorded_at'>): Promise<Attendance> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const now = new Date().toISOString()
+      const table = getMemoryTable('attendance')
+      const existing = Array.from(table.values()).find(
+        (a) => a.student_id === attendance.student_id && a.date === attendance.date
+      )
+      if (existing) {
+        const updated = { ...existing, ...attendance, recorded_at: now }
+        table.set(existing.id || generateId(), updated as Attendance)
+        return updated as Attendance
+      }
+      const row: Attendance = { ...attendance, id: generateId(), recorded_at: now }
+      table.set(row.id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data: existing } = await supabase
         .from('attendance')
         .select('id')
         .eq('student_id', attendance.student_id)
         .eq('date', attendance.date)
-        .single()
+        .maybeSingle()
       
       if (existing) {
         const { data, error } = await supabase
@@ -769,8 +964,12 @@ export const attendanceDb = {
   },
 
   async delete(id: string): Promise<void> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      getMemoryTable('attendance').delete(id)
+      return
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { error } = await supabase
         .from('attendance')
         .delete()
@@ -788,8 +987,11 @@ export const attendanceDb = {
 
 export const recitationsDb = {
   async getByStudent(studentId: string): Promise<Recitation[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('recitations').values()).filter((r) => r.student_id === studentId) as Recitation[]
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('recitations')
         .select('*')
@@ -803,8 +1005,14 @@ export const recitationsDb = {
   },
 
   async create(recitation: Omit<Recitation, 'id' | 'created_at'>): Promise<Recitation> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const now = new Date().toISOString()
+      const row: Recitation = { ...recitation, id: generateId(), created_at: now }
+      getMemoryTable('recitations').set(row.id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('recitations')
         .insert(recitation)
@@ -818,8 +1026,16 @@ export const recitationsDb = {
   },
 
   async update(id: string, updates: Partial<Recitation>): Promise<Recitation> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('recitations')
+      const existing = table.get(id)
+      if (!existing) throw new Error('Recitation not found')
+      const row = { ...existing, ...updates } as Recitation
+      table.set(id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('recitations')
         .update(updates)
@@ -840,8 +1056,13 @@ export const recitationsDb = {
 
 export const notificationsDb = {
   async getByUser(userId: string, unreadOnly = false): Promise<Notification[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      let records = Array.from(getMemoryTable('notifications').values()).filter((n) => n.user_id === userId) as Notification[]
+      if (unreadOnly) records = records.filter((n) => !n.read)
+      return records.slice(0, 100)
+    }
     try {
-      const supabase = createSupabaseAdmin()
       let query = supabase
         .from('notifications')
         .select('*')
@@ -860,8 +1081,13 @@ export const notificationsDb = {
   },
 
   async create(notification: Omit<Notification, 'id' | 'created_at'>): Promise<Notification> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const row: Notification = { ...notification, id: generateId(), created_at: new Date().toISOString() }
+      getMemoryTable('notifications').set(row.id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('notifications')
         .insert(notification)
@@ -875,8 +1101,16 @@ export const notificationsDb = {
   },
 
   async markAsRead(id: string): Promise<void> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('notifications')
+      const existing = table.get(id)
+      if (existing) {
+        table.set(id, { ...existing, read: true, read_at: new Date().toISOString() })
+      }
+      return
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { error } = await supabase
         .from('notifications')
         .update({ read: true, read_at: new Date().toISOString() })
@@ -888,8 +1122,17 @@ export const notificationsDb = {
   },
 
   async markAllAsRead(userId: string): Promise<void> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('notifications')
+      for (const [id, record] of table) {
+        if ((record as Notification).user_id === userId && !(record as Notification).read) {
+          table.set(id, { ...record, read: true, read_at: new Date().toISOString() })
+        }
+      }
+      return
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { error } = await supabase
         .from('notifications')
         .update({ read: true, read_at: new Date().toISOString() })
@@ -908,8 +1151,11 @@ export const notificationsDb = {
 
 export const devicesDb = {
   async getAll(): Promise<Device[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('devices').values()) as Device[]
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('devices')
         .select('*')
@@ -922,13 +1168,26 @@ export const devicesDb = {
   },
 
   async registerDevice(device: Omit<Device, 'id' | 'created_at' | 'updated_at'>): Promise<Device> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const now = new Date().toISOString()
+      const table = getMemoryTable('devices')
+      const existing = Array.from(table.values()).find((d) => d.device_id === device.device_id)
+      if (existing) {
+        const updated = { ...existing, ...device, last_seen_at: now, updated_at: now }
+        table.set(existing.id || generateId(), updated as Device)
+        return updated as Device
+      }
+      const row: Device = { ...device, id: generateId(), created_at: now, updated_at: now, last_seen_at: now }
+      table.set(row.id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data: existing } = await supabase
         .from('devices')
         .select('id')
         .eq('device_id', device.device_id)
-        .single()
+        .maybeSingle()
       
       if (existing) {
         const { data, error } = await supabase
@@ -954,8 +1213,16 @@ export const devicesDb = {
   },
 
   async updateDevice(deviceId: string, updates: Partial<Device>): Promise<Device> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('devices')
+      const existing = Array.from(table.values()).find((d) => d.device_id === deviceId)
+      if (!existing) throw new Error('Device not found')
+      const row = { ...existing, ...updates, updated_at: new Date().toISOString() } as Device
+      table.set(existing.id || deviceId, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('devices')
         .update(updates)
@@ -976,8 +1243,13 @@ export const devicesDb = {
 
 export const aiHistoryDb = {
   async create(entry: Omit<AIQuestionHistory, 'id' | 'created_at'>): Promise<AIQuestionHistory> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const row: AIQuestionHistory = { ...entry, id: generateId(), created_at: new Date().toISOString() }
+      getMemoryTable('ai_question_history').set(row.id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('ai_question_history')
         .insert(entry)
@@ -991,6 +1263,11 @@ export const aiHistoryDb = {
   },
 
   async getRecent(limit = 20): Promise<AIQuestionHistory[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('ai_question_history').values()).slice(0, limit) as AIQuestionHistory[]
+    }
+    try {
     try {
       const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
@@ -1012,8 +1289,11 @@ export const aiHistoryDb = {
 
 export const adminsDb = {
   async getAll(): Promise<Admin[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('admins').values()) as Admin[]
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('admins')
         .select('*')
@@ -1026,17 +1306,18 @@ export const adminsDb = {
   },
 
   async getByEmail(email: string): Promise<Admin | null> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const lowered = email.toLowerCase()
+      return (Array.from(getMemoryTable('admins').values()).find((a) => a.email === lowered) as Admin) || null
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('admins')
         .select('*')
         .eq('email', email.toLowerCase())
-        .single()
-      if (error) {
-        if (error.code === 'PGRST116') return null
-        throw error
-      }
+        .maybeSingle()
+      if (error) throw error
       return data
     } catch (error) {
       handleError(error, 'جلب بيانات المسؤول')
@@ -1044,8 +1325,14 @@ export const adminsDb = {
   },
 
   async create(admin: Omit<Admin, 'id' | 'created_at' | 'updated_at'>): Promise<Admin> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const now = new Date().toISOString()
+      const row: Admin = { ...admin, id: generateId(), created_at: now, updated_at: now }
+      getMemoryTable('admins').set(row.id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('admins')
         .insert(admin)
@@ -1059,8 +1346,16 @@ export const adminsDb = {
   },
 
   async update(id: string, updates: Partial<Admin>): Promise<Admin> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('admins')
+      const existing = table.get(id)
+      if (!existing) throw new Error('Admin not found')
+      const row = { ...existing, ...updates, updated_at: new Date().toISOString() } as Admin
+      table.set(id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('admins')
         .update(updates)
@@ -1081,8 +1376,13 @@ export const adminsDb = {
 
 export const proctoringDb = {
   async create(incident: Omit<ProctoringIncident, 'id' | 'occurred_at'>): Promise<ProctoringIncident> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const row: ProctoringIncident = { ...incident, id: generateId(), occurred_at: new Date().toISOString() }
+      getMemoryTable('proctoring_incidents').set(row.id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('proctoring_incidents')
         .insert(incident)
@@ -1096,8 +1396,11 @@ export const proctoringDb = {
   },
 
   async getByStudent(studentId: string): Promise<ProctoringIncident[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('proctoring_incidents').values()).filter((p) => p.student_id === studentId) as ProctoringIncident[]
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('proctoring_incidents')
         .select('*')
@@ -1117,8 +1420,13 @@ export const proctoringDb = {
 
 export const joinRequestsDb = {
   async getAll(status?: 'pending' | 'approved' | 'rejected'): Promise<JoinRequest[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      let records = Array.from(getMemoryTable('join_requests').values()) as JoinRequest[]
+      if (status) records = records.filter((r) => r.status === status)
+      return records
+    }
     try {
-      const supabase = createSupabaseAdmin()
       let query = supabase
         .from('join_requests')
         .select('*')
@@ -1137,8 +1445,13 @@ export const joinRequestsDb = {
   },
 
   async create(request: Omit<JoinRequest, 'id' | 'created_at'>): Promise<JoinRequest> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const row: JoinRequest = { ...request, id: generateId(), created_at: new Date().toISOString() }
+      getMemoryTable('join_requests').set(row.id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('join_requests')
         .insert(request)
@@ -1152,8 +1465,24 @@ export const joinRequestsDb = {
   },
 
   async updateStatus(id: string, status: 'approved' | 'rejected', reviewedBy?: string, rejectionReason?: string): Promise<JoinRequest> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('join_requests')
+      const existing = table.get(id) as JoinRequest | undefined
+      if (!existing) throw new Error('Join request not found')
+      const updates: Partial<JoinRequest> = {
+        status,
+        reviewed_by: reviewedBy,
+        reviewed_at: new Date().toISOString(),
+      }
+      if (status === 'rejected' && rejectionReason) {
+        updates.rejection_reason = rejectionReason
+      }
+      const row: JoinRequest = { ...existing, ...updates }
+      table.set(id, row)
+      return row
+    }
     try {
-      const supabase = createSupabaseAdmin()
       const updates: Partial<JoinRequest> = {
         status,
         reviewed_by: reviewedBy,
@@ -1180,18 +1509,329 @@ export const joinRequestsDb = {
 // Health Check
 // ============================================================
 
-export async function checkDatabaseConnection(): Promise<{ connected: boolean; error?: string }> {
+export async function checkDatabaseConnection(): Promise<{ connected: boolean; error?: string; mode?: 'supabase' | 'memory' }> {
+  const supabase = createSupabaseAdmin()
+  if (!supabase) {
+    return { connected: true, mode: 'memory' }
+  }
   try {
-    const supabase = createSupabaseAdmin()
     const { error } = await supabase.from('students').select('id').limit(1)
     if (error) {
       return { connected: false, error: error.message }
     }
-    return { connected: true }
+    return { connected: true, mode: 'supabase' }
   } catch (error) {
-    return { 
-      connected: false, 
-      error: error instanceof Error ? error.message : 'فشل الاتصال بقاعدة البيانات' 
+    return {
+      connected: false,
+      error: error instanceof Error ? error.message : 'فشل الاتصال بقاعدة البيانات'
+    }
+  }
+}
+
+export { isServerSupabaseConfigured }
+
+// ============================================================
+// App Snapshots Operations (للبيانات الهرمية المخزنة في JSONB)
+// ============================================================
+
+export interface AppSnapshot {
+  id: string
+  data: Record<string, unknown>
+  updated_at: string
+}
+
+export const appSnapshotsDb = {
+  async get(id: string): Promise<AppSnapshot | null> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      // Fallback: return from memory store
+      const data = getMemoryData(id)
+      const updated_at = getMemoryUpdatedAt(id)
+      if (Object.keys(data).length === 0) return null
+      return { id, data, updated_at: updated_at || new Date().toISOString() }
+    }
+    try {
+      const { data: row, error } = await supabase
+        .from('app_snapshots')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+      if (error) throw error
+      return row
+    } catch (error) {
+      handleError(error, 'جلب البيانات')
+    }
+  },
+
+  async upsert(id: string, data: Record<string, unknown>): Promise<AppSnapshot> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      // Fallback: store in memory
+      setMemoryData(id, data)
+      return { id, data, updated_at: new Date().toISOString() }
+    }
+    try {
+      const { data: row, error } = await supabase
+        .from('app_snapshots')
+        .upsert({ id, data, updated_at: new Date().toISOString() }, { onConflict: 'id' })
+        .select()
+        .single()
+      if (error) throw error
+      return row
+    } catch (error) {
+      handleError(error, 'حفظ البيانات')
+    }
+  }
+}
+
+// ============================================================
+// Messages Operations
+// ============================================================
+
+export interface Message {
+  id: string
+  sender_id: string
+  sender_name: string
+  sender_role: string
+  receiver_id?: string
+  receiver_name?: string
+  receiver_role?: string
+  body: string
+  sender_email?: string
+  receiver_email?: string
+  type?: 'direct' | 'admin' | 'system' | 'logout_request'
+  approved?: boolean
+  read?: boolean
+  read_at?: string
+  logout_request_id?: string
+  created_at?: string
+}
+
+export const messagesDb = {
+  async getAll(): Promise<Message[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('messages').values()).slice(0, 500) as Message[]
+    }
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(500)
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      handleError(error, 'جلب الرسائل')
+    }
+  },
+
+  async create(message: Omit<Message, 'id' | 'created_at'>): Promise<Message> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const row: Message = { ...message, id: generateId(), created_at: new Date().toISOString() }
+      getMemoryTable('messages').set(row.id, row)
+      return row
+    }
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .insert(message)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    } catch (error) {
+      handleError(error, 'إرسال رسالة')
+    }
+  },
+
+  async markRead(id: string): Promise<void> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('messages')
+      const existing = table.get(id)
+      if (existing) {
+        table.set(id, { ...existing, read: true, read_at: new Date().toISOString() } as Message)
+      }
+      return
+    }
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ read: true, read_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) throw error
+    } catch (error) {
+      handleError(error, 'تحديث الرسالة')
+    }
+  }
+}
+
+// ============================================================
+// Record Elements Operations
+// ============================================================
+
+export interface RecordElement {
+  id: string
+  student_id?: string
+  type: string
+  title?: string
+  description?: string
+  data?: Record<string, unknown>
+  created_by?: string
+  created_at?: string
+}
+
+export const recordElementsDb = {
+  async getAll(): Promise<RecordElement[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('record_elements').values()) as RecordElement[]
+    }
+    try {
+      const { data, error } = await supabase
+        .from('record_elements')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      handleError(error, 'جلب عناصر التسجيل')
+    }
+  },
+
+  async create(element: Omit<RecordElement, 'id' | 'created_at'>): Promise<RecordElement> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const row: RecordElement = { ...element, id: generateId(), created_at: new Date().toISOString() }
+      getMemoryTable('record_elements').set(row.id, row)
+      return row
+    }
+    try {
+      const { data, error } = await supabase
+        .from('record_elements')
+        .insert(element)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    } catch (error) {
+      handleError(error, 'إنشاء عنصر تسجيل')
+    }
+  },
+
+  async delete(id: string): Promise<void> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      getMemoryTable('record_elements').delete(id)
+      return
+    }
+    try {
+      const { error } = await supabase
+        .from('record_elements')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+    } catch (error) {
+      handleError(error, 'حذف عنصر تسجيل')
+    }
+  }
+}
+
+// ============================================================
+// Extra Elements Operations
+// ============================================================
+
+export interface ExtraElement {
+  id: string
+  type: string
+  name?: string
+  description?: string
+  category?: string
+  data?: Record<string, unknown>
+  active?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export const extraElementsDb = {
+  async getAll(): Promise<ExtraElement[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      return Array.from(getMemoryTable('extra_elements').values()) as ExtraElement[]
+    }
+    try {
+      const { data, error } = await supabase
+        .from('extra_elements')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      handleError(error, 'جلب العناصر الإضافية')
+    }
+  },
+
+  async create(element: Omit<ExtraElement, 'id' | 'created_at' | 'updated_at'>): Promise<ExtraElement> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const now = new Date().toISOString()
+      const row: ExtraElement = { ...element, id: generateId(), created_at: now, updated_at: now }
+      getMemoryTable('extra_elements').set(row.id, row)
+      return row
+    }
+    try {
+      const { data, error } = await supabase
+        .from('extra_elements')
+        .insert(element)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    } catch (error) {
+      handleError(error, 'إنشاء عنصر إضافي')
+    }
+  },
+
+  async update(id: string, updates: Partial<ExtraElement>): Promise<ExtraElement> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('extra_elements')
+      const existing = table.get(id)
+      if (!existing) throw new Error('Extra element not found')
+      const row = { ...existing, ...updates, updated_at: new Date().toISOString() } as ExtraElement
+      table.set(id, row)
+      return row
+    }
+    try {
+      const { data, error } = await supabase
+        .from('extra_elements')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    } catch (error) {
+      handleError(error, 'تحديث عنصر إضافي')
+    }
+  },
+
+  async delete(id: string): Promise<void> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      getMemoryTable('extra_elements').delete(id)
+      return
+    }
+    try {
+      const { error } = await supabase
+        .from('extra_elements')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+    } catch (error) {
+      handleError(error, 'حذف عنصر إضافي')
     }
   }
 }

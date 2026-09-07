@@ -1,8 +1,6 @@
 import { createHmac } from "node:crypto"
 import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
-import { appSnapshots } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
+import { appSnapshotsDb } from "@/lib/supabase/database"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -50,10 +48,10 @@ export async function POST(request: NextRequest) {
     const password = String(body?.password || "").trim()
     if (!username || !password) return response({ error: "بيانات الدخول غير مكتملة" }, 400)
 
-    const rows = await db.select({ data: appSnapshots.data }).from(appSnapshots).where(eq(appSnapshots.id, SNAPSHOT_ID)).limit(1)
-    const snapshot = (rows[0]?.data && typeof rows[0].data === "object" ? rows[0].data : {}) as Snapshot
-    const admins = Array.isArray(snapshot.admins) ? snapshot.admins : []
-    const students = Array.isArray(snapshot.students) ? snapshot.students : []
+    const snapshot = await appSnapshotsDb.get(SNAPSHOT_ID)
+    const data = (snapshot?.data && typeof snapshot.data === "object" ? snapshot.data : {}) as Snapshot
+    const admins = Array.isArray(data.admins) ? data.admins : []
+    const students = Array.isArray(data.students) ? data.students : []
     const admin = admins.find((item) => phone(item.mobile) === phone(username) && String(item.password || "") === password)
     const student = students.find((item) => normalize(item.username) === normalize(username) && String(item.studentPass || "") === password)
     const parent = students.find((item) => (normalize(item.parent) === normalize(username) || phone(item.parentPhone) === phone(username) || phone(item.phone) === phone(username)) && String(item.parentPass || "") === password)

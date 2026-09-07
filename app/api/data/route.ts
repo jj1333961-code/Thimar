@@ -1,8 +1,6 @@
-import { db } from '@/lib/db'
-import { appSnapshots } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
 import { rejectCrossOrigin } from '@/lib/request-security'
 import { requireAdmin, requireUser } from '@/lib/server-auth'
+import { appSnapshotsDb, messagesDb, devicesDb } from '@/lib/supabase/database'
 
 export const runtime = 'nodejs'
 const SNAPSHOT_ID = 'teacher-platform-v1'
@@ -19,43 +17,63 @@ function response(data: unknown, status = 200) {
   })
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+}
+
+function safeArray(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item) => item && typeof item === 'object' && !Array.isArray(item)) as Record<string, unknown>[]
+}
+
 export async function GET(request: Request) {
   const auth = await requireUser(request)
   if (auth.response) return auth.response
   try {
-    const result = await db.select({ data: appSnapshots.data, updatedAt: appSnapshots.updatedAt })
-      .from(appSnapshots)
-      .where(eq(appSnapshots.id, SNAPSHOT_ID))
-      .limit(1)
-    const snapshot = result[0]
-    const storedData = snapshot?.data
+    const snapshot = await appSnapshotsDb.get(SNAPSHOT_ID)
+    const storedData = isPlainObject(snapshot?.data) ? snapshot!.data : {}
+
     const admin = await requireAdmin(request)
-    if (!admin.response) return response({ data: storedData ?? null, updatedAt: snapshot?.updatedAt ?? null })
+    if (!admin.response) {
+      return response({ data: storedData, updatedAt: snapshot?.updated_at ?? null })
+    }
+
     const email = String(auth.user?.email || '').trim().toLowerCase()
     const role = String(auth.user?.role || '').trim().toLowerCase()
     const accountId = String(auth.user?.accountId || '').trim()
     const accountName = String(auth.user?.accountName || '').trim().toLowerCase()
-    const rawData = storedData && typeof storedData === 'object' && !Array.isArray(storedData) ? storedData as Record<string, unknown> : {}
-    const data = Object.fromEntries(Object.entries(rawData).filter(([key]) => USER_DATA_KEYS.has(key)).map(([key, value]) => {
+
+    const data: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(storedData)) {
+      if (!USER_DATA_KEYS.has(key)) continue
       if (key === 'students' && Array.isArray(value)) {
-        return [key, value.filter((student) => {
-          if (!student || typeof student !== 'object') return false
-          const record = student as Record<string, unknown>
-          if (role === 'student') return String(record.id || '') === accountId || String(record.username || '').trim().toLowerCase() === accountName
-          if (role === 'parent') return String(record.parent || '').trim().toLowerCase() === accountName || String(record.parentPhone || '').replace(/\D/g, '') === accountName.replace(/\D/g, '') || String(record.id || '') === accountId
+        const filtered = safeArray(value).filter((record) => {
+          if (role === 'student') {
+            return String(record.id || '') === accountId || String(record.username || '').trim().toLowerCase() === accountName
+          }
+          if (role === 'parent') {
+            return String(record.parent || '').trim().toLowerCase() === accountName
+              || String(record.parentPhone || '').replace(/\D/g, '') === accountName.replace(/\D/g, '')
+              || String(record.id || '') === accountId
+          }
           return [record.email, record.googleEmail, record.parentEmail, record.parentGoogleEmail].some((candidate) => String(candidate || '').trim().toLowerCase() === email)
-        })]
+        })
+        data[key] = filtered
+        continue
       }
       if (key === 'notifications' && Array.isArray(value)) {
-        return [key, value.filter((notification) => {
-          if (!notification || typeof notification !== 'object') return false
-          const record = notification as Record<string, unknown>
-          return [record.userId, record.email, record.recipientId].some((candidate) => String(candidate || '').trim().toLowerCase() === email || String(candidate || '').trim() === accountId)
-        })]
+        const filtered = safeArray(value).filter((record) => {
+          return [record.userId, record.email, record.recipientId].some((candidate) => {
+            const value = String(candidate || '').trim().toLowerCase()
+            return value === email || String(candidate || '').trim() === accountId
+          })
+        })
+        data[key] = filtered
+        continue
       }
-      return [key, value]
-    }))
-    return response({ data, updatedAt: snapshot?.updatedAt ?? null })
+      data[key] = value
+    }
+    return response({ data, updatedAt: snapshot?.updated_at ?? null })
   } catch (error) {
     console.error('[v0] GET /api/data failed', error)
     return response({ error: 'تعذر الاتصال بقاعدة البيانات' }, 503)
@@ -69,20 +87,15 @@ export async function POST(request: Request) {
   if (auth.response) return auth.response
   try {
     const body = await request.json()
-    const existing = await db.select({ data: appSnapshots.data })
-      .from(appSnapshots)
-      .where(eq(appSnapshots.id, SNAPSHOT_ID))
-      .limit(1)
-    const existingData = existing[0]?.data && typeof existing[0].data === 'object' && !Array.isArray(existing[0].data)
-      ? existing[0].data as Record<string, unknown>
-      : {}
+    const snapshot = await appSnapshotsDb.get(SNAPSHOT_ID)
+    const existingData: Record<string, unknown> = isPlainObject(snapshot?.data) ? snapshot!.data : {}
 
     if (body?.action === 'request_logout') {
       const role = String(auth.user?.role || '').toLowerCase()
       if (role !== 'student' && role !== 'parent') return response({ error: 'هذا الطلب متاح للطالب وولي الأمر فقط' }, 403)
       const requestId = `logout_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
       const accountId = String(auth.user?.accountId || '').slice(0, 160)
-      const notifications = Array.isArray(existingData.notifications) ? existingData.notifications.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
+      const notifications = safeArray(existingData.notifications)
       const active = notifications.find((item) => item.type === 'logout_request' && String(item.userId || '') === accountId && (item.status === 'pending' || item.status === 'approved'))
       if (active) return response({ saved: true, request: active })
       const now = new Date()
@@ -107,9 +120,7 @@ export async function POST(request: Request) {
         read: false,
       }
       const mergedData = { ...existingData, notifications: [item, ...notifications].slice(0, 500) }
-      await db.insert(appSnapshots)
-        .values({ id: SNAPSHOT_ID, data: mergedData, updatedAt: now })
-        .onConflictDoUpdate({ target: appSnapshots.id, set: { data: mergedData, updatedAt: now } })
+      await appSnapshotsDb.upsert(SNAPSHOT_ID, mergedData)
       return response({ saved: true, request: item })
     }
 
@@ -117,16 +128,16 @@ export async function POST(request: Request) {
       const role = String(auth.user?.role || '').toLowerCase()
       if (role !== 'student' && role !== 'parent') return response({ error: 'غير مصرح' }, 403)
       const requestId = String(body?.requestId || '')
-      const notifications = Array.isArray(existingData.notifications) ? existingData.notifications.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
+      const notifications = safeArray(existingData.notifications)
       const target = notifications.find((item) => String(item.id || item.requestId || '') === requestId && item.type === 'logout_request' && String(item.userId || '') === String(auth.user?.accountId || ''))
       if (!target || target.status !== 'approved') return response({ error: 'طلب الخروج غير معتمد' }, 409)
       Object.assign(target, { status: 'completed', completedAt: new Date().toISOString(), lockedPage: '', deviceId: String(body?.deviceId || '').slice(0, 120) })
-      const devices = Array.isArray(existingData.devices) ? existingData.devices.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
+      const devices = safeArray(existingData.devices)
       const deviceId = String(body?.deviceId || '')
       const device = devices.find((item) => String(item.deviceId || '') === deviceId)
       if (device) Object.assign(device, { lockedPage: '', currentPage: '', loggedOutAt: new Date().toISOString() })
       const mergedData = { ...existingData, notifications, devices }
-      await db.insert(appSnapshots).values({ id: SNAPSHOT_ID, data: mergedData, updatedAt: new Date() }).onConflictDoUpdate({ target: appSnapshots.id, set: { data: mergedData, updatedAt: new Date() } })
+      await appSnapshotsDb.upsert(SNAPSHOT_ID, mergedData)
       return response({ saved: true, lockedPage: body?.lockedPage || null })
     }
 
@@ -136,12 +147,12 @@ export async function POST(request: Request) {
       const requestId = String(body?.requestId || '')
       const status = body?.status === 'approved' ? 'approved' : body?.status === 'rejected' ? 'rejected' : ''
       if (!requestId || !status) return response({ error: 'طلب الخروج غير صالح' }, 400)
-      const notifications = Array.isArray(existingData.notifications) ? existingData.notifications.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
+      const notifications = safeArray(existingData.notifications)
       const target = notifications.find((item) => String(item.id || item.requestId || '') === requestId && item.type === 'logout_request')
       if (!target) return response({ error: 'لم يتم العثور على طلب الخروج' }, 404)
       const reviewedAt = new Date().toISOString()
       Object.assign(target, { status, read: true, reviewedAt, reviewedBy: admin.user?.email || admin.user?.id || null })
-      const messages = Array.isArray(existingData.messages) ? existingData.messages.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
+      const messages = safeArray(existingData.messages)
       const isParent = target.role === 'parent'
       const decisionText = status === 'approved'
         ? 'تم قبول طلبك في تسجيل الخروج. تم تسجيل خروج هذا الجهاز وإلغاء تقييده بهذه الصفحة.'
@@ -161,9 +172,7 @@ export async function POST(request: Request) {
         logoutRequestId: target.id || target.requestId,
       })
       const mergedData = { ...existingData, notifications, messages }
-      await db.insert(appSnapshots)
-        .values({ id: SNAPSHOT_ID, data: mergedData, updatedAt: new Date() })
-        .onConflictDoUpdate({ target: appSnapshots.id, set: { data: mergedData, updatedAt: new Date() } })
+      await appSnapshotsDb.upsert(SNAPSHOT_ID, mergedData)
       return response({ saved: true, request: target })
     }
 
@@ -171,9 +180,8 @@ export async function POST(request: Request) {
     if (!device || typeof device !== 'object' || Array.isArray(device) || typeof device.deviceId !== 'string') {
       return response({ error: 'بيانات الجهاز غير صالحة' }, 400)
     }
-    const devices = Array.isArray(existingData.devices) ? existingData.devices.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : []
     const safeDevice = {
-      deviceId: device.deviceId.slice(0, 120),
+      deviceId: String(device.deviceId).slice(0, 120),
       role: String(auth.user?.role || device.role || '').slice(0, 30),
       userId: auth.user?.id || null,
       userName: String(device.userName || '').slice(0, 160),
@@ -182,11 +190,22 @@ export async function POST(request: Request) {
       lockedPage: String(device.lockedPage || '').slice(0, 120),
       userAgent: String(device.userAgent || '').slice(0, 240),
     }
-    const withoutCurrent = devices.filter((item) => item.deviceId !== safeDevice.deviceId)
-    const mergedData = { ...existingData, devices: [safeDevice, ...withoutCurrent].slice(0, 100) }
-    await db.insert(appSnapshots)
-      .values({ id: SNAPSHOT_ID, data: mergedData, updatedAt: new Date() })
-      .onConflictDoUpdate({ target: appSnapshots.id, set: { data: mergedData, updatedAt: new Date() } })
+    try {
+      await devicesDb.registerDevice({
+        device_id: safeDevice.deviceId,
+        user_id: safeDevice.userId || undefined,
+        user_name: safeDevice.userName,
+        role: safeDevice.role,
+        current_page: safeDevice.currentPage,
+        locked_page: safeDevice.lockedPage,
+        user_agent: safeDevice.userAgent,
+      })
+    } catch (e) {
+      console.warn('[v0] device registration in dedicated table failed (continuing)', e)
+    }
+    const devices = safeArray(existingData.devices).filter((item) => String(item.deviceId || '') !== safeDevice.deviceId)
+    const mergedData = { ...existingData, devices: [safeDevice, ...devices].slice(0, 100) }
+    await appSnapshotsDb.upsert(SNAPSHOT_ID, mergedData)
     return response({ saved: true })
   } catch (error) {
     console.error('[v0] POST /api/data device registration failed', error)
@@ -204,40 +223,34 @@ export async function PUT(request: Request) {
     if (!body || typeof body.data !== 'object' || Array.isArray(body.data)) {
       return response({ error: 'صيغة البيانات غير صالحة' }, 400)
     }
-    const sanitizedData = Object.fromEntries(Object.entries(body.data).filter(([key]) => ALLOWED_DATA_KEYS.has(key)))
-    const audit = body.audit && typeof body.audit === 'object' && !Array.isArray(body.audit) ? body.audit as Record<string, unknown> : null
+    const sanitizedData: Record<string, unknown> = Object.fromEntries(
+      Object.entries(body.data as Record<string, unknown>).filter(([key]) => ALLOWED_DATA_KEYS.has(key))
+    )
+    const audit = isPlainObject(body.audit) ? body.audit : null
     const existingForAudit = Array.isArray(sanitizedData.devAuditLog) ? sanitizedData.devAuditLog : []
     if (audit) {
-      sanitizedData.devAuditLog = [...existingForAudit, {
-        id: `visit_${Date.now()}`,
-        action: 'admin_visit_update',
-        actorId: auth.user?.id ?? null,
-        actorEmail: auth.user?.email ?? null,
-        targetUserId: String(audit.targetUserId ?? ''),
-        targetRole: audit.targetRole === 'parent' ? 'parent' : 'student',
-        at: new Date().toISOString(),
-      }].slice(-500)
+      sanitizedData.devAuditLog = [
+        ...existingForAudit,
+        {
+          id: `visit_${Date.now()}`,
+          action: 'admin_visit_update',
+          actorId: auth.user?.id ?? null,
+          actorEmail: auth.user?.email ?? null,
+          targetUserId: String(audit.targetUserId ?? ''),
+          targetRole: audit.targetRole === 'parent' ? 'parent' : 'student',
+          at: new Date().toISOString(),
+        },
+      ].slice(-500)
     }
     const serialized = JSON.stringify(sanitizedData)
     if (serialized.length > 5_000_000) {
       return response({ error: 'حجم البيانات أكبر من الحد المسموح' }, 413)
     }
-    const existing = await db.select({ data: appSnapshots.data })
-      .from(appSnapshots)
-      .where(eq(appSnapshots.id, SNAPSHOT_ID))
-      .limit(1)
-    const existingData = existing[0]?.data && typeof existing[0].data === 'object' && !Array.isArray(existing[0].data)
-      ? existing[0].data as Record<string, unknown>
-      : {}
+    const snapshot = await appSnapshotsDb.get(SNAPSHOT_ID)
+    const existingData: Record<string, unknown> = isPlainObject(snapshot?.data) ? snapshot!.data : {}
     const mergedData = { ...existingData, ...sanitizedData }
-    const result = await db.insert(appSnapshots)
-      .values({ id: SNAPSHOT_ID, data: mergedData, updatedAt: new Date() })
-      .onConflictDoUpdate({
-        target: appSnapshots.id,
-        set: { data: mergedData, updatedAt: new Date() },
-      })
-      .returning({ updatedAt: appSnapshots.updatedAt })
-    return response({ saved: true, updatedAt: result[0]?.updatedAt ?? new Date() })
+    const updated = await appSnapshotsDb.upsert(SNAPSHOT_ID, mergedData)
+    return response({ saved: true, updatedAt: updated.updated_at })
   } catch (error) {
     console.error('[v0] PUT /api/data failed', error)
     return response({ error: 'تعذر حفظ البيانات في قاعدة البيانات' }, 503)
