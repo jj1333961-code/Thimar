@@ -6,13 +6,35 @@ export type SupabaseCookieAdapter = {
   setAll: (cookies: { name: string; value: string; options: CookieOptions }[]) => void
 }
 
+// Support both naming conventions for backward compatibility
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY 
+  || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
 function requireSupabaseConfig() {
-  if (!supabaseUrl) throw new Error('NEXT_PUBLIC_SUPABASE_URL is not configured')
-  if (!supabasePublishableKey) throw new Error('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is not configured')
+  if (!supabaseUrl) {
+    throw new Error(
+      'NEXT_PUBLIC_SUPABASE_URL is not configured. Please set it in your .env.local file.'
+    )
+  }
+  if (!supabasePublishableKey) {
+    throw new Error(
+      'NEXT_PUBLIC_SUPABASE_ANON_KEY is not configured. Please set it in your .env.local file.'
+    )
+  }
   return { url: supabaseUrl, key: supabasePublishableKey }
+}
+
+export function isSupabaseConfigured(): boolean {
+  return Boolean(supabaseUrl && supabasePublishableKey)
+}
+
+export function getSupabaseConfig() {
+  return {
+    url: supabaseUrl,
+    key: supabasePublishableKey,
+    configured: isSupabaseConfigured(),
+  }
 }
 
 export function createSupabaseClient(options?: Parameters<typeof createClient>[2]) {
