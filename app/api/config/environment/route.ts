@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getStorageMode } from "@/lib/storage/persistent-snapshot"
 
 export const dynamic = "force-dynamic"
 
@@ -20,6 +21,8 @@ const OPTIONAL_SERVER_VARS = [
   "SPEAKER_VERIFICATION_API_KEY",
   "SPEAKER_VERIFICATION_URL",
   "VERCEL_DEPLOY_HOOK_URL",
+  "THIMAR_SESSION_SECRET",
+  "THIMAR_LOCAL_DATA_FILE",
 ] as const
 
 function status(name: string) {
@@ -35,6 +38,10 @@ export async function GET() {
       serverSide: true,
       required,
       optional,
+      storage: {
+        mode: getStorageMode(),
+        localFileConfigured: Boolean(process.env.THIMAR_LOCAL_DATA_FILE?.trim()),
+      },
       secretsNeverReturned: true,
     },
     { headers: { "Cache-Control": "no-store" } },

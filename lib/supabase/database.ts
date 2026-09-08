@@ -10,6 +10,7 @@
  */
 
 import { createSupabaseAdmin, isServerSupabaseConfigured } from './server'
+import { getPersistentSnapshot, upsertPersistentSnapshot } from '@/lib/storage/persistent-snapshot'
 
 // In-memory fallback store when Supabase is not configured
 const memoryStore: Map<string, { data: Record<string, unknown>; updated_at: string }> = new Map()
@@ -1268,8 +1269,6 @@ export const aiHistoryDb = {
       return Array.from(getMemoryTable('ai_question_history').values()).slice(0, limit) as AIQuestionHistory[]
     }
     try {
-    try {
-      const supabase = createSupabaseAdmin()
       const { data, error } = await supabase
         .from('ai_question_history')
         .select('*')
@@ -1542,45 +1541,11 @@ export interface AppSnapshot {
 
 export const appSnapshotsDb = {
   async get(id: string): Promise<AppSnapshot | null> {
-    const supabase = createSupabaseAdmin()
-    if (!supabase) {
-      // Fallback: return from memory store
-      const data = getMemoryData(id)
-      const updated_at = getMemoryUpdatedAt(id)
-      if (Object.keys(data).length === 0) return null
-      return { id, data, updated_at: updated_at || new Date().toISOString() }
-    }
-    try {
-      const { data: row, error } = await supabase
-        .from('app_snapshots')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle()
-      if (error) throw error
-      return row
-    } catch (error) {
-      handleError(error, 'جلب البيانات')
-    }
+    return getPersistentSnapshot(id)
   },
 
   async upsert(id: string, data: Record<string, unknown>): Promise<AppSnapshot> {
-    const supabase = createSupabaseAdmin()
-    if (!supabase) {
-      // Fallback: store in memory
-      setMemoryData(id, data)
-      return { id, data, updated_at: new Date().toISOString() }
-    }
-    try {
-      const { data: row, error } = await supabase
-        .from('app_snapshots')
-        .upsert({ id, data, updated_at: new Date().toISOString() }, { onConflict: 'id' })
-        .select()
-        .single()
-      if (error) throw error
-      return row
-    } catch (error) {
-      handleError(error, 'حفظ البيانات')
-    }
+    return upsertPersistentSnapshot(id, data)
   }
 }
 
@@ -1611,7 +1576,9 @@ export const messagesDb = {
   async getAll(): Promise<Message[]> {
     const supabase = createSupabaseAdmin()
     if (!supabase) {
-      return Array.from(getMemoryTable('messages').values()).slice(0, 500) as Message[]
+      const snapshot = await appSnapshotsDb.get('teacher-platform-v1')
+      const data = snapshot?.data?.messages
+      return Array.isArray(data) ? data.slice(0, 500) as Message[] : []
     }
     try {
       const { data, error } = await supabase
@@ -1630,7 +1597,10 @@ export const messagesDb = {
     const supabase = createSupabaseAdmin()
     if (!supabase) {
       const row: Message = { ...message, id: generateId(), created_at: new Date().toISOString() }
-      getMemoryTable('messages').set(row.id, row)
+      const snapshot = await appSnapshotsDb.get('teacher-platform-v1')
+      const data = snapshot?.data || {}
+      const messages = Array.isArray(data.messages) ? data.messages : []
+      await appSnapshotsDb.upsert('teacher-platform-v1', { ...data, messages: [row, ...messages].slice(0, 500) })
       return row
     }
     try {
@@ -1649,11 +1619,13 @@ export const messagesDb = {
   async markRead(id: string): Promise<void> {
     const supabase = createSupabaseAdmin()
     if (!supabase) {
-      const table = getMemoryTable('messages')
-      const existing = table.get(id)
-      if (existing) {
-        table.set(id, { ...existing, read: true, read_at: new Date().toISOString() } as Message)
-      }
+      const snapshot = await appSnapshotsDb.get('teacher-platform-v1')
+      const data = snapshot?.data || {}
+      const messages = Array.isArray(data.messages) ? data.messages : []
+      const updated = messages.map((message) => String((message as Record<string, unknown>).id || '') === id
+        ? { ...(message as Record<string, unknown>), read: true, read_at: new Date().toISOString() }
+        : message)
+      await appSnapshotsDb.upsert('teacher-platform-v1', { ...data, messages: updated })
       return
     }
     try {

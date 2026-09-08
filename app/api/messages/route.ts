@@ -72,7 +72,7 @@ async function getContext(request: Request) {
 
 async function getMessagesForUser(email: string, isAdmin: boolean): Promise<Record<string, unknown>[]> {
   try {
-    const allMessages = await messagesDb.getAll()
+    const allMessages = (await messagesDb.getAll()) as unknown as Record<string, unknown>[]
     if (isAdmin) return allMessages
     return allMessages.filter((msg) => {
       const senderId = String(msg.sender_id || msg.senderId || '').trim().toLowerCase()
