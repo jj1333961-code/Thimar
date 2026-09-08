@@ -1,5 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto"
 import { NextRequest, NextResponse } from "next/server"
+import { getSessionSecret } from "@/lib/auth/session-secret"
 
 export const dynamic = "force-dynamic"
 const COOKIE = "teacher_google_state"
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
     const user = await userResponse.json()
     if (typeof user.email !== "string" || user.email_verified !== true) return NextResponse.redirect(`${APP_PAGE}?google_error=email_not_verified`)
     const response = NextResponse.redirect(`${APP_PAGE}?google=success`)
-    response.cookies.set(SESSION, sessionValue(user.email, typeof user.name === "string" ? user.name : "", clientSecret), { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7 })
+    response.cookies.set(SESSION, sessionValue(user.email, typeof user.name === "string" ? user.name : "", getSessionSecret()), { httpOnly: true, secure: request.nextUrl.protocol === "https:" || process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7 })
     response.cookies.delete(COOKIE)
     return response
   } catch { return NextResponse.redirect(`${APP_PAGE}?google_error=not_configured`) }
@@ -87,7 +88,7 @@ export async function POST() {
 }
 
 export async function session(request: NextRequest) {
-  const secret = process.env.GOOGLE_CLIENT_SECRET?.trim() || process.env.DATABASE_URL?.trim()
+  const secret = getSessionSecret()
   const value = request.cookies.get(SESSION)?.value
   return secret && value ? verify(value, secret) : null
 }
