@@ -24,6 +24,7 @@
     "@capacitor/keyboard": "^8.0.5",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.3",
+    "@google/genai": "^2.21.0",
     "@mediapipe/tasks-vision": "^1.0.1",
     "@napi-rs/canvas": "0.1.80",
     "@supabase/ssr": "^0.12.5",

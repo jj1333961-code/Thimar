@@ -18,8 +18,8 @@ function safeAudioLog(event: string, details: Record<string, unknown> = {}) {
 const GEMINI = {
   label: "Google Gemini",
   endpoint: "https://generativelanguage.googleapis.com/v1beta/models",
-  models: Array.from(new Set([(process.env.GEMINI_MODEL || "").trim(), "gemini-2.5-flash", "gemini-2.0-flash"])).filter(Boolean),
-  model: (process.env.GEMINI_MODEL || "gemini-2.5-flash").trim(),
+  models: Array.from(new Set([(process.env.GEMINI_MODEL || "").trim(), "gemini-3.5-flash", "gemini-3.1-flash-lite"])).filter(Boolean),
+  model: (process.env.GEMINI_MODEL || "gemini-3.5-flash").trim(),
   get key() {
     return (process.env.GEMINI_API_KEY || "").trim()
   },
