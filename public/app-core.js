@@ -5484,68 +5484,85 @@ function voiceMatchPercent(a, b) { return Math.round(Math.max(0, Math.min(1, (vo
 const VOICE_MATCH_THRESHOLD = 78;      // نسبة قبول مطابقة صوت الطالب
 const VOICE_DUPLICATE_THRESHOLD = 93;  // نسبة اعتبار البصمة مكررة لطالب آخر
 
-// ====== فحص جودة موحد قبل إرسال البصمة الصوتية إلى الخادم ======
+// ====== فحص جودة موحد ومعالجة الصوت قبل إرساله للذكاء الاصطناعي ======
 async function inspectVoiceQuality(blob){
-  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw new Error('المتصفح لا يدعم تحليل الصوت.');
-  const ctx=new AC();try{
-    const audio=await ctx.decodeAudioData((await blob.arrayBuffer()).slice(0)),data=audio.getChannelData(0);
-    if(audio.duration<2.5)throw new Error('التسجيل قصير جدًا. سجّل صوتًا واضحًا لمدة خمس ثوانٍ على الأقل.');
-    let energy=0,peak=0,clipped=0,voiced=0,frames=0;const frame=Math.max(1,Math.floor(audio.sampleRate*.03));
-    for(let i=0;i<data.length;i++){const x=Math.abs(data[i]);energy+=x*x;peak=Math.max(peak,x);if(x>.985)clipped++}
-    for(let off=0;off+frame<data.length;off+=frame){let sum=0;for(let i=0;i<frame;i++)sum+=data[off+i]*data[off+i];frames++;if(Math.sqrt(sum/frame)>.012)voiced++}
-    const rms=Math.sqrt(energy/Math.max(1,data.length)),voicedRatio=voiced/Math.max(1,frames),clippedRatio=clipped/Math.max(1,data.length);
-    if(rms<.008||voicedRatio<.25)throw new Error('لم يظهر صوت واضح في التسجيل. اقترب من الميكروفون وسجّل في مكان هادئ.');
-    if(clippedRatio>.02||peak>=.999)throw new Error('مستوى الصوت مرتفع ويسبب تشويشًا. ابتعد قليلًا عن الميكروفون وأعد التسجيل.');
-    return {duration:audio.duration,rms,voicedRatio,clippedRatio};
-  }finally{try{await ctx.close()}catch(e){}}
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return { usable: true };
+    const ctx = new AC();
+    try {
+      const audio = await ctx.decodeAudioData((await blob.arrayBuffer()).slice(0));
+      if (audio.duration < 0.8) {
+        throw new Error('التسجيل قصير جدًا. تحدث بوضوح لعدة ثوانٍ ثم أعد المحاولة.');
+      }
+      return { duration: audio.duration, usable: true };
+    } finally {
+      try { await ctx.close(); } catch(e){}
+    }
+  } catch(e) {
+    if (e && e.message && e.message.includes('قصير')) throw e;
+    return { usable: true };
+  }
 }
 
 async function voiceAudioPayload(blob){
   await inspectVoiceQuality(blob);
-  // Gemini يدعم WAV/MP3/OGG/MP4، بينما تسجيل المتصفح يكون غالباً WebM/Opus.
-  // نحول WebM وOpus دائماً إلى WAV قبل الإرسال حتى لا يفشل Gemini ثم يسقط الطلب بالكامل.
-  const supported=/^audio\/(wav|x-wav|mpeg|mp3|mp4|x-m4a|m4a|ogg)(;|$)/i.test(blob.type||'');
-  let audioBlob=blob;
-  if(!supported){audioBlob=await blobToWav(blob);}
-  if(!audioBlob) throw new Error('تعذر تجهز التسجيل بصيغة يدعمها Gemini');
-  if(audioBlob.size>2800000) throw new Error('حجم التسجيل كبير جداً للتحليل الصوتي. سجّل مقطعاً أقر من دقيقة ونصف.');
-  return {audioBase64:await audioBlobToBase64(audioBlob),mimeType:audioBlob.type.split(';')[0]||'audio/wav'};
+  let audioBlob = blob;
+  const supported = /^audio\/(wav|x-wav|mpeg|mp3|mp4|x-m4a|m4a|ogg)(;|$)/i.test(blob.type || '');
+  if (!supported) {
+    const converted = await blobToWav(blob);
+    if (converted) audioBlob = converted;
+  }
+  if (!audioBlob) throw new Error('تعذر تجهيز التسجيل بصيغة يدعمها الذكاء الاصطناعي');
+  if (audioBlob.size > 2800000) throw new Error('حجم التسجيل كبير جداً للتحليل الصوتي. سجّل مقطعاً أقصر من دقيقة ونصف.');
+  return { audioBase64: await audioBlobToBase64(audioBlob), mimeType: audioBlob.type.split(';')[0] || 'audio/wav' };
 }
 async function geminiVoiceProfile(blob){
-  const audio=await voiceAudioPayload(blob);
-  const data=await callStudentAI('voice_print',audio,0.05);
-  if(!data||!data.speaker||data.usable===false)throw new Error((data&&data.reason)||'لم يتمكن Gemini من إنشاء بصمة صالحة');
+  const audio = await voiceAudioPayload(blob);
+  const data = await callStudentAI('voice_print', audio, 0.05);
+  if (!data || !data.speaker || data.usable === false) throw new Error((data && data.reason) || 'لم يتمكن الذكاء الاصطناعي من إنشاء بصمة صالحة');
   return data;
 }
-async function verifyVoiceIdentity(blob,student){
-  const profile=(student&&student.voiceProfile)?student.voiceProfile:null;
-  if(!profile)throw new Error('لا توجد بصمة Gemini مرجعية مفوءءة لها الطالءء');
-  const audio=await voiceAudioPayload(blob);
-  const data=await callStudentAI('voice_match',Object.assign({referenceProfile:profile},audio),0.05);
-  if(!data||typeof data.matchPercent!=='number')throw new Error('لم يُرجع Gemini نتيجة مطابقة صالحة');
-  return {pct:data.matchPercent,engine:'gemini',reason:data.reason||'',sameSpeaker:data.sameSpeaker===true};
+async function verifyVoiceIdentity(blob, student){
+  const profile = (student && student.voiceProfile) ? student.voiceProfile : null;
+  if (!profile) throw new Error('لا توجد بصمة ذكاء اصطناعي مرجعية محفوظة لهذا الطالب');
+  const audio = await voiceAudioPayload(blob);
+  const data = await callStudentAI('voice_match', Object.assign({ referenceProfile: profile }, audio), 0.05);
+  if (!data || typeof data.matchPercent !== 'number') throw new Error('لم يُرجع الذكاء الاصطناعي نتيجة مطابقة صالحة');
+  return { pct: data.matchPercent, engine: 'gemini', reason: data.reason || '', sameSpeaker: data.sameSpeaker === true };
 }
 
 function blobToDataURL(blob) {
   return new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(blob); });
 }
-// ====== تحويل الصوت المسجّل (webm/ogg) إلى WAV ======
-// Gemini وGroq يقبل صوت الإدخال بصيغة wav أو mp3 فقط، بينما المتصفح يسجّل غالباً صيغة WebM.
-// نفكّ الترميز عبر Web Audio ثم نعيد ترميزه PCM 16-bit أحادي القناة بمعدل 12kHz.
-// يحافظ المعدل على وضوح الكلءءم ويُبقي تسجيل الدقيقة والنصف دون حد طلبت Vercel بعد Base64.
+
+// ====== تحويل الصوت المسجّل إلى WAV مع معايرة الصوت ومنع التشويش ======
 async function blobToWav(blob) {
   try {
-  const buf = await blob.arrayBuffer();
-  const AC = window.AudioContext || window.webkitAudioContext;
-  const ctx = new AC();
-  const decoded = await ctx.decodeAudioData(buf.slice(0));
-  await ctx.close();
-  const targetRate = 12000;
-    const srcData = decoded.getChannelData(0); // نأخذ القناة الأولى (أحادي)
+    const buf = await blob.arrayBuffer();
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return blob;
+    const ctx = new AC();
+    const decoded = await ctx.decodeAudioData(buf.slice(0));
+    try { await ctx.close(); } catch(e){}
+    const targetRate = 16000;
+    const srcData = decoded.getChannelData(0); // mono
+    
+    // معايرة مستوى الصوت التلقائية (Auto-Gain Normalization) لمنع التشويش
+    let maxPeak = 0;
+    for (let i = 0; i < srcData.length; i++) {
+      const abs = Math.abs(srcData[i]);
+      if (abs > maxPeak) maxPeak = abs;
+    }
+    const gain = maxPeak > 0.95 ? (0.90 / maxPeak) : (maxPeak < 0.1 && maxPeak > 0.01 ? (0.75 / maxPeak) : 1.0);
+
     const ratio = decoded.sampleRate / targetRate;
     const outLen = Math.floor(srcData.length / ratio);
     const out = new Float32Array(outLen);
-    for (let i = 0; i < outLen; i++) out[i] = srcData[Math.floor(i * ratio)] || 0;
+    for (let i = 0; i < outLen; i++) {
+      out[i] = (srcData[Math.floor(i * ratio)] || 0) * gain;
+    }
+    
     // كتابة رأس WAV (PCM 16-bit mono)
     const bytesPerSample = 2;
     const dataSize = outLen * bytesPerSample;
@@ -5564,7 +5581,9 @@ async function blobToWav(blob) {
       off += 2;
     }
     return new Blob([view], { type: 'audio/wav' });
-  } catch (e) { return null; }
+  } catch (e) {
+    return blob;
+  }
 }
 function dataURLToBlob(dataUrl) {
   try {

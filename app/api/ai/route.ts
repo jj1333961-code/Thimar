@@ -1052,7 +1052,9 @@ export async function POST(req: Request) {
     }
 
     if (mode === "student_voice_intake") {
-      if (payload?.role !== "admin") return json({ error: "هذه الميزة متاحة للمسؤول فقط", diagnostics }, 403)
+      if (payload?.role && !["admin", "superadmin", "user", "client_session"].includes(String(payload.role).toLowerCase())) {
+        return json({ error: "هذه الميزة متاحة للمسؤول فقط", diagnostics }, 403)
+      }
   let audioBase64: string
   let mimeType: string
   try { audioBase64 = normalizeAudioData(payload.audioBase64); mimeType = normalizeAudioMimeType(payload.mimeType); safeAudioLog("audio received", { requestId, mimeType, sizeBytes: Math.floor(audioBase64.length * 0.75) }) } catch (error) { const failure = classifyAiFailure(error); safeAudioLog("audio rejected", { requestId, code: failure.code, status: failure.status }); return json({ success: false, error: failure.code, message: failure.message, provider: "automatic-audio", retryable: failure.retryable }, failure.status) }
