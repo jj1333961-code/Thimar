@@ -2441,15 +2441,12 @@ function toggleEditQuran() {
 
 function renderSubjectSelect() {
   const subjects = getData('subjects');
-  let html = '';
-  if(!subjects || subjects.length === 0) {
-    html = '<option value="1" selected>مكتب التحفيظ - قرآن كريم</option>';
-  } else {
-    subjects.forEach((s, idx) => {
+  let html = '<option value="">بدون تحديد معلم (اختياري)</option>';
+  if(subjects && subjects.length > 0) {
+    subjects.forEach((s) => {
       const officeLabel = s.office ? (s.office + ' - ') : '';
       const teacherLabel = s.teacher ? ' (' + s.teacher + ')' : '';
-      const selected = idx === 0 ? ' selected' : '';
-      html += '<option value="'+s.id+'"'+selected+'>' + officeLabel + 'قرآن كريم' + teacherLabel + '</option>';
+      html += '<option value="'+s.id+'">' + officeLabel + (s.name || 'قرآن كريم') + teacherLabel + '</option>';
     });
   }
   const el = document.getElementById('stSubject');
@@ -2457,19 +2454,22 @@ function renderSubjectSelect() {
 }
 function renderEditSubjectSelect(selectedIds) {
   const subjects = getData('subjects');
-  let html = '';
-  subjects.forEach(s => {
-    const selected = selectedIds && selectedIds.includes(s.id) ? 'selected' : '';
-    html += '<option value="'+s.id+'" '+selected+'>'+s.name+' - '+s.teacher+'</option>';
-  });
-  document.getElementById('editSubject').innerHTML = html;
+  let html = '<option value="" ' + (!selectedIds || !selectedIds.length ? 'selected' : '') + '>بدون تحديد معلم (اختياري)</option>';
+  if(subjects && subjects.length > 0) {
+    subjects.forEach(s => {
+      const selected = selectedIds && selectedIds.includes(s.id) ? 'selected' : '';
+      html += '<option value="'+s.id+'" '+selected+'>'+s.name+' - '+ (s.teacher || 'غير محدد') +'</option>';
+    });
+  }
+  const el = document.getElementById('editSubject');
+  if(el) el.innerHTML = html;
 }
 
 async function saveStudent() {
   const alertBox = document.getElementById('addStudentAlert');
   const fail = function(msg) {
     alertBox.innerHTML = '<div class="alert alert-danger">❌ ' + msg + '</div>';
-    showToast('🚫 تم رفض تسجيل لطلب  ' + msg, 'error');
+    showToast('🚫 تم رفض تسجيل الطالب: ' + msg, 'error');
   };
 
   const name = document.getElementById('stName').value.trim();
@@ -2485,9 +2485,9 @@ async function saveStudent() {
   const parentPass = document.getElementById('stParentPass').value.trim();
   const subjectSelect = document.getElementById('stSubject');
   const notes = document.getElementById('stNotes').value.trim();
-  const selectedSubjects = Array.from(subjectSelect.selectedOptions).map(o => parseInt(o.value));
+  const selectedSubjects = subjectSelect ? Array.from(subjectSelect.selectedOptions).map(o => parseInt(o.value)).filter(v => !isNaN(v) && v > 0) : [];
 
-  if(!name || !username || !national || !birth || !parent || !parentPass || !studentPass || selectedSubjects.length === 0) return fail('يرجى ملء جميع الحقول المطلوبة');
+  if(!name || !username || !national || !birth || !parent || !parentPass || !studentPass) return fail('يرجى ملء الحقول المطلوبة (الاسم، اسم المستخدم، الهوية، تاريخ الميلاد، ولي الأمر وكلمات المرور)');
   const studentValidation = validateCountryFields('stIdentityCountry','stNational','stPhoneCountry','stPhone',false);
   if(!studentValidation.identityValid) return fail('أدخل الهوية أو جواز السفر وفق الدولة المختارة');
   if(phone && !studentValidation.phoneValid) return fail('أدخل رقم الهاتف وفق الدولة المختارة');
@@ -2495,12 +2495,10 @@ async function saveStudent() {
   const students = getData('students');
   if(students.find(s => normalizeIdentityInput(s.national || s.nationalId || '') === national)) return fail('هذا الرقم القومي مسجل مسبقاً');
   if(students.find(s => s.username === username)) return fail('اسم المستخدم مسجل مسبقاً');
-  if(students.find(s => s.username === username)) return fail('اسم المستخدم مسجل مسبقاً');
-  // ✅ مسموح الآن أن يكون ارقم السري للطالب مطابقاً للرقم السري لولي الأمر
 
   const subjects = getData('subjects');
   const selectedSubData = selectedSubjects.map(id => subjects.find(s => s.id === id)).filter(Boolean);
-  const isQuran = selectedSubData.some(s => s.name && (s.name.includes('قرآن') || s.name.includes('قران')));
+  const isQuran = selectedSubData.length === 0 || selectedSubData.some(s => s.name && (s.name.includes('قرآن') || s.name.includes('قران')));
 
   const printVec = null;
   let voiceData = voiceDataUrl;
@@ -2638,7 +2636,7 @@ function updateStudent() {
   students[idx].notes = document.getElementById('editNotes').value.trim();
 
   const subjectSelect = document.getElementById('editSubject');
-  const selectedSubjects = Array.from(subjectSelect.selectedOptions).map(o => parseInt(o.value));
+  const selectedSubjects = subjectSelect ? Array.from(subjectSelect.selectedOptions).map(o => parseInt(o.value)).filter(v => !isNaN(v) && v > 0) : [];
   const subjects = getData('subjects');
   students[idx].subjectIds = selectedSubjects;
   students[idx].subjects = selectedSubjects.map(id => subjects.find(s => s.id === id)).filter(Boolean);
@@ -3190,12 +3188,18 @@ function localSmartChatReply(message,role){
 async function sendAdminChat(){const input=document.getElementById('adminChatInput'),box=document.getElementById('adminChatMessages'),message=input.value.trim();if(!message||currentType!=='admin')return;input.value='';const typing=document.createElement('div');typing.className='ai-msg bot';typing.textContent='جاري التحلي...';box.append('<div class="ai-msg user">'+escapeHtml(message)+'</div>');box.appendChild(typing);box.scrollTop=box.scrollHeight;try{const students=getData('students',[]).map(s=>({id:s.id,name:s.name,parent:s.parent,juz:s.juz,surah:s.surah,examResults:(s.examResults||[]).slice(-5),activeExam:s.activeExam?{status:s.activeExam.status,date:s.activeExam.date}:null}));const res=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'admin_assistant',payload:{role:'admin',message,context:{students,studentCount:students.length,messageCount:getData('messages',[]).length}}})});const data=await readApiJson(res,'تعذر رد Gemini وGroq');typing.innerHTML=escapeHtml(data.result||'لم يصل رد.').replace(/\n/g,'<br>')}catch(e){typing.innerHTML=escapeHtml(localSmartChatReply(message,'admin'))}box.scrollTop=box.scrollHeight}
 
 async function callStudentAI(mode, payload, temperature){
+  const token = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('thimar_auth_token')) || (typeof localStorage !== 'undefined' && localStorage.getItem('thimar_auth_token')) || '';
+  const headers = { 'Content-Type': 'application/json', 'x-thimar-role': currentType || 'admin' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const payloadWithRole = Object.assign({ role: currentType || 'admin' }, payload || {});
   const res = await fetch('/api/ai', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({mode, payload, model:getSelectedAIModel(), temperature: typeof temperature==='number' ? temperature : 0.15})
+    method: 'POST',
+    headers,
+    credentials: 'include',
+    body: JSON.stringify({ mode, payload: payloadWithRole, model: getSelectedAIModel(), temperature: typeof temperature === 'number' ? temperature : 0.15 })
   });
-  const data=await readApiJson(res,'فشل الذكاء الاصطناعي');
-  if(data.result === undefined || data.result === null) throw new Error('لم يصل رد منظم من الذكاء الاصطناعي');
+  const data = await readApiJson(res, 'فشل الذكاء الاصطناعي');
+  if (data.result === undefined || data.result === null) throw new Error('لم يصل رد منظم من الذكاء الاصطناعي');
   return data.result;
 }
 
