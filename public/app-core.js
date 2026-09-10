@@ -977,23 +977,44 @@ function roleShellPath(role) {
 }
 
 function goBack() {
+  const currentVisible = document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)');
+  const currentId = currentVisible ? currentVisible.id : '';
+
   if(pageHistory.length > 0) {
     const prevPage = pageHistory.pop();
-    if(prevPage && document.getElementById(prevPage)) {
+    if(prevPage && prevPage !== currentId && document.getElementById(prevPage)) {
       showPage(prevPage, { fromBrowser: true });
       return;
     }
   }
+
+  // If inside subpages, go back to main role dashboard
+  if (currentType === 'student') {
+    if (currentId && currentId !== 'studentDashboard') {
+      showPage('studentDashboard');
+      return;
+    }
+  } else if (currentType === 'parent') {
+    if (currentId && currentId !== 'parentDashboard') {
+      showPage('parentDashboard');
+      return;
+    }
+  } else if (currentType === 'admin') {
+    if (currentId && currentId !== 'adminDashboard') {
+      showPage('adminDashboard');
+      return;
+    }
+  }
+
   if (window.history.length > 1) {
     window.history.back();
     return;
   }
-  // Fallback
-  if(currentType === 'admin') showPage('adminDashboard');
-  else if(currentType === 'student') showPage('studentDashboard');
-  else if(currentType === 'parent') showPage('parentDashboard');
-  else showPage('lockScreen');
+
+  // Ultimate fallback to lockScreen / home
+  showPage('lockScreen');
 }
+window.goBack = goBack;
 
 function updateBackButton() {
   const existing = document.getElementById('globalBackBtn');
