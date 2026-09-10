@@ -104,6 +104,16 @@ button:active { transform:scale(.98); }
   position:fixed; top:20px; left:20px; z-index:1000;
   display:flex; align-items:center; gap:10px;
   }
+ .home-toggle {
+  position:static; padding: 0 16px;
+  background:var(--card-bg); border:2px solid var(--primary); color:var(--primary);
+  height:50px; min-height:50px; border-radius:25px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:var(--shadow);
+  font-weight:700; font-size:0.95rem; white-space:nowrap; transition:0.2s;
+  }
+ .home-toggle:hover {
+  background:var(--primary); color:#ffffff;
+ }
  .theme-toggle,.lang-toggle {
   position:static; flex:0 0 50px;
   background:var(--card-bg); border:2px solid var(--primary); color:var(--primary);
@@ -894,6 +904,7 @@ html, body {
 <body>
 
   <div class="display-controls" aria-label="إعدادات العرض">
+    <button class="home-toggle" type="button" onclick="goToHomeOrLogin()" title="الرئيسية / تسجيل الدخول" aria-label="الرئيسية / تسجيل الدخول">🏠 الرئيسية</button>
     <button class="theme-toggle" type="button" onclick="toggleTheme()" title="تبديل الوضع" aria-label="تبديل الوضع">🌙</button>
     <button class="lang-toggle" type="button" id="langToggleBtn" onclick="toggleLang()" title="تغيير اللغة / Change language" aria-label="تغيير اللغة / Change language">EN</button>
   </div>

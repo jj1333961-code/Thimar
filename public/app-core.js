@@ -6365,6 +6365,16 @@ async function logout() {
   showPage('lockScreen');
 }
 
+async function goToHomeOrLogin() {
+  if (currentUser || currentType) {
+    await logout();
+  } else {
+    clearSession();
+    showPage('lockScreen');
+  }
+}
+window.goToHomeOrLogin = goToHomeOrLogin;
+
 window.requestLogout = requestLogout;
 window.pollLogoutApproval = pollLogoutApproval;
 window.completeApprovedLogout = completeApprovedLogout;
