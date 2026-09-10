@@ -287,11 +287,17 @@
     });
   }
 
+  let isChangingLang = false;
   function setLocale(next) {
-    locale = next === 'en' ? 'en' : 'ar';
-    localStorage.setItem('lang', locale);
-    apply(document.body);
-    window.dispatchEvent(new Event('languagechange'));
+    if (isChangingLang) return;
+    isChangingLang = true;
+    try {
+      locale = next === 'en' ? 'en' : 'ar';
+      localStorage.setItem('lang', locale);
+      apply(document.body);
+    } finally {
+      isChangingLang = false;
+    }
   }
 
   window.ThimarI18n = {
@@ -302,31 +308,52 @@
   };
 
   window.addEventListener('languagechange', function () {
-    locale = localStorage.getItem('lang') === 'en' ? 'en' : 'ar';
-    apply(document.body);
+    if (isChangingLang) return;
+    isChangingLang = true;
+    try {
+      locale = localStorage.getItem('lang') === 'en' ? 'en' : 'ar';
+      apply(document.body);
+    } finally {
+      isChangingLang = false;
+    }
   });
 
   var observerFrame = 0;
+  var isApplying = false;
   var pendingRoots = [];
   function scheduleApply(root) {
-    if (!root) return;
+    if (!root || isApplying) return;
     if (pendingRoots.indexOf(root) === -1) pendingRoots.push(root);
     if (observerFrame) return;
     var flush = function () {
       observerFrame = 0;
-      var roots = pendingRoots.splice(0, pendingRoots.length);
-      roots.slice(0, 12).forEach(apply);
-      if (roots.length > 12) {
-        pendingRoots = roots.slice(12).concat(pendingRoots);
-        scheduleApply(pendingRoots[0]);
+      if (isApplying) return;
+      isApplying = true;
+      try {
+        var roots = pendingRoots.splice(0, pendingRoots.length);
+        roots.slice(0, 12).forEach(function(r) {
+          try { apply(r); } catch(e) {}
+        });
+        if (roots.length > 12) {
+          pendingRoots = roots.slice(12).concat(pendingRoots);
+          scheduleApply(pendingRoots[0]);
+        }
+      } finally {
+        isApplying = false;
       }
     };
     observerFrame = typeof requestAnimationFrame === 'function' ? requestAnimationFrame(flush) : setTimeout(flush, 0);
   }
 
   function init() {
-    apply(document.body);
+    isApplying = true;
+    try {
+      apply(document.body);
+    } finally {
+      isApplying = false;
+    }
     var observer = new MutationObserver(function (records) {
+      if (isApplying) return;
       records.forEach(function (record) {
         Array.prototype.forEach.call(record.addedNodes, function (added) {
           if (added.nodeType === Node.ELEMENT_NODE || added.nodeType === Node.TEXT_NODE) {

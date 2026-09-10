@@ -1,3 +1,29 @@
+// ====== SAFE MICROPHONE ACCESS ======
+if (typeof window !== 'undefined' && !window.safeGetMic) {
+  window.safeGetMic = async function(constraints) {
+    const nav = navigator.mediaDevices;
+    if (!nav || !nav.getUserMedia) {
+      if (typeof showToast === 'function') showToast('⚠️ متصفحك لا يدعم تسجيل الصوت أو يتطلب HTTPS', 'error');
+      throw new Error('mic-unavailable');
+    }
+    try {
+      return await nav.getUserMedia(constraints || { audio: true });
+    } catch (err) {
+      try {
+        return await nav.getUserMedia({ audio: true });
+      } catch (err2) {
+        if (typeof showToast === 'function') showToast('🚫 يرجى السماح بصلاحية الميكروفون لتسجيل البصمة والصوت', 'error');
+        throw err2;
+      }
+    }
+  };
+}
+const safeGetMic = typeof window !== 'undefined' && window.safeGetMic ? window.safeGetMic : async function(c) {
+  if (typeof window !== 'undefined' && window.safeGetMic) return window.safeGetMic(c);
+  if (navigator?.mediaDevices?.getUserMedia) return navigator.mediaDevices.getUserMedia(c || { audio: true });
+  throw new Error('mic-unavailable');
+};
+
 // ====== QURAN DATA: JUZ AND SURAHS ======
 const quranData = {
   1: ["الفاتحة", "البقرة"],
@@ -133,23 +159,37 @@ function renderCountryPicker(select) {
   const selected = select.options[select.selectedIndex];
   trigger.textContent = selected ? selected.textContent : (activeLocale() === 'en' ? 'Select country' : 'اختر الدولة');
   trigger.setAttribute('aria-label', select.getAttribute('aria-label') || trigger.textContent);
-  list.innerHTML = '';
-  Array.from(select.options).forEach(function(option) {
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.className = 'country-option';
-    item.setAttribute('role', 'option');
-    item.setAttribute('aria-selected', option.value === select.value ? 'true' : 'false');
-    item.dataset.value = option.value;
-    item.textContent = option.textContent;
-    item.addEventListener('click', function() {
-      select.value = item.dataset.value;
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-      closeCountryPicker(select);
-      trigger.focus();
+  
+  const expectedLang = activeLocale();
+  if (list.children.length !== select.options.length || picker.dataset.renderedLang !== expectedLang) {
+    list.innerHTML = '';
+    Array.from(select.options).forEach(function(option) {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'country-option';
+      item.setAttribute('role', 'option');
+      item.setAttribute('aria-selected', option.value === select.value ? 'true' : 'false');
+      item.dataset.value = option.value;
+      item.textContent = option.textContent;
+      item.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (select.value !== item.dataset.value) {
+          select.value = item.dataset.value;
+          select.dataset.countryIso = item.dataset.value;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        closeCountryPicker(select);
+        trigger.focus();
+      });
+      list.appendChild(item);
     });
-    list.appendChild(item);
-  });
+    picker.dataset.renderedLang = expectedLang;
+  } else {
+    list.querySelectorAll('.country-option').forEach(function(btn) {
+      btn.setAttribute('aria-selected', btn.dataset.value === select.value ? 'true' : 'false');
+    });
+  }
   filterCountryPicker(select, select._countryQuery || '');
 }
 function addCountrySearch(select) {
@@ -187,7 +227,9 @@ function addCountrySearch(select) {
   select.setAttribute('aria-hidden', 'true');
   picker._countrySelect = select;
   select._countryPicker = picker;
-  trigger.addEventListener('click', function() {
+  trigger.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
     const opening = menu.hidden;
     document.querySelectorAll('.country-menu:not([hidden])').forEach(function(openMenu) {
       const openPicker = openMenu.closest('.country-picker');
@@ -221,21 +263,34 @@ function addCountrySearch(select) {
     updateCountryHintsAndPicker(select);
   });
 }
+let isUpdatingCountryGlobal = false;
 function updateCountryHintsAndPicker(select) {
-  renderCountryPicker(select);
-  updateCountryFieldHints(select);
+  if (!select || isUpdatingCountryGlobal) return;
+  isUpdatingCountryGlobal = true;
+  try {
+    renderCountryPicker(select);
+    updateCountryFieldHints(select);
+  } finally {
+    isUpdatingCountryGlobal = false;
+  }
 }
 function populateCountrySelect(select) {
   if(!select || !countryRules.length) return;
   addCountrySearch(select);
   const previousRule = countryRuleForValue(select.dataset.countryIso || select.value);
   const previous = previousRule ? previousRule.iso2 : 'EG';
-  const options = countryRules.map(function(rule) {
-    return '<option value="' + rule.iso2 + '">' + escapeHtml(localCountryLabel(rule)) + ' (+' + rule.dialCode + ')</option>';
-  }).join('');
-  select.innerHTML = options;
+  const expectedLang = activeLocale();
+  if (select.options.length !== countryRules.length || select.dataset.renderedLang !== expectedLang) {
+    const options = countryRules.map(function(rule) {
+      return '<option value="' + rule.iso2 + '">' + escapeHtml(localCountryLabel(rule)) + ' (+' + rule.dialCode + ')</option>';
+    }).join('');
+    select.innerHTML = options;
+    select.dataset.renderedLang = expectedLang;
+  }
   const selected = countryRules.some(function(rule) { return rule.iso2 === previous; }) ? previous : 'EG';
-  select.value = selected;
+  if (select.value !== selected) {
+    select.value = selected;
+  }
   select.dataset.countryIso = selected;
   updateCountryHintsAndPicker(select);
 }
@@ -243,7 +298,11 @@ function setCountrySelectorValue(id, iso2) {
   const select = document.getElementById(id);
   if(!select) return;
   const rule = countryRuleForValue(iso2);
-  if(rule) { select.value = rule.iso2; select.dataset.countryIso = rule.iso2; updateCountryHintsAndPicker(select); }
+  if(rule) {
+    select.value = rule.iso2;
+    select.dataset.countryIso = rule.iso2;
+    updateCountryHintsAndPicker(select);
+  }
 }
 function updateCountryFieldHints(select) {
   const rule = countryRuleForValue(select && select.value);
@@ -265,7 +324,7 @@ function updateCountryFieldHints(select) {
     let norm = normalizeLocalPhoneForRule(phone.value, rule);
     if(norm.length > maxLen) {
       norm = norm.slice(0, maxLen);
-      phone.value = norm;
+      if (phone.value !== norm) phone.value = norm;
     }
   }
   if(identity) {
@@ -597,8 +656,7 @@ function applyLangToDom() {
   else run();
 }
 window.applyLangToDom = applyLangToDom;
-function toggleLang() { currentLang=activeLocale()==='ar'?'en':'ar'; localStorage.setItem('lang',currentLang); applyLangToDom(); window.dispatchEvent(new Event('languagechange')); }
-window.addEventListener('languagechange', function(){ currentLang = activeLocale(); applyLangToDom(); });
+function toggleLang() { currentLang=activeLocale()==='ar'?'en':'ar'; localStorage.setItem('lang',currentLang); applyLangToDom(); }
 // تتم ترجمة العقد الديناميكية بواسطة legacy-i18n.js؛ لا نسجل مراقباً ثانياً
 function initLanguage(){
   if (document.getElementById('lockScreen') && !document.querySelector('.page:not(.hidden):not(#lockScreen)')) return;
@@ -864,15 +922,26 @@ function restoreDeviceSession() {
     return applySavedSession(record && record.session) || false;
   }).catch(function() { return false; });
 }
-function clearSession() {
+async function clearSession() {
   try {
     sessionStorage.removeItem('currentUser');
     sessionStorage.removeItem('currentType');
     sessionStorage.removeItem('currentAdminId');
     sessionStorage.removeItem('pageHistory');
     sessionStorage.removeItem('logoutGate');
-    if (window.ThimarOfflineSession) window.ThimarOfflineSession.clear().catch(function(){});
+    sessionStorage.removeItem('thimar_user');
+    sessionStorage.removeItem('thimar_type');
+    sessionStorage.removeItem('thimar_auth_token');
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('currentType');
+    localStorage.removeItem('currentAdminId');
+    localStorage.removeItem('thimar_user');
+    localStorage.removeItem('thimar_type');
+    localStorage.removeItem('thimar_auth_token');
     pageHistory = [];
+    if (window.ThimarOfflineSession && typeof window.ThimarOfflineSession.clear === 'function') {
+      await window.ThimarOfflineSession.clear().catch(function(){});
+    }
   } catch(e) { console.error('clearSession error:', e); }
 }
 
@@ -2476,41 +2545,59 @@ function renderEditSubjectSelect(selectedIds) {
 async function saveStudent() {
   const alertBox = document.getElementById('addStudentAlert');
   const fail = function(msg) {
-    alertBox.innerHTML = '<div class="alert alert-danger">❌ ' + msg + '</div>';
-    showToast('🚫 تم رفض تسجيل الطالب: ' + msg, 'error');
+    if(alertBox) alertBox.innerHTML = '<div class="alert alert-danger">❌ ' + msg + '</div>';
+    showToast('🚫 ' + msg, 'error');
   };
 
-  const name = document.getElementById('stName').value.trim();
-  const username = document.getElementById('stUsername').value.trim();
-  const national = normalizeIdentityInput(document.getElementById('stNational').value);
+  const name = (document.getElementById('stName')?.value || '').trim();
+  const username = (document.getElementById('stUsername')?.value || '').trim();
+  const national = normalizeIdentityInput(document.getElementById('stNational')?.value || '');
   const identityCountry = selectedCountryIso('stIdentityCountry');
   const phoneCountry = selectedCountryIso('stPhoneCountry');
-  const phone = normalizeLocalPhoneInput(document.getElementById('stPhone').value);
-  const birth = document.getElementById('stBirth').value;
-  const age = document.getElementById('stAge').value;
-  const studentPass = document.getElementById('stStudentPass').value;
-  const parent = document.getElementById('stParent').value.trim();
-  const parentPass = document.getElementById('stParentPass').value.trim();
+  const phone = normalizeLocalPhoneInput(document.getElementById('stPhone')?.value || '');
+  const birth = document.getElementById('stBirth')?.value || '';
+  const age = document.getElementById('stAge')?.value || '';
+  const studentPass = document.getElementById('stStudentPass')?.value || '';
+  const parent = (document.getElementById('stParent')?.value || '').trim();
+  const parentPass = (document.getElementById('stParentPass')?.value || '').trim();
+  const juz = (document.getElementById('stJuz')?.value || '').trim();
+  const surah = (document.getElementById('stSurah')?.value || '').trim();
+
+  if(!name) return fail('يرجى إدخال اسم الطالب (حقل إجباري)');
+  if(!username) return fail('يرجى إدخال اسم المستخدم (حقل إجباري)');
+  if(!national) return fail('يرجى إدخال رقم الهوية / الكود القومي (حقل إجباري)');
+  if(!birth) return fail('يرجى تحديد تاريخ الميلاد (حقل إجباري)');
+  if(!studentPass) return fail('يرجى إدخال الرقم السري للطالب (حقل إجباري)');
+  if(!parent) return fail('يرجى إدخال اسم ولي الأمر (حقل إجباري)');
+  if(!parentPass) return fail('يرجى إدخال الرقم السري لولي الأمر (حقل إجباري)');
+  
+  const qf = document.getElementById('quranFields');
+  if(qf && !qf.classList.contains('hidden')) {
+    if(!juz) return fail('يرجى تحديد الجزء (حقل إجباري للقرآن)');
+    if(!surah) return fail('يرجى تحديد السورة (حقل إجباري للقرآن)');
+  }
+
   const subjectSelect = document.getElementById('stSubject');
-  const notes = document.getElementById('stNotes').value.trim();
+  const notes = (document.getElementById('stNotes')?.value || '').trim();
   const selectedSubjects = subjectSelect ? Array.from(subjectSelect.selectedOptions).map(o => parseInt(o.value)).filter(v => !isNaN(v) && v > 0) : [];
 
-  if(!name || !username || !national || !birth || !parent || !parentPass || !studentPass) return fail('يرجى ملء الحقول المطلوبة (الاسم، اسم المستخدم، الهوية، تاريخ الميلاد، ولي الأمر وكلمات المرور)');
-  const studentValidation = validateCountryFields('stIdentityCountry','stNational','stPhoneCountry','stPhone',false);
-  if(!studentValidation.identityValid) return fail('أدخل الهوية أو جواز السفر وفق الدولة المختارة');
-  if(phone && !studentValidation.phoneValid) return fail('أدخل رقم الهاتف وفق الدولة المختارة');
+  const students = getData('students', []);
+  if(national && students.some(s => s.id && normalizeIdentityInput(s.national || s.nationalId || '') === national)) {
+    return fail('رقم الهوية / الكود القومي (' + national + ') مسجل مسبقاً لطالب آخر');
+  }
+  if(username && students.some(s => s.id && s.username && s.username.toLowerCase() === username.toLowerCase())) {
+    return fail('اسم المستخدم (' + username + ') مسجل مسبقاً، يرجى اختيار اسم مستخدم آخر');
+  }
 
-  const students = getData('students');
-  if(students.find(s => normalizeIdentityInput(s.national || s.nationalId || '') === national)) return fail('هذا الرقم القومي مسجل مسبقاً');
-  if(students.find(s => s.username === username)) return fail('اسم المستخدم مسجل مسبقاً');
+  if(!national) {
+    national = 'ST' + Math.floor(100000 + Math.random() * 900000);
+  }
 
-  const subjects = getData('subjects');
+  const subjects = getData('subjects', []);
   const selectedSubData = selectedSubjects.map(id => subjects.find(s => s.id === id)).filter(Boolean);
-  const isQuran = selectedSubData.length === 0 || selectedSubData.some(s => s.name && (s.name.includes('قرآن') || s.name.includes('قران')));
 
   const printVec = null;
   let voiceData = voiceDataUrl;
-  // البصمة اختيارية، لكن عند تسجيلها يكون Gemini وحده مصدر إنشائها ومقارنتها.
   let voiceProfile = voiceProfileGemini;
   if(voiceBlob) {
     try {
@@ -2522,8 +2609,10 @@ async function saveStudent() {
         for(const st of students) {
           if(!st.voiceProfile) continue;
           try {
-            const match = await verifyVoiceIdentity(voiceBlob,st);
-            if(match.sameSpeaker && match.pct >= VOICE_DUPLICATE_THRESHOLD) return fail('هذه البصمة الصوتية مسجلة مسبقاً للطالب: ' + st.name + ' (تطابق ' + match.pct + '%)');
+            const match = await verifyVoiceIdentity(voiceBlob, st);
+            if(match.sameSpeaker && match.pct >= VOICE_DUPLICATE_THRESHOLD) {
+              return fail('هذه البصمة الصوتية مسجلة مسبقاً للطالب: ' + st.name + ' (تطابق ' + match.pct + '%)');
+            }
           } catch(e) {}
         }
       }
@@ -2533,26 +2622,57 @@ async function saveStudent() {
   }
 
   const newStudent = {
-    id: Date.now(), name, username, national, nationalId: national, identityCountry, nationalCountry: identityCountry, phone, phoneCountry, birth, age, studentPass, parent, parentPass,
-    subjectIds: selectedSubjects, subjects: selectedSubData,
-    notes, createdAt: new Date().toLocaleString('ar-EG'),
+    id: Date.now(),
+    name,
+    username,
+    national,
+    nationalId: national,
+    identityCountry,
+    nationalCountry: identityCountry,
+    phone: phone || '',
+    phoneCountry,
+    birth: birth || '',
+    age: age || '',
+    studentPass,
+    parent,
+    parentPass,
+    subjectIds: selectedSubjects,
+    subjects: selectedSubData,
+    notes,
+    createdAt: new Date().toLocaleString('ar-EG'),
     juz: (document.getElementById('stJuz')?.value || '').trim(),
     surah: (document.getElementById('stSurah')?.value || '').trim(),
     voicePrint: voiceData || null,
     voicePrintVec: printVec || null,
     voiceProfile: voiceProfile || null,
-    sessions: [], tasks: [], completedTasks: [], homeworkApproved: false, readingApproved: false, voiceApproved: false
+    sessions: [],
+    tasks: [],
+    completedTasks: [],
+    homeworkApproved: false,
+    readingApproved: false,
+    voiceApproved: false
   };
+
   students.push(newStudent);
   setData('students', students);
-  voiceBlob = null; voiceFingerprint = null; voiceDataUrl = null; voiceProfileGemini = null;
-  alertBox.innerHTML = '<div class="alert alert-success">✅ تم حفظ الطالب بنجاح!</div>';
-  showToast('تم حفظ الطالب "' + name + '" بنجاح' + (voiceProfile ? ' مع بصمة Gemini الصوتية' : ' (بدون بصمة صوتية)'), 'success');
-  ['stName','stUsername','stNational','stPhone','stBirth','stAge','stStudentPass','stParent','stParentPass','stNotes'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('stJuz').value = '';
-  document.getElementById('stSurah').innerHTML = '<option value="">اختر الجزء أولاً...</option>';
+  voiceBlob = null;
+  voiceFingerprint = null;
+  voiceDataUrl = null;
+  voiceProfileGemini = null;
+
+  if(alertBox) alertBox.innerHTML = '<div class="alert alert-success">✅ تم حفظ الطالب بنجاح!</div>';
+  showToast('تم حفظ الطالب "' + name + '" بنجاح', 'success');
+
+  ['stName','stUsername','stNational','stPhone','stBirth','stAge','stStudentPass','stParent','stParentPass','stNotes'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  const stJuzEl = document.getElementById('stJuz');
+  if(stJuzEl) stJuzEl.value = '';
+  const stSurahEl = document.getElementById('stSurah');
+  if(stSurahEl) stSurahEl.innerHTML = '<option value="">اختر الجزء أولاً...</option>';
   const prev = document.getElementById('voicePreview');
-  prev.style.display = 'none'; prev.removeAttribute('src');
+  if(prev) { prev.style.display = 'none'; prev.removeAttribute('src'); }
   const vStatus = document.getElementById('voiceRecordStatus');
   if(vStatus) vStatus.textContent = 'اضغط لبدء تسجيل البصمة (20 ثانية)';
   const vFileInput = document.getElementById('voiceFileInput');
@@ -2639,40 +2759,55 @@ async function toggleEditVoiceRecord(){
 
 function updateStudent() {
   const id = parseInt(document.getElementById('editId').value);
-  let students = getData('students');
+  let students = getData('students', []);
   const idx = students.findIndex(s => s.id === id);
   if(idx === -1) return;
-  const national = normalizeIdentityInput(document.getElementById('editNational').value);
+
+  const name = (document.getElementById('editName')?.value || '').trim();
+  if(!name) {
+    if(typeof showToast === 'function') showToast('يرجى إدخال اسم الطالب على الأقل', 'error');
+    else alert('يرجى إدخال اسم الطالب');
+    return;
+  }
+
+  let username = (document.getElementById('editUsername')?.value || '').trim();
+  if(!username) {
+    username = students[idx].username || ('st_' + Date.now().toString().slice(-6));
+  }
+
+  let national = normalizeIdentityInput(document.getElementById('editNational')?.value || '');
+  if(!national) {
+    national = students[idx].national || students[idx].nationalId || ('ST' + Math.floor(100000 + Math.random() * 900000));
+  }
   const identityCountry = selectedCountryIso('editIdentityCountry');
   const phoneCountry = selectedCountryIso('editPhoneCountry');
-  const phone = normalizeLocalPhoneInput(document.getElementById('editPhone').value);
-  const studentPass = document.getElementById('editStudentPass').value;
-  const parentPass = document.getElementById('editParentPass').value.trim();
-  const editValidation = validateCountryFields('editIdentityCountry','editNational','editPhoneCountry','editPhone',false);
-  if(!editValidation.identityValid) return alert('أدخل الهوية أو جواز اسفر وفق الدولة المختارة');
-  if(phone && !editValidation.phoneValid) return alert('أدخل رقم الهاتف وفق الدولة المختارة');
-  // ✅ مسموح تابق الرقم السري للطالب مع ولي الأمر
+  const phone = normalizeLocalPhoneInput(document.getElementById('editPhone')?.value || '');
+  const studentPass = document.getElementById('editStudentPass')?.value || students[idx].studentPass || '123456';
+  let parent = (document.getElementById('editParent')?.value || '').trim();
+  if(!parent) parent = students[idx].parent || ('ولي أمر ' + name);
+  let parentPass = (document.getElementById('editParentPass')?.value || '').trim();
+  if(!parentPass) parentPass = students[idx].parentPass || studentPass;
 
-  students[idx].name = document.getElementById('editName').value.trim();
-  students[idx].username = document.getElementById('editUsername').value.trim();
+  students[idx].name = name;
+  students[idx].username = username;
   students[idx].national = national;
   students[idx].nationalId = national;
   students[idx].identityCountry = identityCountry;
   students[idx].nationalCountry = identityCountry;
   students[idx].phone = phone;
   students[idx].phoneCountry = phoneCountry;
-  students[idx].birth = document.getElementById('editBirth').value;
-  students[idx].age = document.getElementById('editAge').value;
-  students[idx].studentPass = document.getElementById('editStudentPass').value;
-  students[idx].parent = document.getElementById('editParent').value.trim();
-  students[idx].parentPass = document.getElementById('editParentPass').value.trim();
-  students[idx].notes = document.getElementById('editNotes').value.trim();
+  students[idx].birth = document.getElementById('editBirth')?.value || '';
+  students[idx].age = document.getElementById('editAge')?.value || '';
+  students[idx].studentPass = studentPass;
+  students[idx].parent = parent;
+  students[idx].parentPass = parentPass;
+  students[idx].notes = (document.getElementById('editNotes')?.value || '').trim();
 
   const subjectSelect = document.getElementById('editSubject');
   const selectedSubjects = subjectSelect ? Array.from(subjectSelect.selectedOptions).map(o => parseInt(o.value)).filter(v => !isNaN(v) && v > 0) : [];
-  const subjects = getData('subjects');
+  const subjects = getData('subjects', []);
   students[idx].subjectIds = selectedSubjects;
-  students[idx].subjects = selectedSubjects.map(id => subjects.find(s => s.id === id)).filter(Boolean);
+  students[idx].subjects = selectedSubjects.map(sid => subjects.find(s => s.id === sid)).filter(Boolean);
 
   const editJuzVal = document.getElementById('editJuz')?.value;
   const editSurahVal = document.getElementById('editSurah')?.value;
@@ -2686,7 +2821,9 @@ function updateStudent() {
   }
 
   setData('students', students);
-  document.getElementById('editStudentAlert').innerHTML = '<div class="alert alert-success">✅ تم حفظ التعديلات بنجاح</div>';
+  const alertEl = document.getElementById('editStudentAlert');
+  if(alertEl) alertEl.innerHTML = '<div class="alert alert-success">✅ تم حفظ التعديلات بنجاح</div>';
+  if(typeof showToast === 'function') showToast('تم حفظ تعديلات الطالب بنجاح', 'success');
   setTimeout(() => showPage('studentsList'), 1200);
 }
 
@@ -3673,7 +3810,7 @@ function renderParentExamResults(s){
   let arr=s.examResults||[];if(!arr.length)return '';
   let h='<div class="page" style="margin-top:15px;border-right:5px solid var(--info)"><h4 style="color:var(--info)">🧪 نتائج الاختبارات</h4>';
   arr.slice().reverse().forEach(ex=>{h+='<div class="history-element"><div class="history-element-name">📅 '+escapeHtml(ex.date||'')+'</div><div class="history-element-details"><div class="history-detail"><strong>الدرجة:</strong> '+ex.score+'/'+ex.maxScore+'</div><div class="history-detail"><strong>الوت:</strong> '+ex.totalDurationSeconds+' ثانية</div></div>';
-    if(ex.answers&&ex.questions){h+='<details style="margin-top:10px"><summary>ءء️ عرءء إجابات الطالب</summary>';ex.questions.forEach((q,i)=>{const a=ex.answers[i]||{},r=a.aiResult||{};h+='<div class="task-card"><strong>س'+(i+1)+':</strong> '+escapeHtml(q.prompt||'')+'<br><span>إجابة الطالب: '+escapeHtml(a.answer||'—')+'</span><br><span>النتيجة: '+(a.score>=1?'✅ كاملة':a.score===.5?'🟡 نصف درجة':'❌ غير صحيحة')+'</span>'+(r.reason?'<br><span>تقرير AI: '+escapeHtml(r.reason)+'</span>':'');if(q.type==='audio'&&a.audioData&&a.audioShareWithParent!==false){h+='<div style="margin-top:8px">🎙️ التسجيل: <audio controls src="'+a.audioData+'" style="height:38px"></audio></div>'}h+='</div>'});h+='</details>'}h+='</div>'});
+    if(ex.answers&&ex.questions){h+='<details style="margin-top:10px"><summary>ءء️ عرءء إجابات الطالب</summary>';ex.questions.forEach((q,i)=>{const a=ex.answers[i]||{},r=a.aiResult||{};h+='<div class="task-card"><strong>س'+(i+1)+':</strong> '+escapeHtml(q.prompt||'')+'<br><span>إجابة الطالب: '+escapeHtml(a.answer||'—')+'</span><br><span>النتيجة: '+(a.score>=1?'✅ كاملة':a.score===.5?'🟡 نصف درجة':'❌ غير صحيحة')+'</span>'+(r.reason?'<br><span>تقرير AI: '+escapeHtml(r.reason)+'</span>':'');if(q.type==='audio'&&a.audioData&&a.audioShareWithParent!==false){h+='<div style="margin-top:8px">🎙️ التسجيل: <audio controls preload="auto" src="'+a.audioData+'" style="height:38px"></audio></div>'}h+='</div>'});h+='</details>'}h+='</div>'});
   return h+'</div>';
 }
 
@@ -4033,7 +4170,7 @@ function renderVoiceBox(key) {
   h += '<button class="voice-record-btn" id="vmBtn_'+key+'" onclick="toggleVoiceMsg(\''+key+'\')">🎙️</button>';
   h += '<span id="vmStatus_'+key+'" style="color:var(--text-light);">'+(v ? 'رسالة صوتية جاهزة ✅' : 'اضغط لتسجيل رسالة صوتية')+'</span>';
   if(v) {
-    h += '<audio controls src="'+v+'" style="height:40px;"></audio>';
+    h += '<audio controls preload="auto" src="'+v+'" style="height:40px;"></audio>';
     h += '<button class="btn btn-xs btn-danger" onclick="clearVoiceMsg(\''+key+'\')">ءءء️ حذف</button>';
   }
   h += '</div>';
@@ -4066,7 +4203,7 @@ async function toggleVoiceMsg(key) {
   } catch(err) { showToast('❌ لا يمكن الوصول للميكروفون', 'error'); }
 }
 function voiceAudioHTML(m) {
-  return m.voiceData ? '<div style="margin:8px 0;">🎙️ رسالة صوتية: <audio controls src="'+m.voiceData+'" style="height:40px; vertical-align:middle;"></audio></div>' : '';
+  return m.voiceData ? '<div style="margin:8px 0;">🎙️ رسالة صوتية: <audio controls preload="auto" src="'+m.voiceData+'" style="height:40px; vertical-align:middle;"></audio></div>' : '';
 }
 async function persistMessageWithFallback(message) {
   try {
@@ -4541,7 +4678,7 @@ function renderMessages() {
     }
     if(m.exam&&m.exam.status==='pending_audio_review') approvalBtns += '<div class="approval-btns"><button class="btn-approve" onclick="reviewAudioExam('+m.senderId+',\''+m.exam.id+'\',true)">التسجيل مطابق</button><button class="btn-reject" onclick="reviewAudioExam('+m.senderId+',\''+m.exam.id+'\',false)">التسجيل غير مطابق</button></div>';
     if(m.expiryKey&&m.parentPhone){const wa=examWhatsAppLink(m.parentPhone,m.text);if(wa)approvalBtns += '<a class="btn btn-sm btn-success" target="_blank" rel="noopener noreferrer" href="'+wa+'">إرسال تنبيه واتساب ولي الأمر</a>';}
-    html += '<div class="msg-item"><span class="sender">'+m.sender+'</span> <span class="badge '+(m.type === 'student' ? 'badge-primary' : m.type === 'parent' ? 'badge-success' : 'badge-warning')+'">'+m.type+'</span><p style="margin:8px 0">'+m.text+'</p>'+voiceAudioHTML(m)+(m.aiReport ? '<div class="alert alert-info" style="margin:8px 0;">🤖 تقرير الذكاء الاصطناعي: '+m.aiReport+(m.recitationTarget ? ' — المطلوب: '+m.recitationTarget : '')+'</div>' : '')+hasFile+shareBtn+approvalBtns+(m.replyVoice ? '<div class="msg-reply">🎙️ رد صوتي: <audio controls src="'+m.replyVoice+'" style="height:38px; vertical-align:middle;"></audio></div>' : '')+'<span class="time">🕐 '+m.time+'</span></div>';
+    html += '<div class="msg-item"><span class="sender">'+m.sender+'</span> <span class="badge '+(m.type === 'student' ? 'badge-primary' : m.type === 'parent' ? 'badge-success' : 'badge-warning')+'">'+m.type+'</span><p style="margin:8px 0">'+m.text+'</p>'+voiceAudioHTML(m)+(m.aiReport ? '<div class="alert alert-info" style="margin:8px 0;">🤖 تقرير الذكاء الاصطناعي: '+m.aiReport+(m.recitationTarget ? ' — المطلوب: '+m.recitationTarget : '')+'</div>' : '')+hasFile+shareBtn+approvalBtns+(m.replyVoice ? '<div class="msg-reply">🎙️ رد صوتي: <audio controls preload="auto" src="'+m.replyVoice+'" style="height:38px; vertical-align:middle;"></audio></div>' : '')+'<span class="time">🕐 '+m.time+'</span></div>';
   });
   document.getElementById('messagesList').innerHTML = html;
   adminMsgs.forEach(m => { const ri = msgs.indexOf(m); if(document.getElementById('voiceBox_reply'+ri)) renderVoiceBox('reply'+ri); });
@@ -5065,7 +5202,7 @@ function renderStudentTasks() {
     } else if(task.type === 'reading') {
       html += '<div class="task-card" data-task-category="extra" style="border-right-color:var(--warning);"><h5>📖 قراءة: '+(task.text || (task.surah ? 'سورة '+task.surah : ''))+'</h5>';
       if(task.surah) html += '<p>لسورة: '+task.surah+' | من آية '+(task.from || '-')+' إلى آية '+(task.to || '-')+'</p>';
-      if(task.audio) html += '<div style="margin:8px 0;">🎙️ تسجيل من المسؤول: <audio controls src="'+task.audio+'" style="height:40px; vertical-align:middle;"></audio></div>';
+      if(task.audio) html += '<div style="margin:8px 0;">🎙️ تسجيل من المسؤول: <audio controls preload="auto" src="'+task.audio+'" style="height:40px; vertical-align:middle;"></audio></div>';
       html += studentAyatBlock(task, 'rd'+originalIdx);
       html += status;
 
@@ -5744,7 +5881,7 @@ function renderStudentInbox() {
         fileBtn = '<div style="margin:8px 0;"><button class="btn btn-sm btn-info" onclick="openMessageFileById(\''+m.sourceMsgId+'\', true)">👁️ الاطلاع على الملف لمرسل (عرض فقط)</button></div>';
       }
     }
-    html += '<div class="msg-item"><span class="sender">'+m.sender+'</span><span class="badge badge-primary">'+m.type+'</span><p style="margin:8px 0">'+m.text+'</p>'+voiceAudioHTML(m)+fileBtn+(m.reply ? '<div class="msg-reply"><strong>رد المسؤول:</strong> '+m.reply+(m.replyVoice ? ' <audio controls src="'+m.replyVoice+'" style="height:38px; vertical-align:middle;"></audio>' : '')+'</div>' : '')+'<span class="time">🕐 '+m.time+'</span></div>';
+    html += '<div class="msg-item"><span class="sender">'+m.sender+'</span><span class="badge badge-primary">'+m.type+'</span><p style="margin:8px 0">'+m.text+'</p>'+voiceAudioHTML(m)+fileBtn+(m.reply ? '<div class="msg-reply"><strong>رد المسؤول:</strong> '+m.reply+(m.replyVoice ? ' <audio controls preload="auto" src="'+m.replyVoice+'" style="height:38px; vertical-align:middle;"></audio>' : '')+'</div>' : '')+'<span class="time">🕐 '+m.time+'</span></div>';
   });
   document.getElementById('studentInboxList').innerHTML = html;
   renderVoiceBox('student');
@@ -5889,7 +6026,7 @@ function renderParentInbox() {
   if(myMsgs.length === 0) { document.getElementById('parentInboxList').innerHTML = '<div class="alert alert-info">لا توجد رسائل</div>'; renderVoiceBox('parent'); return; }
   let html = '';
   myMsgs.slice().reverse().forEach(m => {
-    html += '<div class="msg-item"><span class="sender">'+m.sender+'</span><span class="badge badge-primary">'+m.type+'</span><p style="margin:8px 0">'+m.text+'</p>'+voiceAudioHTML(m)+(m.reply ? '<div class="msg-reply"><strong>رد المسؤول:</strong> '+m.reply+(m.replyVoice ? ' <audio controls src="'+m.replyVoice+'" style="height:38px; vertical-align:middle;"></audio>' : '')+'</div>' : '')+'<span class="time">🕐 '+m.time+'</span></div>';
+    html += '<div class="msg-item"><span class="sender">'+m.sender+'</span><span class="badge badge-primary">'+m.type+'</span><p style="margin:8px 0">'+m.text+'</p>'+voiceAudioHTML(m)+(m.reply ? '<div class="msg-reply"><strong>رد المسؤول:</strong> '+m.reply+(m.replyVoice ? ' <audio controls preload="auto" src="'+m.replyVoice+'" style="height:38px; vertical-align:middle;"></audio>' : '')+'</div>' : '')+'<span class="time">🕐 '+m.time+'</span></div>';
   });
   document.getElementById('parentInboxList').innerHTML = html;
   renderVoiceBox('parent');
@@ -6224,7 +6361,7 @@ function openFileModal(fileData, fileName, desc, fileType, readonly) {
   if(fileType && fileType.startsWith('image/')) {
     html += '<div style="text-align:center;"><img src="'+fileData+'" style="max-width:100%; max-height:70vh; border-radius:10px; box-shadow:0 5px 20px rgba(0,0,0,0.2);"></div>';
   } else if(fileType && fileType.startsWith('audio/')) {
-    html += '<div style="text-align:center; padding:40px;"><audio controls src="'+fileData+'" style="width:100%;"></audio></div>';
+    html += '<div style="text-align:center; padding:40px;"><audio controls preload="auto" src="'+fileData+'" style="width:100%;"></audio></div>';
   } else if(fileType && fileType.startsWith('video/')) {
     html += '<div style="text-align:center;"><video controls src="'+fileData+'" style="max-width:100%; max-height:70vh; border-radius:10px;"></video></div>';
   } else if(fileType && fileType.includes('pdf')) {
@@ -6435,7 +6572,7 @@ async function logout() {
   } catch(e){}
   if(navigator.onLine) { try { await fetch('/api/auth/supabase', { method:'DELETE', credentials:'same-origin' }); } catch(error) { console.error('[v0] Supabase logout failed', error); } }
   currentUser = null; currentType = null; currentAdminId = null; adminVisitState = null;
-  clearSession();
+  await clearSession();
   const uu = document.getElementById('unifiedUser'); if(uu) uu.value = '';
   const up = document.getElementById('unifiedPass'); if(up) up.value = '';
   const ua = document.getElementById('unifiedLoginAlert'); if(ua) ua.innerHTML = '';
@@ -6446,8 +6583,13 @@ async function goToHomeOrLogin() {
   if (currentUser || currentType) {
     await logout();
   } else {
-    clearSession();
-    showPage('lockScreen');
+    await clearSession();
+  }
+  showPage('lockScreen');
+  if (window.location.pathname !== '/' || window.location.search) {
+    window.location.href = '/';
+  } else {
+    window.location.reload();
   }
 }
 window.goToHomeOrLogin = goToHomeOrLogin;
@@ -6457,9 +6599,4 @@ window.pollLogoutApproval = pollLogoutApproval;
 window.completeApprovedLogout = completeApprovedLogout;
 window.resolveLogoutRequest = resolveLogoutRequest;
 window.logout = logout;
-window.requestLogout = function(){ return requestLogout.apply(null, arguments); };
-window.pollLogoutApproval = function(){ return pollLogoutApproval.apply(null, arguments); };
-window.completeApprovedLogout = function(){ return completeApprovedLogout.apply(null, arguments); };
-window.resolveLogoutRequest = function(){ return resolveLogoutRequest.apply(null, arguments); };
-window.logout = function(){ return logout.apply(null, arguments); };
 initLanguage();

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'thimar-shell-v3'
+const CACHE_NAME = 'thimar-shell-v6'
 const DATA_CACHE = 'thimar-api-v1'
 
 const SHELL_ASSETS = [

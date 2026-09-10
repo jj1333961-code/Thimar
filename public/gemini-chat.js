@@ -162,7 +162,7 @@
       .gemini-msg.model {
         align-self: flex-end;
         background: var(--table-header, #f1f5f9);
-        color: inherit;
+        color: var(--text, #1e293b);
         border: 1px solid var(--border, #e2e8f0);
         border-bottom-left-radius: 4px;
       }
@@ -177,6 +177,127 @@
         color: #0284c7;
         text-decoration: underline;
         margin-right: 6px;
+      }
+
+      /* Dark Mode Styles for Gemini Chat */
+      [data-theme="dark"] .gemini-modal,
+      .dark .gemini-modal,
+      body.dark .gemini-modal {
+        background: #18382c !important;
+        color: #ffffff !important;
+        border-color: #3b6d58 !important;
+        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5) !important;
+      }
+      [data-theme="dark"] .gemini-header,
+      .dark .gemini-header,
+      body.dark .gemini-header {
+        background: linear-gradient(135deg, #0f3d2f, #14533f) !important;
+        color: #ffffff !important;
+        border-bottom: 1px solid #2d6b52 !important;
+      }
+      [data-theme="dark"] .gemini-config-bar,
+      .dark .gemini-config-bar,
+      body.dark .gemini-config-bar {
+        background: #142f25 !important;
+        border-bottom: 1px solid #2d6b52 !important;
+        color: #ffffff !important;
+      }
+      [data-theme="dark"] .gemini-config-bar *,
+      .dark .gemini-config-bar *,
+      body.dark .gemini-config-bar * {
+        color: #ffffff !important;
+      }
+      [data-theme="dark"] .gemini-select,
+      .dark .gemini-select,
+      body.dark .gemini-select {
+        background: #1f4738 !important;
+        color: #ffffff !important;
+        border-color: #3b6d58 !important;
+      }
+      [data-theme="dark"] .gemini-toggle-label,
+      .dark .gemini-toggle-label,
+      body.dark .gemini-toggle-label {
+        color: #ffffff !important;
+      }
+      [data-theme="dark"] .gemini-messages,
+      .dark .gemini-messages,
+      body.dark .gemini-messages {
+        background: #18382c !important;
+        color: #ffffff !important;
+      }
+      [data-theme="dark"] .gemini-msg.model,
+      .dark .gemini-msg.model,
+      body.dark .gemini-msg.model {
+        background: #234d3d !important;
+        color: #fef08a !important;
+        border: 1px solid #3b6d58 !important;
+      }
+      [data-theme="dark"] .gemini-msg.model *,
+      .dark .gemini-msg.model *,
+      body.dark .gemini-msg.model * {
+        color: #fef08a !important;
+      }
+      [data-theme="dark"] .gemini-msg.user,
+      .dark .gemini-msg.user,
+      body.dark .gemini-msg.user {
+        background: linear-gradient(135deg, #10b981, #059669) !important;
+        color: #ffffff !important;
+      }
+      [data-theme="dark"] .gemini-input-area,
+      .dark .gemini-input-area,
+      body.dark .gemini-input-area {
+        background: #142f25 !important;
+        border-top: 1px solid #2d6b52 !important;
+      }
+      [data-theme="dark"] .gemini-input,
+      .dark .gemini-input,
+      body.dark .gemini-input {
+        background: #1f4738 !important;
+        color: #ffffff !important;
+        border-color: #3b6d58 !important;
+      }
+      [data-theme="dark"] .gemini-input::placeholder,
+      .dark .gemini-input::placeholder,
+      body.dark .gemini-input::placeholder {
+        color: #ffffff !important;
+        opacity: 0.85;
+      }
+      [data-theme="dark"] .gemini-voice-btn,
+      .dark .gemini-voice-btn,
+      body.dark .gemini-voice-btn {
+        background: #1f4738 !important;
+        color: #ffffff !important;
+        border-color: #3b6d58 !important;
+      }
+      [data-theme="dark"] .gemini-chips,
+      .dark .gemini-chips,
+      body.dark .gemini-chips {
+        background: #142f25 !important;
+        border-top: 1px solid #2d6b52 !important;
+      }
+      [data-theme="dark"] .gemini-chip,
+      .dark .gemini-chip,
+      body.dark .gemini-chip {
+        background: #1f4738 !important;
+        color: #ffffff !important;
+        border-color: #3b6d58 !important;
+      }
+      [data-theme="dark"] .gemini-chip:hover,
+      .dark .gemini-chip:hover,
+      body.dark .gemini-chip:hover {
+        background: #2a5a48 !important;
+        color: #86efac !important;
+      }
+      [data-theme="dark"] .gemini-grounding,
+      .dark .gemini-grounding,
+      body.dark .gemini-grounding {
+        border-top-color: #3b6d58 !important;
+        color: #cbd5e1 !important;
+      }
+      [data-theme="dark"] .gemini-grounding a,
+      .dark .gemini-grounding a,
+      body.dark .gemini-grounding a {
+        color: #38bdf8 !important;
       }
       .gemini-input-area {
         padding: 12px;
@@ -477,7 +598,9 @@
     const voiceBtn = document.getElementById('geminiVoiceBtn');
     if (!isRecording) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = typeof window.safeGetMic === 'function' 
+          ? await window.safeGetMic() 
+          : await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorder = new MediaRecorder(stream);
         audioChunks = [];
 
@@ -501,7 +624,7 @@
         voiceBtn.classList.add('recording');
         voiceBtn.title = 'اضغط للإيقاف وإرسال التسجيل';
       } catch (err) {
-        alert('تعذر الوصول إلى الميكروفون: ' + err.message);
+        if (typeof showToast === 'function') showToast('تعذر الوصول إلى الميكروفون', 'error');
       }
     } else {
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {

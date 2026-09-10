@@ -106,32 +106,33 @@ html, body {
            (window.isSecureContext || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   };
 
-  /* بديل موحّد وآمن لطلب الميكروفون مع رسائل عربية واضحة */
+  /* بديل موحّد وآمن لطلب الميكروفون مع التعامل المرن */
   window.safeGetMic = async function(constraints){
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      if (location.protocol === 'file:') {
-        alert('⚠️ لا يمكن تشغيل الميكروفون عند فتح الملف مباشرة من الجهاز (file://).\nارفع الملف على استضافة HTTPS مثل Netlify أو افتحه عبر الرابط المنشور.');
-      } else if (!window.isSecureContext) {
-        alert('⚠️ الميكروفون يحتاج اتصالاً آمناً (HTTPS). افتح الموقع عبر رابط https.');
-      } else {
-        alert('⚠️ متصفحك لا يدعم تسجيل الصوت. جرّب Chrome أو Safari المحدّث.');
+    var nav = navigator.mediaDevices;
+    if (!nav || !nav.getUserMedia) {
+      if (typeof showToast === 'function') {
+        showToast('⚠️ متصفحك لا يدعم تسجيل الصوت أو يتطلب HTTPS', 'error');
       }
       throw new Error('mic-unavailable');
     }
     try {
-      return await navigator.mediaDevices.getUserMedia(constraints || { audio: true });
+      return await nav.getUserMedia(constraints || { audio: true });
     } catch (err) {
-      var name = (err && err.name) || '';
-      if (name === 'NotAllowedError' || name === 'SecurityError') {
-        alert('🚫 تم رفض إذن الميكروفون.\nاضغط على أيقونة القفل 🔒 في شريط العنوان ثم اسمح بالميكروفون وأعد المحاولة.');
-      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
-        alert('🎤 لم يتم العثور على ميكروفون متصل بالجهاز.');
-      } else if (name === 'NotReadableError') {
-        alert('🎤 الميكروفون مستخدم من تطبيق آخر. أغلق التطبيقات الأخرى وحاول مرة أخرى.');
-      } else {
-        alert('⚠️ تعذر تشغيل الميكروفون: ' + (err && err.message ? err.message : name));
+      try {
+        return await nav.getUserMedia({ audio: true });
+      } catch (err2) {
+        var name = (err2 && err2.name) || '';
+        var msg = '⚠️ تعذر تشغيل الميكروفون';
+        if (name === 'NotAllowedError' || name === 'SecurityError') {
+          msg = '🚫 يرجى السماح بصلاحية الميكروفون في المتصفح';
+        } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+          msg = '🎤 لم يتم العثور على ميكروفون متصل';
+        } else if (name === 'NotReadableError') {
+          msg = '🎤 الميكروفون قيد الاستخدام من تطبيق آخر';
+        }
+        if (typeof showToast === 'function') showToast(msg, 'error');
+        throw err2;
       }
-      throw err;
     }
   };
 })();
@@ -491,12 +492,17 @@ tr:hover { background: var(--table-hover); }
 /* AI Chat Styles */
 .ai-chat { display: flex; flex-direction: column; height: 500px; border: 2px solid var(--border); border-radius: 15px; overflow: hidden; background: var(--card-bg); }
 .ai-chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
- .ai-input { display: flex; gap: 10px; padding: 15px; border-top: 2px solid var(--border); background: var(--input-bg); flex-wrap: wrap; }
- .ai-input input { flex: 1; min-width: 180px; padding: 12px 15px; border: 2px solid var(--border); border-radius: 10px; font-size: 1rem; background: var(--card-bg); color: var(--text); }
- .ai-model-picker { min-width: 150px; padding: 10px 12px; border: 2px solid var(--border); border-radius: 10px; background: var(--card-bg); color: var(--text); font-size: 0.95rem; }
+.ai-input { display: flex; gap: 10px; padding: 15px; border-top: 2px solid var(--border); background: var(--input-bg); flex-wrap: wrap; }
+.ai-input input { flex: 1; min-width: 180px; padding: 12px 15px; border: 2px solid var(--border); border-radius: 10px; font-size: 1rem; background: var(--card-bg); color: var(--text); }
+.ai-model-picker { min-width: 150px; padding: 10px 12px; border: 2px solid var(--border); border-radius: 10px; background: var(--card-bg); color: var(--text); font-size: 0.95rem; }
 .ai-msg { padding: 12px 16px; border-radius: 15px; max-width: 80%; word-wrap: break-word; line-height: 1.5; }
 .ai-msg.user { align-self: flex-end; background: var(--primary); color: #fff; border-bottom-right-radius: 4px; }
 .ai-msg.bot { align-self: flex-start; background: var(--table-header); color: var(--text); border-bottom-left-radius: 4px; border: 1px solid var(--border); }
+[data-theme="dark"] .ai-msg.bot, .dark .ai-msg.bot { background: #234d3d !important; color: #ffffff !important; border-color: #3b6d58 !important; }
+[data-theme="dark"] .ai-msg.bot *, .dark .ai-msg.bot * { color: #ffffff !important; }
+[data-theme="dark"] .ai-msg.user, .dark .ai-msg.user { background: #059669 !important; color: #ffffff !important; }
+[data-theme="dark"] .ai-input, .dark .ai-input { background: #142f25 !important; border-top-color: #2d6b52 !important; }
+[data-theme="dark"] .ai-input input, .dark .ai-input input { background: #1f4738 !important; color: #ffffff !important; border-color: #3b6d58 !important; }
 
 /* Session Card */
 .session-card { background: var(--table-header); border-radius: 12px; padding: 15px; margin-bottom: 12px; border-right: 4px solid var(--primary); }
@@ -899,24 +905,24 @@ tr:hover { background: var(--table-hover); }
 
 window.goToHomeOrLogin = function() {
   try {
-    if (typeof logout === 'function' && (window.currentUser || window.currentType)) {
-      logout();
-      return;
-    }
-  } catch(e) {}
-  try {
-    if (typeof showPage === 'function') {
-      showPage('lockScreen');
-      return;
-    }
-  } catch(e) {}
-  try {
-    ['thimar_user', 'thimar_type', 'currentUser', 'currentType', 'currentAdminId', 'pageHistory'].forEach(function(k){
-      sessionStorage.removeItem(k);
-      localStorage.removeItem(k);
+    ['thimar_user', 'thimar_type', 'currentUser', 'currentType', 'currentAdminId', 'pageHistory', 'thimar_auth_token'].forEach(function(k){
+      try { sessionStorage.removeItem(k); } catch(e){}
+      try { localStorage.removeItem(k); } catch(e){}
     });
+    if (window.ThimarOfflineSession && typeof window.ThimarOfflineSession.clear === 'function') {
+      window.ThimarOfflineSession.clear().catch(function(){});
+    }
   } catch(e){}
-  window.location.href = '/';
+  if (typeof window.logout === 'function') {
+    try { window.logout(); } catch(e){}
+  } else if (typeof window.showPage === 'function') {
+    try { window.showPage('lockScreen'); } catch(e){}
+  }
+  if (window.location.pathname !== '/' || window.location.search) {
+    window.location.href = '/';
+  } else {
+    window.location.reload();
+  }
 };
 
 window.goBack = function() {
@@ -943,7 +949,7 @@ window.goBack = function() {
         window.showPage('adminDashboard');
         return;
       }
-      window.showPage('lockScreen');
+      window.window.location.href = '/';
       return;
     }
   } catch(e) {}
@@ -1300,38 +1306,38 @@ window.goBack = function() {
     <div id="studentIntakeResult" aria-live="polite" style="margin-top:10px;"></div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label>اسم الطالب *</label><input type="text" id="stName"></div>
-    <div class="form-group"><label>اسم المستخدم *</label><input type="text" id="stUsername" placeholder="اسم المستخدم لتسجيل الدخول"></div>
+    <div class="form-group"><label>اسم الطالب *</label><input type="text" id="stName" placeholder="أدخل اسم الطالب ثلاثي أو رباعي"></div>
+    <div class="form-group"><label>اسم المستخدم *</label><input type="text" id="stUsername" placeholder="أدخل اسم المستخدم"></div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label for="stNational">كود الهوية أو جواز السفر *</label><div class="country-input-row"><select id="stIdentityCountry" data-country-selector data-identity-id="stNational" aria-label="دولة الهوية"><option value="EG">مصر (+20)</option></select><input type="text" id="stNational" data-identity-input autocomplete="off" placeholder="أدخل هوية الدولة أو رقم جواز السفر"></div><small id="stNationalHint" class="country-hint"></small></div>
-    <div class="form-group"><label for="stPhone">الدولة ورقم الهاتف</label><div class="country-input-row"><select id="stPhoneCountry" data-country-selector data-phone-id="stPhone" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="tel" id="stPhone" data-phone-input class="phone-input" autocomplete="tel" placeholder="الرقم المحلي بدون رمز الدولة" style="flex:1;"></div><small id="stPhoneInternational" class="country-hint"></small></div>
+    <div class="form-group"><label for="stNational">كود الهوية أو جواز السفر *</label><div class="country-input-row"><select id="stIdentityCountry" data-country-selector data-identity-id="stNational" aria-label="دولة الهوية"><option value="EG">مصر (+20)</option></select><input type="text" id="stNational" data-identity-input autocomplete="off" placeholder="أدخل هوية الدولة أو رقم جواز السفر "></div><small id="stNationalHint" class="country-hint"></small></div>
+    <div class="form-group"><label for="stPhone">الدولة ورقم الهاتف (اختياري)</label><div class="country-input-row"><select id="stPhoneCountry" data-country-selector data-phone-id="stPhone" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="tel" id="stPhone" data-phone-input class="phone-input" autocomplete="tel" placeholder="الرقم المحلي بدون رمز الدولة (اختياري)" style="flex:1;"></div><small id="stPhoneInternational" class="country-hint"></small></div>
   </div>
   <div class="form-row">
     <div class="form-group"><label>تاريخ الميلاد *</label><input type="date" id="stBirth" onchange="calcAge()"></div>
     <div class="form-group"><label>السن (يحسب تلقائياً)</label><input type="number" id="stAge" readonly style="background:var(--table-header)"></div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label>الرقم السري للطالب *</label><input type="password" id="stStudentPass" placeholder="رقم سري لتسجيل دخول الطالب"><label style="font-weight:normal; margin-top:6px; display:block;"><input type="checkbox" id="stSamePass" onchange="syncStudentPass('st')"> اتخدام نفس الرقم السري لولي الأمر</label></div>
-    <div class="form-group"><label>اسم ولي الأمر *</label><input type="text" id="stParent"></div>
+    <div class="form-group"><label>الرقم السري للطالب *</label><input type="password" id="stStudentPass" placeholder="123456"><label style="font-weight:normal; margin-top:6px; display:block;"><input type="checkbox" id="stSamePass" onchange="syncStudentPass('st')"> استخدام نفس الرقم السري لولي الأمر</label></div>
+    <div class="form-group"><label>اسم ولي الأمر *</label><input type="text" id="stParent" placeholder="ولي الأمر"></div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label>الرقم السري لولي الأمر *</label><input type="password" id="stParentPass" placeholder="رقم سري خاص بولي الأمر" oninput="syncStudentPass('st')"></div>
+    <div class="form-group"><label>الرقم السري لولي الأمر *</label><input type="password" id="stParentPass" placeholder="أدخل الرقم السري لولي الأمر" oninput="syncStudentPass('st')"></div>
     <div class="form-group"><label>المواد الدراسية / المعلم (اختياري)</label><select id="stSubject" multiple class="subjects-select" onchange="toggleQuranFields()"></select><small style="color:var(--text-light)">اضغط Ctrl لاختيار أكثر من مادة (أو اتركها فارغة)</small></div>
   </div>
     <div id="quranFields" class="quran-section" style="border:2px solid var(--primary); border-radius:14px; padding:18px; margin:18px 0; background:rgba(49,92,75,0.04);">
-    <h4 style="color:var(--primary); margin-bottom:14px; font-size:1.15rem; display:flex; align-items:center; gap:8px;">📖 بيانات حفظ القرآن الكريم والبصمة الصوتية</h4>
+    <h4 style="color:var(--primary); margin-bottom:14px; font-size:1.15rem; display:flex; align-items:center; gap:8px;">📖 بيانات حفظ القرآن الكريم والبصمة الصوتية </h4>
     <div class="form-row">
       <div class="form-group">
-        <label for="stJuz" style="font-weight:700; color:var(--primary);">📖 تحديد الجزء (1 إلى 30) *</label>
+        <label for="stJuz" style="font-weight:700; color:var(--primary);">📖 تحديد الجزء (1 إلى 30) </label>
         <select id="stJuz" onchange="updateSurahSelect()" style="font-size:1rem; font-weight:600;">
-          <option value="">اختر الجزء...</option>
+          <option value="">اختر الجزء ...</option>
         </select>
       </div>
       <div class="form-group">
-        <label for="stSurah" style="font-weight:700; color:var(--primary);">📜 تحديد السورة الخاصة بالجزء والموجودة فيه *</label>
+        <label for="stSurah" style="font-weight:700; color:var(--primary);">📜 تحديد السورة الخاصة بالجزء </label>
         <select id="stSurah" style="font-size:1rem; font-weight:600;">
-          <option value="">اختر الجزء أولاً لتحديد السورة...</option>
+          <option value="">اختر الجزء أولاً لتحديد السورة ...</option>
         </select>
       </div>
     </div>
@@ -1355,7 +1361,7 @@ window.goBack = function() {
       <small style="color:var(--text-light); display:block; margin-top:8px;">اختياري: يمكن حفظ بيانات الطالب الآن وإضافة البصمة أو تحديثها لاحقاً من شاشة تعديل الطالب.</small>
     </div>
   </div>
-  <div class="form-group"><label>ملاحظات إضافية</label><textarea id="stNotes" rows="2" placeholder="أي ملاحظات إضافية..."></textarea></div>
+  <div class="form-group"><label>ملاحظات إضافية (اختياري)</label><textarea id="stNotes" rows="2" placeholder="أي ملاحظات إضافية..."></textarea></div>
   <button class="btn btn-primary" onclick="saveStudent()">💾 حفظ الطالب</button>
 </div>
 
@@ -1423,7 +1429,7 @@ window.goBack = function() {
     <p style="color:var(--text-light)">الاختيار التلقائي للسورة والآيات يظل كما هو، ويمكن للمسؤول تعديل اللوح والصورة يدوياً دون تعطيل الاختيار التلقائي.</p>
     <div class="form-row">
       <div class="form-group"><label>نص اللوح/التعديل اليدوي</label><textarea id="manualBoardText" rows="3" placeholder="اكتب التعديل المطلوب..."></textarea></div>
-      <div class="form-group"><label>رابط صورة اللوح (اختياري)</label><input id="manualBoardImage" type="url" placeholder="https://..."></div>
+      <div class="form-group"><label>رابط صورة اللوح </label><input id="manualBoardImage" type="url" placeholder="https://..."></div>
     </div>
     <button class="btn btn-info" onclick="saveManualBoardEdit()">💾 حفظ التعديل اليدوي</button>
   </div>
@@ -1436,7 +1442,7 @@ window.goBack = function() {
     <div class="form-row">
 <div class="form-group"><label for="examBaseSurah">آخر سورة محفوظة للطالب</label><select id="examBaseSurah" onchange="syncExamSurahRange()"></select><small style="color:var(--text-light)">يُبنى الماضي من السور التي تسبقها في المراجعة حتى سورة الاس.</small></div>
  <div class="form-group"><label for="examPastScope">نوع الماضي</label><select id="examPastScope" onchange="syncExamSurahRange()"><option value="both">الماضي القريب والبعيد</option><option value="near">ماضي القريب</option><option value="far">الماضي البعيد</option></select><small id="examPastScopeHelp" style="color:var(--text-light)">يُسم الماضي إلى نصف ريب نص بعيد.</small></div>
- <div class="form-group"><label for="examLastSurah">نهاية الماضي (اختياري)</label><select id="examLastSurah" onchange="syncExamSurahRange()"><option value="">سورة اناس تلقائياً</option></select><small style="color:var(--text-light)">يمكن تضييق نطاق الماضي يدويا قبل ءءقسيمه.</small></div>
+ <div class="form-group"><label for="examLastSurah">نهاية الماضي </label><select id="examLastSurah" onchange="syncExamSurahRange()"><option value="">سورة اناس تلقائياً</option></select><small style="color:var(--text-light)">يمكن تضييق نطاق الماضي يدويا قبل ءءقسيمه.</small></div>
  <div class="form-group"><label for="examDeadline">موعد انتهاء الإتاحة</label><input id="examDeadline" type="datetime-local"></div>
  <div class="form-group"><label for="examSourceMode">المرجع الأساسي</label><select id="examSourceMode" onchange="updateExamSourceDistribution()"><option value="ai">الذكاء الاصطناعي</option><option value="file">من الملفات</option></select><small id="examSourceDistribution" style="color:var(--text-light)">توليد ذكي مع التحقق من النص القرآني والمراجع الموثوقة.</small></div>
  <div class="form-group" id="examFileSourceGroup" style="display:none"><label for="examFileSource">ملف المرجع</label><select id="examFileSource"><option value="">اختر مجعاً...</option></select><small style="color:var(--text-light)">يجب اختيار ملف عند استخدام «من الملفات».</small></div>
@@ -1819,7 +1825,7 @@ try { window.alert = function(m){ showToast(m); }; } catch(e){}
     if (corePromise) return corePromise;
     corePromise = new Promise(function(resolve, reject){
       const s = document.createElement('script');
-      s.src = '/app-core.js?v=20260906-4';
+      s.src = '/app-core.js?v=20260910-1';
       s.async = false;
       s.onload = function(){ window.__thimarAppCoreLoaded = true; const p=document.createElement('script'); p.src='/proctoring-v2.js'; p.onload=resolve; p.onerror=reject; document.head.appendChild(p); };
       s.onerror = function(){ corePromise = null; reject(new Error('تعذر تحميل ملفات النظام.')); };
