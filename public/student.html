@@ -899,6 +899,63 @@ html, body {
     if (btn) btn.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
   });
 })();
+
+window.goToHomeOrLogin = function() {
+  try {
+    if (typeof logout === 'function' && (window.currentUser || window.currentType)) {
+      logout();
+      return;
+    }
+  } catch(e) {}
+  try {
+    if (typeof showPage === 'function') {
+      showPage('lockScreen');
+      return;
+    }
+  } catch(e) {}
+  try {
+    ['thimar_user', 'thimar_type', 'currentUser', 'currentType', 'currentAdminId', 'pageHistory'].forEach(function(k){
+      sessionStorage.removeItem(k);
+      localStorage.removeItem(k);
+    });
+  } catch(e){}
+  window.location.href = '/';
+};
+
+window.goBack = function() {
+  try {
+    if (typeof window.showPage === 'function') {
+      var visible = document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)');
+      var id = visible ? visible.id : '';
+      if (window.pageHistory && window.pageHistory.length > 0) {
+        var prev = window.pageHistory.pop();
+        if (prev && prev !== id && document.getElementById(prev)) {
+          window.showPage(prev, { fromBrowser: true });
+          return;
+        }
+      }
+      if (window.currentType === 'student' && id !== 'studentDashboard') {
+        window.showPage('studentDashboard');
+        return;
+      }
+      if (window.currentType === 'parent' && id !== 'parentDashboard') {
+        window.showPage('parentDashboard');
+        return;
+      }
+      if (window.currentType === 'admin' && id !== 'adminDashboard') {
+        window.showPage('adminDashboard');
+        return;
+      }
+      window.showPage('lockScreen');
+      return;
+    }
+  } catch(e) {}
+  if (window.history.length > 1) {
+    window.history.back();
+  } else {
+    window.location.href = '/';
+  }
+};
 </script>
 </head>
 <body>
