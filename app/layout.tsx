@@ -1,0 +1,63 @@
+import { Analytics } from '@vercel/analytics/next'
+import type { Metadata, Viewport } from 'next'
+import './globals.css'
+import { LanguageRuntime } from '@/components/language-runtime'
+import { LanguageToggle } from '@/components/language-toggle'
+import { ConnectivityBanner } from '@/components/connectivity-banner'
+
+export const metadata: Metadata = {
+  metadataBase: new URL('https://teacher-three-ashen.vercel.app'),
+  alternates: {
+    canonical: '/',
+  },
+  title: 'ثمار | منصة القرآن والتعليم',
+  description: 'منصة قرآنية هادئة للتسميع والاختبارات والمهام، تجمع الطالب والمعلم في مساحة للنمو والثبات.',
+  openGraph: {
+    title: 'ثمار | منصة القرآن والتعليم',
+    description: 'منصة قرآنية هادئة للتسميع والاختبارات والمهام، تجمع الطالب والمعلم في مساحة للنمو والثبات.',
+  },
+  generator: 'v0.app',
+  icons: {
+    icon: [
+      {
+        url: '/icon-light-32x32.png',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/icon-dark-32x32.png',
+        media: '(prefers-color-scheme: dark)',
+      },
+      {
+        url: '/icon.svg',
+        type: 'image/svg+xml',
+      },
+    ],
+    apple: '/apple-icon.png',
+  },
+}
+
+export const viewport: Viewport = {
+  colorScheme: 'light dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: 'white' },
+    { media: '(prefers-color-scheme: dark)', color: 'black' },
+  ],
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
+  return (
+    <html lang="ar" dir="rtl" className="bg-background">
+      <body className="antialiased">
+        <ConnectivityBanner />
+        {children}
+        <div className="fixed left-4 top-4 z-50"><LanguageToggle /></div>
+        <LanguageRuntime />
+        {process.env.NODE_ENV === 'production' && <Analytics />}
+      </body>
+    </html>
+  )
+}
