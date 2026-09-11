@@ -6580,17 +6580,11 @@ async function logout() {
 }
 
 async function goToHomeOrLogin() {
-  if (currentUser || currentType) {
-    await logout();
-  } else {
-    await clearSession();
-  }
-  showPage('lockScreen');
-  if (window.location.pathname !== '/' || window.location.search) {
-    window.location.href = '/';
-  } else {
-    window.location.reload();
-  }
+  try {
+    localStorage.clear();
+    sessionStorage.clear();
+  } catch(e){}
+  window.location.href = '/';
 }
 window.goToHomeOrLogin = goToHomeOrLogin;
 
