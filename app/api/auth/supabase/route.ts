@@ -82,6 +82,6 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   const { supabase, applyCookies } = authClient(request)
-  await supabase.auth.signOut().catch((error) => console.error('[v0] Supabase signout error:', error))
+  await supabase.auth.signOut().catch((error: any) => console.error('[v0] Supabase signout error:', error))
   return applyCookies(json({ signedOut: true }))
 }

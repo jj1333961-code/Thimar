@@ -1,0 +1,175 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "teacher", "student", "parent"] },
+        "phone": { "type": "string" },
+        "country": { "type": "string" },
+        "identityCode": { "type": "string" },
+        "isApproved": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastLogin": { "type": "string", "format": "date-time" },
+        "voiceFingerprintUrl": { "type": "string" }
+      },
+      "required": ["name", "role", "isApproved", "createdAt"]
+    },
+    "JoinRequest": {
+      "title": "Join Request",
+      "description": "A request from a new user to join the platform",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["teacher", "student", "parent"] },
+        "country": { "type": "string" },
+        "phone": { "type": "string" },
+        "identityCode": { "type": "string" },
+        "age": { "type": "integer" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "role", "country", "phone", "identityCode", "status", "createdAt"]
+    },
+    "Assignment": {
+      "title": "Assignment",
+      "description": "A task assigned to a student by a teacher",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "type": { "type": "string", "enum": ["quran", "tuhfat-al-atfal", "homework", "exam"] },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "deadline": { "type": "string", "format": "date-time" },
+        "submissionMethod": { "type": "string", "enum": ["audio", "file", "video", "live", "anti-cheat"] },
+        "status": { "type": "string", "enum": ["assigned", "submitted", "graded"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "teacherId", "type", "title", "status", "createdAt"]
+    },
+    "Recitation": {
+      "title": "Recitation",
+      "description": "A student's recitation record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "assignmentId": { "type": "string" },
+        "lawh": { "type": "string" },
+        "surah": { "type": "string" },
+        "pastNear": { "type": "string" },
+        "pastFar": { "type": "string" },
+        "gradeLawh": { "type": "string", "enum": ["excellent", "very-good", "good", "repeat"] },
+        "gradeSurah": { "type": "string", "enum": ["excellent", "very-good", "good", "repeat"] },
+        "gradePastNear": { "type": "string", "enum": ["excellent", "very-good", "good", "repeat"] },
+        "gradePastFar": { "type": "string", "enum": ["excellent", "very-good", "good", "repeat"] },
+        "feedback": { "type": "string" },
+        "audioUrl": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "createdAt"]
+    },
+    "Quiz": {
+      "title": "Quiz",
+      "description": "A quiz entity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "questions": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "questions", "createdAt", "updatedAt"]
+    },
+    "QuizAttempt": {
+      "title": "Quiz Attempt",
+      "description": "A student's attempt at a quiz",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "quizId": { "type": "string" },
+        "currentQuestion": { "type": "integer" },
+        "answers": { "type": "object" },
+        "completed": { "type": "boolean" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "quizId", "currentQuestion", "answers", "completed", "startedAt", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A chat message",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "recipientId": { "type": "string" },
+        "body": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "readAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "recipientId", "body", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A user notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["login", "signup", "assignment", "grade"] },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "title", "message", "isRead", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/joinRequests/{requestId}": {
+      "schema": "JoinRequest",
+      "description": "Pending join requests"
+    },
+    "/assignments/{assignmentId}": {
+      "schema": "Assignment",
+      "description": "Assignments"
+    },
+    "/recitations/{recitationId}": {
+      "schema": "Recitation",
+      "description": "Recitations"
+    },
+    "/quizzes/{quizId}": {
+      "schema": "Quiz",
+      "description": "Quizzes"
+    },
+    "/quizAttempts/{attemptId}": {
+      "schema": "QuizAttempt",
+      "description": "Quiz attempts"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Chat messages"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    }
+  }
+}

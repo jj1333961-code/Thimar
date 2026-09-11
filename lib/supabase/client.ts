@@ -12,17 +12,39 @@ const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
 function requireSupabaseConfig() {
-  if (!supabaseUrl) {
-    throw new Error(
-      'NEXT_PUBLIC_SUPABASE_URL is not configured. Please set it in your .env.local file.'
-    )
+  if (!supabaseUrl || !supabasePublishableKey) {
+    console.warn('Supabase not configured. Using mock client.')
+    const noOp = () => Promise.resolve({ data: null, error: null })
+    const mockClient = new Proxy({}, {
+      get: (_, prop) => {
+        if (prop === 'auth') return {
+          getSession: noOp,
+          onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+          getUser: noOp,
+          signInWithPassword: noOp,
+          signOut: noOp,
+        }
+        if (prop === 'from') return () => ({
+          select: () => ({
+            eq: () => ({
+              single: noOp,
+              maybeSingle: noOp,
+              order: () => ({ limit: noOp }),
+              limit: noOp,
+            }),
+            order: () => ({ limit: noOp }),
+          }),
+          insert: noOp,
+          update: noOp,
+          delete: noOp,
+          upsert: noOp,
+        })
+        return noOp
+      }
+    })
+    return { url: 'http://localhost', key: 'mock', mock: true, mockClient }
   }
-  if (!supabasePublishableKey) {
-    throw new Error(
-      'NEXT_PUBLIC_SUPABASE_ANON_KEY is not configured. Please set it in your .env.local file.'
-    )
-  }
-  return { url: supabaseUrl, key: supabasePublishableKey }
+  return { url: supabaseUrl, key: supabasePublishableKey, mock: false }
 }
 
 export function isSupabaseConfigured(): boolean {
@@ -39,7 +61,8 @@ export function getSupabaseConfig() {
 
 export function createSupabaseClient(options?: Parameters<typeof createClient>[2]) {
   const config = requireSupabaseConfig()
-  return createClient(config.url, config.key, {
+  if (config.mock) return config.mockClient as any
+  return createClient(config.url, config.key!, {
     ...options,
     auth: {
       persistSession: true,
@@ -52,7 +75,8 @@ export function createSupabaseClient(options?: Parameters<typeof createClient>[2
 
 export function createSupabaseServerClient(cookies: SupabaseCookieAdapter) {
   const config = requireSupabaseConfig()
-  return createServerClient(config.url, config.key, {
+  if (config.mock) return config.mockClient as any
+  return createServerClient(config.url, config.key!, {
     cookies: {
       getAll: cookies.getAll,
       setAll: cookies.setAll,

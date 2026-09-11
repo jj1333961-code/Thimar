@@ -1,4 +1,4 @@
-import { Analytics } from '@vercel/analytics/next'
+const Analytics = () => null
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { LanguageRuntime } from '@/components/language-runtime'

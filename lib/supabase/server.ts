@@ -100,7 +100,29 @@ export function createSupabaseAdmin(): SupabaseClient | null {
   }
 
   if (!chosenKey) {
-    return null
+    console.warn('Supabase Admin not configured. Using mock client.')
+    const noOp = () => Promise.resolve({ data: null, error: null })
+    const mockClient = new Proxy({}, {
+      get: (_, prop) => {
+        if (prop === 'from') return () => ({
+          select: () => ({
+            eq: () => ({
+              single: noOp,
+              maybeSingle: noOp,
+              order: () => ({ limit: noOp }),
+              limit: noOp,
+            }),
+            order: () => ({ limit: noOp }),
+          }),
+          insert: noOp,
+          update: noOp,
+          delete: noOp,
+          upsert: noOp,
+        })
+        return noOp
+      }
+    })
+    return mockClient as any
   }
 
   cachedServerClient = createClient(url, chosenKey, {

@@ -264,18 +264,18 @@ export interface ProctoringIncident {
 
 export interface JoinRequest {
   id: string
-  student_name?: string
-  parent_name?: string
-  email?: string
-  phone?: string
-  grade_level?: string
-  status?: 'pending' | 'approved' | 'rejected'
-  requested_by?: string
+  name: string
+  email: string
+  phone: string
+  role: string
+  country: string
+  identity_code: string
+  age?: number
+  status: 'pending' | 'approved' | 'rejected'
   reviewed_by?: string
   reviewed_at?: string
   rejection_reason?: string
-  notes?: string
-  created_at?: string
+  created_at: string
 }
 
 export interface Task {
@@ -1500,22 +1500,45 @@ export const joinRequestsDb = {
     }
   },
 
-  async create(request: Omit<JoinRequest, 'id' | 'created_at'>): Promise<JoinRequest> {
+  async create(request: Omit<JoinRequest, 'id' | 'created_at' | 'status'>): Promise<JoinRequest> {
     const supabase = createSupabaseAdmin()
+    
+    // Check for uniqueness (Memory or Supabase)
     if (!supabase) {
-      const row: JoinRequest = { ...request, id: generateId(), created_at: new Date().toISOString() }
-      getMemoryTable('join_requests').set(row.id, row)
+      const table = getMemoryTable('join_requests')
+      const exists = Array.from(table.values()).some((r: any) => 
+        r.identity_code === request.identity_code || r.email === request.email
+      )
+      if (exists) {
+        throw new DatabaseError('هذا الحساب أو كود الهوية مسجل بالفعل', 'UNIQUE_VIOLATION')
+      }
+      const now = new Date().toISOString()
+      const row: JoinRequest = { ...request, id: generateId(), created_at: now, status: 'pending' }
+      table.set(row.id, row)
       return row
     }
+
     try {
+      // Check for existing identity_code or email
+      const { data: existing } = await supabase
+        .from('join_requests')
+        .select('id')
+        .or(`identity_code.eq.${request.identity_code},email.eq.${request.email}`)
+        .maybeSingle()
+
+      if (existing) {
+        throw new DatabaseError('هذا الحساب أو كود الهوية مسجل بالفعل', 'UNIQUE_VIOLATION')
+      }
+
       const { data, error } = await supabase
         .from('join_requests')
-        .insert(request)
+        .insert({ ...request, status: 'pending' })
         .select()
         .single()
       if (error) throw error
       return data
     } catch (error) {
+      if (error instanceof DatabaseError) throw error
       handleError(error, 'إنشاء طلب انضمام')
     }
   },

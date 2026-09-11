@@ -38,25 +38,22 @@ export async function POST(request: NextRequest) {
   const originError = rejectCrossOrigin(request)
   if (originError) return originError
 
-  const auth = await requireUser(request)
-  if (auth.response) return auth.response
-
   try {
     const body = await request.json()
-    const { student_name, parent_name, email, phone, grade_level, notes } = body
+    const { name, email, phone, role, country, identity_code, age } = body
 
-    if (!student_name) {
-      return json({ error: 'اسم الطالب مطلوب' }, 400)
+    if (!name || !email || !phone || !role || !country || !identity_code) {
+      return json({ error: 'جميع الحقول مطلوبة' }, 400)
     }
 
     const request_entry = await joinRequestsDb.create({
-      student_name,
-      parent_name,
+      name,
       email,
       phone,
-      grade_level,
-      notes,
-      requested_by: auth.user?.id,
+      role,
+      country,
+      identity_code,
+      age,
     })
 
     return json({ request: request_entry }, 201)

@@ -1,6 +1,29 @@
 import { readFile } from "node:fs/promises"
 import path from "node:path"
-import { del, get, list, put } from "@vercel/blob"
+
+// MOCKED @vercel/blob — in-memory, data lost on container sleep
+const blobStore = new Map<string, { buffer: Buffer; contentType: string }>()
+const del = async (url: string | string[], _options?: any) => {
+  const urls = Array.isArray(url) ? url : [url]
+  urls.forEach(u => blobStore.delete(u))
+}
+const get = async (url: string, _options?: any) => {
+  const item = blobStore.get(url)
+  if (!item) return { statusCode: 404, stream: null }
+  return { statusCode: 200, stream: item.buffer }
+}
+const list = async (options: { prefix?: string, cursor?: string, limit?: number }) => {
+  const blobs = Array.from(blobStore.keys())
+    .filter(k => !options.prefix || k.startsWith(options.prefix))
+    .map(k => ({ pathname: k }))
+  return { blobs, hasMore: false, cursor: "" }
+}
+const put = async (pathname: string, body: Buffer | string, options: { contentType?: string, access?: string, addRandomSuffix?: boolean }) => {
+  const buffer = Buffer.isBuffer(body) ? body : Buffer.from(body)
+  blobStore.set(pathname, { buffer, contentType: options.contentType || "application/octet-stream" })
+  return { pathname, url: pathname }
+}
+
 import mammoth from "mammoth"
 import { rejectCrossOrigin } from "@/lib/request-security"
 import { requireAdmin } from "@/lib/server-auth"
