@@ -15,6 +15,7 @@ import {
   CheckCheck
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
+import { requestJson } from '@/lib/api-client'
 
 interface Message {
   id: number
@@ -67,8 +68,7 @@ export function MessagesView({ currentUser }: { currentUser: any }) {
     try {
       // In a real app, we'd fetch actual contacts based on the user's role and relations
       // For now, let's fetch students if admin, or teachers if student/parent
-      const res = await fetch('/api/supabase/students') // Example endpoint
-      const data = await res.json()
+      const data = await requestJson<any>('/api/supabase/students') // Example endpoint
       
       const formattedContacts = (data.students || []).map((s: any) => ({
         id: s.id,
@@ -89,8 +89,7 @@ export function MessagesView({ currentUser }: { currentUser: any }) {
 
   const fetchMessages = async (contactId: string) => {
     try {
-      const res = await fetch(`/api/messages?contactId=${contactId}`)
-      const data = await res.json()
+      const data = await requestJson<any>(`/api/messages?contactId=${contactId}`)
       setMessages(data.messages || [])
     } catch (err) {
       console.error(err)
@@ -103,20 +102,16 @@ export function MessagesView({ currentUser }: { currentUser: any }) {
 
     setSending(true)
     try {
-      const res = await fetch('/api/messages', {
+      const data = await requestJson<any>('/api/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipientId: selectedContact.id,
           body: newMessage
         })
       })
       
-      if (res.ok) {
-        const data = await res.json()
-        setMessages(prev => [...prev, data.message])
-        setNewMessage('')
-      }
+      setMessages(prev => [...prev, data.message])
+      setNewMessage('')
     } catch (err) {
       console.error(err)
     } finally {

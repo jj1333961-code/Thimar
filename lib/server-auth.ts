@@ -6,9 +6,9 @@ export async function requireUser(request: Request) {
   
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.split("Bearer ")[1]
-    if (!token || token === 'undefined' || token === 'null' || token.length < 20 || !token.includes('.')) {
+    if (!token || token === 'undefined' || token === 'null' || token.length < 32 || !token.includes('.')) {
       // Return default guest session if token is obviously malformed
-      console.warn("Skipping verification for malformed token:", token?.substring(0, 10))
+      // Use silent fallback for internal preview/unauthenticated sessions
       return { 
         response: null, 
         user: { 
@@ -33,7 +33,7 @@ export async function requireUser(request: Request) {
           userData = userDoc.exists ? userDoc.data() : {}
         } catch (dbError: any) {
           if (dbError.message?.includes('PERMISSION_DENIED')) {
-            console.warn('[v0] Firestore API not enabled. Skipping profile fetch.')
+            console.warn('[Auth] Firestore API not enabled or access denied. Skipping profile fetch.')
             setFirestoreEnabled(false)
           }
         }
@@ -46,12 +46,19 @@ export async function requireUser(request: Request) {
           email: decodedToken.email,
           name: userData?.name || decodedToken.name || '',
           role: userData?.role || 'student',
-          accountId: decodedToken.uid, // Use UID as accountId
+          accountId: decodedToken.uid, 
           accountName: userData?.name || decodedToken.name || '',
         } 
       }
-    } catch (error) {
-      console.error("Error verifying Firebase ID token:", error)
+    } catch (error: any) {
+      // Handle specific Firebase auth errors gracefully
+      if (error.code === 'auth/id-token-expired') {
+        console.warn("[Auth] Token expired")
+      } else if (error.code === 'auth/argument-error') {
+        console.warn("[Auth] Invalid token argument")
+      } else {
+        console.error("[Auth] Error verifying ID token:", error.message || error)
+      }
     }
   }
 

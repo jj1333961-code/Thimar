@@ -21,6 +21,7 @@ import { NotificationsView } from '@/components/dashboard/NotificationsView'
 import { ReportsView } from '@/components/dashboard/ReportsView'
 import { SettingsView } from '@/components/dashboard/SettingsView'
 import { useSearchParams } from 'next/navigation'
+import { requestJson } from '@/lib/api-client'
 
 function AdminContent() {
   const searchParams = useSearchParams()
@@ -39,13 +40,10 @@ function AdminContent() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [reqRes, notifRes] = await Promise.all([
-        fetch('/api/supabase/join-requests'),
-        fetch('/api/supabase/notifications')
+      const [reqData, notifData] = await Promise.all([
+        requestJson<any>('/api/supabase/join-requests'),
+        requestJson<any>('/api/supabase/notifications')
       ])
-      
-      const reqData = await reqRes.json()
-      const notifData = await notifRes.json()
       
       setRequests(reqData.requests || [])
       setNotifications(notifData.notifications || [])
@@ -58,15 +56,12 @@ function AdminContent() {
 
   const handleAction = async (id: number, status: 'approved' | 'rejected') => {
     try {
-      const res = await fetch('/api/supabase/join-requests', {
+      await requestJson('/api/supabase/join-requests', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status })
       })
-      if (res.ok) {
-        setRequests(prev => prev.filter(r => r.id !== id))
-        fetchData() // Refresh notifications for log
-      }
+      setRequests(prev => prev.filter(r => r.id !== id))
+      fetchData() // Refresh notifications for log
     } catch (err) {
       console.error(err)
     }

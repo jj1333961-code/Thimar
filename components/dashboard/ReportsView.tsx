@@ -19,6 +19,7 @@ import {
   History
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
+import { requestJson } from '@/lib/api-client'
 
 interface Student {
   id: string
@@ -56,8 +57,7 @@ export function ReportsView({ role, currentUserId }: { role: 'admin' | 'student'
     setLoading(true)
     try {
       if (role === 'admin') {
-        const res = await fetch('/api/supabase/students')
-        const data = await res.json()
+        const data = await requestJson<any>('/api/supabase/students')
         setStudents(data.students || [])
       } else if (role === 'parent') {
         // Fetch children

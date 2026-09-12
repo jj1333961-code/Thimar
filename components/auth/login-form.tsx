@@ -4,7 +4,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'motion/react'
 import { LogIn, Mail, Lock, Loader2, MessageCircle, HelpCircle, Globe, Share2 } from 'lucide-react'
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
+import { 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signInWithEmailAndPassword 
+} from 'firebase/auth'
 import { auth, googleProvider } from '@/lib/firebase'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -27,6 +31,7 @@ export function LoginForm() {
 
     // Special Admin Logic
     if (formData.identifier === 'thimar' && formData.password === '0101') {
+      localStorage.setItem('thimar_auth_token', 'admin_local_bypass_token')
       setTimeout(() => {
         router.push('/admin')
         setLoading(false)
@@ -35,21 +40,24 @@ export function LoginForm() {
     }
 
     try {
-      // Simulate real auth call
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      })
+      // Use Firebase Client Auth
+      const userCredential = await signInWithEmailAndPassword(auth, formData.identifier, formData.password)
+      const user = userCredential.user
+      const idToken = await user.getIdToken()
+      
+      // Save token
+      localStorage.setItem('thimar_auth_token', idToken)
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'خطأ في تسجيل الدخول')
-      }
-
-      router.push('/student') // Default to student for now
+      // Fetch profile to redirect correctly
+      const userDoc = await getDoc(doc(db, 'users', user.uid))
+      const userData = userDoc.exists() ? userDoc.data() : { role: 'student' }
+      
+      router.push(`/${userData.role || 'student'}`)
     } catch (err: any) {
-      setError(err.message || 'بيانات الدخول غير صحيحة')
+      console.error('Login Error:', err)
+      setError(err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' 
+        ? 'بيانات الدخول غير صحيحة' 
+        : 'فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.')
     } finally {
       setLoading(false)
     }

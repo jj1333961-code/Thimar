@@ -13,6 +13,7 @@ import {
   ChevronRight
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
+import { requestJson } from '@/lib/api-client'
 
 interface Notification {
   id: number
@@ -34,8 +35,7 @@ export function NotificationsView() {
   const fetchNotifications = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/supabase/notifications')
-      const data = await res.json()
+      const data = await requestJson<any>('/api/supabase/notifications')
       setNotifications(data.notifications || [])
     } catch (err) {
       console.error(err)
