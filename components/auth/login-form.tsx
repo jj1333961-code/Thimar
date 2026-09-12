@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'motion/react'
 import { LogIn, Mail, Lock, Loader2, MessageCircle, HelpCircle, Globe, Share2 } from 'lucide-react'
 import { 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider, 
   signInWithEmailAndPassword 
 } from 'firebase/auth'
@@ -23,6 +25,48 @@ export function LoginForm() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    let isMounted = true
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (!result || !isMounted) return
+        setLoading(true)
+        const user = result.user
+        const credential = GoogleAuthProvider.credentialFromResult(result)
+        const accessToken = credential?.accessToken || null
+        if (accessToken) setGoogleAccessToken(accessToken)
+        const idToken = await user.getIdToken()
+        localStorage.setItem('thimar_auth_token', idToken)
+
+        const userDoc = await getDoc(doc(db, 'users', user.uid))
+        if (!userDoc.exists()) {
+          await setDoc(doc(db, 'users', user.uid), {
+            name: user.displayName || 'مستخدم جديد',
+            email: user.email,
+            role: 'student',
+            isApproved: true,
+            createdAt: serverTimestamp(),
+            lastLogin: serverTimestamp()
+          })
+          router.push('/student')
+        } else {
+          const userData = userDoc.data()
+          await setDoc(doc(db, 'users', user.uid), { lastLogin: serverTimestamp() }, { merge: true })
+          router.push(`/${userData.role || 'student'}`)
+        }
+      })
+      .catch((err) => {
+        console.warn('Redirect result error (if any):', err)
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,7 +111,21 @@ export function LoginForm() {
     setLoading(true)
     setError('')
     try {
-      const result = await signInWithPopup(auth, googleProvider)
+      let result
+      try {
+        result = await signInWithPopup(auth, googleProvider)
+      } catch (popupErr: any) {
+        if (
+          popupErr.code === 'auth/popup-blocked' ||
+          popupErr.code === 'auth/cancelled-popup-request' ||
+          popupErr.code === 'auth/operation-not-supported-in-this-environment'
+        ) {
+          // Inside WebView/Capacitor or restricted popup environments, use redirect
+          await signInWithRedirect(auth, googleProvider)
+          return
+        }
+        throw popupErr
+      }
       const user = result.user
       const credential = GoogleAuthProvider.credentialFromResult(result)
       const accessToken = credential?.accessToken || null

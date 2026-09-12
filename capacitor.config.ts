@@ -4,9 +4,14 @@ const config: CapacitorConfig = {
   appId: 'com.thimar.app',
   appName: 'ثمار',
   webDir: 'public',
-  // Bundle the public shell so the native app can launch without internet.
-  // API requests are routed to the hosted deployment by offline-runtime.js when online.
-
+  android: {
+    allowMixedContent: true,
+    backgroundColor: '#1f5845',
+  },
+  server: {
+    androidScheme: 'https',
+    cleartext: true,
+  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 0,

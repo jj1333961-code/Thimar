@@ -9,7 +9,23 @@ __v0_jsx-dev-runtime.ts
 .vercel/
 
 # Environment variables
+.env
+.env.local
 .env*.local
+.env.development
+.env.production
+.env*.development
+.env*.production
+
+# Android & Keystores (Security)
+*.keystore
+*.jks
+*.key
+android/app/release.keystore
+android/app/debug.keystore
+android/.gradle/
+android/app/build/
+android/build/
 
 # Common ignores
 node_modules
@@ -18,3 +34,4 @@ node_modules
 .vercel
 .dyad/
 .data/
+dist/
