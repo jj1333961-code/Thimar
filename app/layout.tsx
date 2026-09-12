@@ -4,6 +4,7 @@ import './globals.css'
 import { LanguageRuntime } from '@/components/language-runtime'
 import { LanguageToggle } from '@/components/language-toggle'
 import { ConnectivityBanner } from '@/components/connectivity-banner'
+import { QueryProvider } from '@/lib/query-provider'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://teacher-three-ashen.vercel.app'),
@@ -52,8 +53,10 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className="bg-background">
       <body className="antialiased">
-        <ConnectivityBanner />
-        {children}
+        <QueryProvider>
+          <ConnectivityBanner />
+          {children}
+        </QueryProvider>
         <div className="fixed left-4 top-4 z-50"><LanguageToggle /></div>
         <LanguageRuntime />
         {process.env.NODE_ENV === 'production' && <Analytics />}

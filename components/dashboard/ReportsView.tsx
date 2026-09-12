@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { requestJson } from '@/lib/api-client'
+import { useQuery } from '@tanstack/react-query'
 
 import { t } from '@/lib/i18n'
 
@@ -38,14 +39,31 @@ interface Student {
 
 export function ReportsView({ role, currentUserId }: { role: 'admin' | 'student' | 'parent', currentUserId: string }) {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
-  const [students, setStudents] = useState<Student[]>([])
-  const [loading, setLoading] = useState(true)
+
+  const { data: students = [], isLoading: loading } = useQuery<Student[]>({
+    queryKey: ['students', role, currentUserId],
+    queryFn: async () => {
+      if (role === 'admin') {
+        const data = await requestJson<any>('/api/supabase/students')
+        return data.students?.map((s: any) => ({
+          ...s,
+          diligence: Math.floor(Math.random() * 30) + 70,
+          regularity: Math.floor(Math.random() * 30) + 70,
+          studyHabits: Math.floor(Math.random() * 30) + 70
+        })) || []
+      } else if (role === 'parent') {
+        return [
+          { id: 's1', name: 'ياسين عمر', email: 'y@thimar.app', role: 'student', progress: 82, level: 'الجزء ٢٤', diligence: 90, regularity: 95, studyHabits: 80 },
+          { id: 's2', name: 'لينا عمر', email: 'l@thimar.app', role: 'student', progress: 45, level: 'الجزء ٥', diligence: 75, regularity: 80, studyHabits: 85 },
+        ]
+      }
+      return []
+    },
+    enabled: role === 'admin' || role === 'parent'
+  })
 
   useEffect(() => {
-    if (role === 'admin' || role === 'parent') {
-      fetchStudents()
-    } else {
-      // For student, they are the selected student
+    if (role === 'student' && !selectedStudent) {
       setSelectedStudent({
         id: currentUserId,
         name: 'ياسين عمر',
@@ -57,35 +75,8 @@ export function ReportsView({ role, currentUserId }: { role: 'admin' | 'student'
         regularity: 95,
         studyHabits: 75
       })
-      setLoading(false)
     }
-  }, [])
-
-  const fetchStudents = async () => {
-    setLoading(true)
-    try {
-      if (role === 'admin') {
-        const data = await requestJson<any>('/api/supabase/students')
-        setStudents(data.students?.map((s: any) => ({
-          ...s,
-          diligence: Math.floor(Math.random() * 30) + 70, // Simulated metrics based on real presence
-          regularity: Math.floor(Math.random() * 30) + 70,
-          studyHabits: Math.floor(Math.random() * 30) + 70
-        })) || [])
-      } else if (role === 'parent') {
-        // Fetch children
-        const mockChildren: Student[] = [
-          { id: 's1', name: 'ياسين عمر', email: 'y@thimar.app', role: 'student', progress: 82, level: 'الجزء ٢٤', diligence: 90, regularity: 95, studyHabits: 80 },
-          { id: 's2', name: 'لينا عمر', email: 'l@thimar.app', role: 'student', progress: 45, level: 'الجزء ٥', diligence: 75, regularity: 80, studyHabits: 85 },
-        ]
-        setStudents(mockChildren)
-      }
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [role, currentUserId])
 
   if (loading) {
     return (

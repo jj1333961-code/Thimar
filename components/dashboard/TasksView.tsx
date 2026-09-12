@@ -15,6 +15,7 @@ import {
   Calendar
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
+import { useQuery } from '@tanstack/react-query'
 
 interface Task {
   id: number
@@ -30,30 +31,19 @@ interface Task {
 import { t } from '@/lib/i18n'
 
 export function TasksView({ role, currentUserId }: { role: 'student' | 'parent', currentUserId: string }) {
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'new' | 'completed'>('all')
 
-  useEffect(() => {
-    fetchTasks()
-  }, [])
-
-  const fetchTasks = async () => {
-    setLoading(true)
-    try {
-      // Fetching tasks would normally be from /api/tasks
-      const mockTasks: Task[] = [
+  const { data: tasks = [], isLoading: loading } = useQuery<Task[]>({
+    queryKey: ['tasks', role, currentUserId],
+    queryFn: async () => {
+      // Mock data for demonstration, normally would fetch from /api/tasks
+      return [
         { id: 1, type: 'recitation', title: 'تسميع سورة النور (١-٢٠)', status: 'new', deadline: t('اليوم، ٨:٠٠ م'), studentName: 'ياسين عمر' },
         { id: 2, type: 'exam', title: 'اختبار الجزء ٢٤', status: 'completed', score: '٩٥٪', studentName: 'ياسين عمر' },
         { id: 3, type: 'homework', title: 'حفظ تحفة الأطفال (١-٥)', status: 'in-progress', deadline: t('غداً'), studentName: 'لينا عمر' },
       ]
-      setTasks(mockTasks)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
     }
-  }
+  })
 
   const filteredTasks = tasks.filter(t => {
     if (filter === 'new') return t.status === 'new' || t.status === 'in-progress'
