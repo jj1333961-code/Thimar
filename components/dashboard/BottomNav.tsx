@@ -11,23 +11,24 @@ import {
   ClipboardList 
 } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { t } from '@/lib/i18n'
 
 export type UserRole = 'admin' | 'student' | 'parent'
 
 interface NavItem {
   id: string
-  label: string
+  labelKey: string
   icon: React.ElementType
   roles: UserRole[]
 }
 
 const navItems: NavItem[] = [
-  { id: 'home', label: 'الرئيسية', icon: Home, roles: ['admin', 'student', 'parent'] },
-  { id: 'messages', label: 'الرسائل', icon: MessageSquare, roles: ['admin', 'student', 'parent'] },
-  { id: 'notifications', label: 'التنبيهات', icon: Bell, roles: ['admin'] },
-  { id: 'tasks', label: 'المهمات', icon: ClipboardList, roles: ['student', 'parent'] },
-  { id: 'reports', label: 'التقارير', icon: BarChart2, roles: ['admin', 'student', 'parent'] },
-  { id: 'settings', label: 'الإعدادات', icon: Settings, roles: ['admin', 'student', 'parent'] },
+  { id: 'home', labelKey: 'الرئيسية', icon: Home, roles: ['admin', 'student', 'parent'] },
+  { id: 'messages', labelKey: 'الرسائل', icon: MessageSquare, roles: ['admin', 'student', 'parent'] },
+  { id: 'notifications', labelKey: 'التنبيهات', icon: Bell, roles: ['admin'] },
+  { id: 'tasks', labelKey: 'المهمات', icon: ClipboardList, roles: ['student', 'parent'] },
+  { id: 'reports', labelKey: 'التقارير', icon: BarChart2, roles: ['admin', 'student', 'parent'] },
+  { id: 'settings', labelKey: 'الإعدادات', icon: Settings, roles: ['admin', 'student', 'parent'] },
 ]
 
 interface BottomNavProps {
@@ -69,7 +70,7 @@ export function BottomNav({ role }: BottomNavProps) {
                 )}
               </div>
               <span className={`text-[10px] font-bold ${isActive ? 'text-emerald-600' : 'text-gray-400'}`}>
-                {item.label}
+                {t(item.labelKey)}
               </span>
             </button>
           )

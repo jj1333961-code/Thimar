@@ -26,6 +26,38 @@ export const translations: Record<string, string> = {
   'أدوات المسؤول': 'Admin Tools',
   'أدوات الطالب': 'Student Tools',
   'أدوات ولي الأمر': 'Parent Tools',
+  'مرحباً بك مجدداً، المسؤول thimar': 'Welcome back, Admin thimar',
+  'تحليل ثمار AI': 'Thimar AI Analysis',
+  'طلبات الانضمام المعلقة': 'Pending Join Requests',
+  'لا توجد طلبات حالياً': 'No requests currently',
+  'جلسات مباشرة': 'Live Sessions',
+  'ابدأ جلسة تسميع مباشرة مع أحد الطلاب الآن': 'Start a live recitation session with a student now',
+  'فتح غرفة اتصال': 'Open communication room',
+  'مهمة اليوم': 'Today\'s Task',
+  'سورة': 'Surah',
+  'النور': 'An-Nur',
+  'من الآية': 'From Ayah',
+  'إلى الآية': 'To Ayah',
+  'متبقي': 'Remaining',
+  'ساعات': 'Hours',
+  'مراجعة': 'Review',
+  'ابدأ التسميع': 'Start Recitation',
+  'استمع للمقرئين': 'Listen to Reciters',
+  'الشيخ': 'Sheikh',
+  'الحصري': 'Al-Husary',
+  'المنشاوي': 'Al-Minshawi',
+  'عبدالباسط': 'Abdul-Basit',
+  'رسائل المعلم': 'Teacher Messages',
+  '"أحسنت في تسميع الأمس يا ياسين، ركز اليوم على مخارج حرف الضاد في سورة النور."': '"Well done on yesterday\'s recitation, Yassin. Focus today on the articulation of the letter Dad in Surah An-Nur."',
+  'أبنائي': 'My Children',
+  'إضافة ابن جديد +': 'Add New Child +',
+  'التقدم': 'Progress',
+  'آخر نشاطات': 'Latest Activities',
+  'المعلم المباشر': 'Direct Teacher',
+  'معلم القرآن': 'Quran Teacher',
+  'نصيحة اليوم': 'Tip of the Day',
+  '"أفضل هدية تقدمها لطفلك هي تشجيعه على ملازمة القرآن."': '"The best gift you can give your child is encouraging them to stay close to the Quran."',
+  'اقرأ المزيد': 'Read More',
   'أرسل طلب انضمام للمسؤول': 'Send a join request to the admin',
   'بيانات طلب الانضمام': 'Join Request Data',
   'تم إرسال الطلب للمسؤول': 'Request sent to admin',
@@ -290,4 +322,14 @@ export function translate(value: string, locale: Locale): string {
   }
 
   return result
+}
+
+/**
+ * Shorthand translation function that uses the stored language preference.
+ * Defaults to Arabic if no preference is set or if running on server.
+ */
+export function t(key: string): string {
+  if (typeof window === 'undefined') return key;
+  const lang = (localStorage.getItem('thimar_lang') as Locale) || 'ar';
+  return translate(key, lang);
 }
