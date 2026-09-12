@@ -15,9 +15,19 @@ type RequestOptions = RequestInit & { retries?: number }
 export async function requestJson<T>(input: RequestInfo | URL, options: RequestOptions = {}): Promise<T> {
   const { retries = 0, ...init } = options
   let attempt = 0
+  
+  // Get token from localStorage if available
+  const token = typeof window !== 'undefined' ? localStorage.getItem('thimar_auth_token') : null
+
   while (true) {
     try {
-      const response = await fetch(input, { ...init, headers: { accept: 'application/json', ...(init.headers ?? {}) } })
+      const headers = new Headers(init.headers)
+      headers.set('accept', 'application/json')
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`)
+      }
+
+      const response = await fetch(input, { ...init, headers })
       const payload = await response.json().catch(() => ({})) as { error?: string; message?: string }
       if (!response.ok) throw new ApiRequestError(payload.error || payload.message || 'تعذر تنفيذ الطلب', response.status)
       return payload as T

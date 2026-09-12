@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm'
 import { db, isPostgresConfigured, isPostgresHealthy, markPostgresUnavailable } from '@/lib/db'
 import { appSnapshots } from '@/lib/db/schema'
 import { createSupabaseAdmin, isServerSupabaseConfigured } from '@/lib/supabase/server'
+import { adminDb, isFirestoreEnabled, setFirestoreEnabled } from '@/lib/firebase-admin'
 
 export type PersistentSnapshot = {
   id: string
@@ -100,6 +101,45 @@ async function upsertSupabaseSnapshot(id: string, data: Record<string, unknown>)
   }
 }
 
+async function getFirestoreSnapshot(id: string): Promise<PersistentSnapshot | null> {
+  if (!adminDb || !isFirestoreEnabled) return null
+  try {
+    const doc = await adminDb.collection('app_snapshots').doc(id).get()
+    if (!doc.exists) return null
+    const data = doc.data()
+    return {
+      id: doc.id,
+      data: isRecord(data?.data) ? data!.data : {},
+      updated_at: data?.updated_at || new Date().toISOString(),
+    }
+  } catch (error: any) {
+    if (error.message?.includes('PERMISSION_DENIED')) {
+      console.warn('[v0] Firestore API not enabled. Disabling Firestore fallback.')
+      setFirestoreEnabled(false)
+    } else {
+      console.warn('[v0] Firestore snapshot fetch failed', error)
+    }
+    return null
+  }
+}
+
+async function upsertFirestoreSnapshot(id: string, data: Record<string, unknown>): Promise<void> {
+  if (!adminDb || !isFirestoreEnabled) return
+  try {
+    await adminDb.collection('app_snapshots').doc(id).set({
+      data,
+      updated_at: new Date().toISOString(),
+    })
+  } catch (error: any) {
+    if (error.message?.includes('PERMISSION_DENIED')) {
+      console.warn('[v0] Firestore API not enabled. Disabling Firestore fallback.')
+      setFirestoreEnabled(false)
+    } else {
+      console.warn('[v0] Firestore snapshot sync failed', error)
+    }
+  }
+}
+
 async function getNeonSnapshot(id: string): Promise<PersistentSnapshot | null> {
   const rows = await db.select().from(appSnapshots).where(eq(appSnapshots.id, id)).limit(1)
   return rows[0] ? asSnapshot(rows[0]) : null
@@ -123,6 +163,14 @@ export function getStorageMode(): 'supabase' | 'neon' | 'local' {
 }
 
 export async function getPersistentSnapshot(id: string): Promise<PersistentSnapshot | null> {
+  // Try Firestore first as it's our primary cloud DB now
+  try {
+    const snap = await getFirestoreSnapshot(id)
+    if (snap) return snap
+  } catch {
+    // Fallback
+  }
+
   if (isServerSupabaseConfigured()) {
     try {
       const snap = await getSupabaseSnapshot(id)
@@ -147,6 +195,13 @@ export async function getPersistentSnapshot(id: string): Promise<PersistentSnaps
 
 export async function upsertPersistentSnapshot(id: string, data: Record<string, unknown>): Promise<PersistentSnapshot> {
   const localSnapshot = await upsertLocalSnapshot(id, data)
+
+  // Sync to Firestore
+  try {
+    await upsertFirestoreSnapshot(id, data)
+  } catch {
+    // Fallback
+  }
 
   if (isServerSupabaseConfigured()) {
     try {

@@ -9,3 +9,10 @@ const app = getApps().length === 0
 
 export const adminAuth = getAuth(app);
 export const adminDb = getFirestore(app);
+
+// Global flag to track if Firestore API is enabled and accessible
+export let isFirestoreEnabled = true;
+
+export function setFirestoreEnabled(enabled: boolean) {
+  isFirestoreEnabled = enabled;
+}

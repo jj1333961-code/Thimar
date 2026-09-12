@@ -61,6 +61,10 @@ export function LoginForm() {
     try {
       const result = await signInWithPopup(auth, googleProvider)
       const user = result.user
+      const idToken = await user.getIdToken()
+      
+      // Save token for app-core.js and other legacy scripts
+      localStorage.setItem('thimar_auth_token', idToken)
 
       // Check if user exists in Firestore
       const userDoc = await getDoc(doc(db, 'users', user.uid))

@@ -11,6 +11,7 @@
 
 import { createSupabaseAdmin, isServerSupabaseConfigured } from './server'
 import { getPersistentSnapshot, upsertPersistentSnapshot } from '@/lib/storage/persistent-snapshot'
+import { adminDb, isFirestoreEnabled, setFirestoreEnabled } from '@/lib/firebase-admin'
 
 // In-memory fallback store when Supabase is not configured
 const memoryStore: Map<string, { data: Record<string, unknown>; updated_at: string }> = new Map()
@@ -1209,6 +1210,18 @@ export const notificationsDb = {
 
 export const devicesDb = {
   async getAll(): Promise<Device[]> {
+    if (adminDb && isFirestoreEnabled) {
+      try {
+        const snapshot = await adminDb.collection('devices').orderBy('last_seen_at', 'desc').get()
+        return snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) as Device[]
+      } catch (error: any) {
+        if (error.message?.includes('PERMISSION_DENIED')) {
+          setFirestoreEnabled(false)
+        }
+        console.warn('[v0] Firestore devices fetch failed', error)
+      }
+    }
+
     const supabase = createSupabaseAdmin()
     if (!supabase) {
       return Array.from(getMemoryTable('devices').values()) as Device[]
@@ -1226,6 +1239,32 @@ export const devicesDb = {
   },
 
   async registerDevice(device: Omit<Device, 'id' | 'created_at' | 'updated_at'>): Promise<Device> {
+    if (adminDb && isFirestoreEnabled) {
+      try {
+        const snapshot = await adminDb.collection('devices').where('device_id', '==', device.device_id).limit(1).get()
+        const now = new Date().toISOString()
+        
+        if (!snapshot.empty) {
+          const doc = snapshot.docs[0]
+          await doc.ref.update({ ...device, last_seen_at: now, updated_at: now })
+          return { id: doc.id, ...device, last_seen_at: now, updated_at: now } as Device
+        }
+        
+        const docRef = await adminDb.collection('devices').add({
+          ...device,
+          created_at: now,
+          updated_at: now,
+          last_seen_at: now
+        })
+        return { id: docRef.id, ...device, created_at: now, updated_at: now, last_seen_at: now } as Device
+      } catch (error: any) {
+        if (error.message?.includes('PERMISSION_DENIED')) {
+          setFirestoreEnabled(false)
+        }
+        console.warn('[v0] Firestore device registration failed', error)
+      }
+    }
+
     const supabase = createSupabaseAdmin()
     if (!supabase) {
       const now = new Date().toISOString()
@@ -1476,6 +1515,19 @@ export const proctoringDb = {
 
 export const joinRequestsDb = {
   async getAll(status?: 'pending' | 'approved' | 'rejected'): Promise<JoinRequest[]> {
+    if (adminDb) {
+      try {
+        let query: any = adminDb.collection('join_requests').orderBy('created_at', 'desc')
+        if (status) {
+          query = query.where('status', '==', status)
+        }
+        const snapshot = await query.get()
+        return snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) as JoinRequest[]
+      } catch (error) {
+        console.warn('[v0] Firestore join_requests fetch failed', error)
+      }
+    }
+
     const supabase = createSupabaseAdmin()
     if (!supabase) {
       let records = Array.from(getMemoryTable('join_requests').values()) as JoinRequest[]
@@ -1501,6 +1553,29 @@ export const joinRequestsDb = {
   },
 
   async create(request: Omit<JoinRequest, 'id' | 'created_at' | 'status'>): Promise<JoinRequest> {
+    if (adminDb) {
+      try {
+        // Check for existing
+        const emailCheck = await adminDb.collection('join_requests').where('email', '==', request.email).get()
+        const identityCheck = await adminDb.collection('join_requests').where('identity_code', '==', request.identity_code).get()
+        
+        if (!emailCheck.empty || !identityCheck.empty) {
+          throw new DatabaseError('هذا الحساب أو كود الهوية مسجل بالفعل', 'UNIQUE_VIOLATION')
+        }
+
+        const now = new Date().toISOString()
+        const docRef = await adminDb.collection('join_requests').add({
+          ...request,
+          status: 'pending',
+          created_at: now
+        })
+        return { id: docRef.id, ...request, status: 'pending', created_at: now } as JoinRequest
+      } catch (error) {
+        if (error instanceof DatabaseError) throw error
+        console.warn('[v0] Firestore join_requests create failed', error)
+      }
+    }
+
     const supabase = createSupabaseAdmin()
     
     // Check for uniqueness (Memory or Supabase)
@@ -1544,6 +1619,24 @@ export const joinRequestsDb = {
   },
 
   async updateStatus(id: string, status: 'approved' | 'rejected', reviewedBy?: string, rejectionReason?: string): Promise<JoinRequest> {
+    if (adminDb) {
+      try {
+        const updates: any = {
+          status,
+          reviewed_by: reviewedBy,
+          reviewed_at: new Date().toISOString(),
+        }
+        if (status === 'rejected' && rejectionReason) {
+          updates.rejection_reason = rejectionReason
+        }
+        await adminDb.collection('join_requests').doc(id).update(updates)
+        const doc = await adminDb.collection('join_requests').doc(id).get()
+        return { id: doc.id, ...doc.data() } as JoinRequest
+      } catch (error) {
+        console.warn('[v0] Firestore join_requests update failed', error)
+      }
+    }
+
     const supabase = createSupabaseAdmin()
     if (!supabase) {
       const table = getMemoryTable('join_requests')

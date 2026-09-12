@@ -4,6 +4,7 @@ export const translations: Record<string, string> = {
   // المنصة والهوية
   'منصة ثمار': 'Thimar Platform',
   'منصة ثِمار': 'Thimar Platform',
+  'أهلاً بك في ثمار': 'Welcome to Thimar',
   'منصة المعلّم الذكية': 'Smart Teacher Platform',
   'منصة القرآن والتعليم': 'Quran & Education Platform',
   'لحفظ القرآن الكريم': 'for memorizing the Holy Quran',
@@ -11,6 +12,9 @@ export const translations: Record<string, string> = {
   'المصحف الشريف': 'Holy Quran',
   'القرآن الكريم': 'The Holy Quran',
   'ثمار | منصة القرآن والتعليم': 'Thimar | Quran & Education Platform',
+  '٢٠٢٦ منصة ثمار التعليمية. جميع الحقوق محفوظة.': '2026 Thimar Educational Platform. All rights reserved.',
+  '٢٠٢٦ منصة ثمار التعليمية': '2026 Thimar Educational Platform',
+  'جميع الحقوق محفوظة': 'All rights reserved',
 
   // الاتصال والإنترنت والوضع غير المتصل (PWA & Offline)
   'تم الاتصال بالإنترنت': 'Connected to the Internet',
@@ -45,10 +49,12 @@ export const translations: Record<string, string> = {
   'أليس لديك حساب؟': "Don't have an account?",
   'لديك حساب بالفعل؟': 'Already have an account?',
   'هل نسيت الرقم السري؟': 'Forgot your password?',
+  'نسيت كلمة المرور؟': 'Forgot your password?',
   'استرجاع الحساب': 'Account recovery',
   'طلب استرداد الحساب': 'Account recovery request',
   'اسم المستخدم': 'Username',
   'الرقم السري': 'Password',
+  'كلمة المرور': 'Password',
   'الرقم السري الحالي': 'Current password',
   'الرقم السري الجديد': 'New password',
   'تأكيد الرقم السري': 'Confirm password',
@@ -62,6 +68,27 @@ export const translations: Record<string, string> = {
   'التسجيل برقم الهاتف': 'Sign in with phone',
   'كود التحقق': 'Verification code',
   'تأكيد الهوية': 'Identity confirmation',
+  'سجل دخولك لمتابعة وردك اليومي': 'Log in to follow your daily progress',
+  'مرحباً بك مجدداً في ثمار': 'Welcome back to Thimar',
+  'اسم المستخدم أو البريد الإلكتروني': 'Username or Email',
+  'أدخل بريدك الإلكتروني': 'Enter your email',
+  'تذكرني': 'Remember me',
+  'أو عبر': 'Or via',
+  'جوجل': 'Google',
+  'فيسبوك': 'Facebook',
+  'مستخدم جديد': 'New user',
+  'فشل تسجيل الدخول عبر جوجل. يرجى المحاولة مرة أخرى.': 'Google login failed. Please try again.',
+  'خطأ في تسجيل الدخول': 'Login error',
+  'بيانات الدخول غير صحيحة': 'Invalid login details',
+
+  // مساعد الذكاء الاصطناعي والدردشة
+  'أهلاً بك في ثمار! أنا مساعدك الذكي. يمكنك التحدث معي أو طلب التواصل مع المسؤول مباشرة.': 'Welcome to Thimar! I am your smart assistant. You can chat with me or request to contact the admin directly.',
+  'تواصل مع ثمار': 'Contact Thimar',
+  'المسؤول والذكاء الاصطناعي': 'Admin & AI',
+  'اكتب رسالتك هنا...': 'Type your message here...',
+  'واتساب': 'WhatsApp',
+  'فشل الاتصال بالذكاء الاصطناعي': 'Failed to connect to AI',
+  'عذراً، حدث خطأ أثناء معالجة طلبك. يرجى المحاولة لاحقاً.': 'Sorry, an error occurred while processing your request. Please try again later.',
 
   // الأدوار والمستخدمين
   'المسؤول': 'Admin',

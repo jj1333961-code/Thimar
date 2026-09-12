@@ -2,25 +2,47 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { MessageCircle, X, Send, User, Brain, ShieldCheck, Globe, MessageSquare } from 'lucide-react'
+import { MessageCircle, X, Send, User, Brain, ShieldCheck, Globe, MessageSquare, Loader2 } from 'lucide-react'
 
 export function AIChatBubble() {
   const [isOpen, setIsOpen] = useState(false)
   const [message, setMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const [chat, setChat] = useState<{ role: 'user' | 'ai' | 'admin', text: string }[]>([
     { role: 'ai', text: 'أهلاً بك في ثمار! أنا مساعدك الذكي. يمكنك التحدث معي أو طلب التواصل مع المسؤول مباشرة.' }
   ])
 
-  const handleSend = () => {
-    if (!message.trim()) return
-    const newChat: { role: 'user' | 'ai' | 'admin', text: string }[] = [...chat, { role: 'user', text: message }]
+  const handleSend = async () => {
+    if (!message.trim() || isLoading) return
+    const userMessage = message.trim()
+    const newChat: { role: 'user' | 'ai' | 'admin', text: string }[] = [...chat, { role: 'user', text: userMessage }]
     setChat(newChat)
     setMessage('')
+    setIsLoading(true)
 
-    // Simulate AI or Admin Response
-    setTimeout(() => {
-      setChat(prev => [...prev, { role: 'ai', text: 'تم استلام رسالتك. سيقوم المسؤول بمراجعة طلبك والرد عليك في أقرب وقت عبر واتساب أو البريد الإلكتروني.' }])
-    }, 1000)
+    try {
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message: userMessage,
+          history: chat.filter(m => m.role !== 'admin').map(m => ({
+            role: m.role,
+            text: m.text
+          }))
+        })
+      })
+
+      if (!response.ok) throw new Error('فشل الاتصال بالذكاء الاصطناعي')
+      
+      const data = await response.json()
+      setChat(prev => [...prev, { role: 'ai', text: data.text }])
+    } catch (error) {
+      console.error(error)
+      setChat(prev => [...prev, { role: 'ai', text: 'عذراً، حدث خطأ أثناء معالجة طلبك. يرجى المحاولة لاحقاً.' }])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const openWhatsApp = () => {
@@ -93,9 +115,10 @@ export function AIChatBubble() {
                 />
                 <button 
                   onClick={handleSend}
-                  className="p-3 bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-100 hover:scale-105 active:scale-95 transition-all"
+                  disabled={isLoading}
+                  className={`p-3 rounded-xl shadow-lg shadow-emerald-100 transition-all ${isLoading ? 'bg-emerald-400' : 'bg-emerald-600 hover:scale-105 active:scale-95'}`}
                 >
-                  <Send className="w-5 h-5 rotate-180" />
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : <Send className="w-5 h-5 rotate-180 text-white" />}
                 </button>
               </div>
             </div>

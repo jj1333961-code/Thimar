@@ -11,6 +11,7 @@ import {
 
 import { AIChatBubble } from '@/components/ui/ai-chat-bubble'
 import { WelcomeMessage } from '@/components/ui/welcome-message'
+import { PWAInstallButton } from '@/components/pwa-install-button'
 
 export default function TeacherDashboard() {
   const [activeView, setActiveView] = useState<'students' | 'tasks' | 'evaluations'>('students')
@@ -60,7 +61,9 @@ export default function TeacherDashboard() {
             <p className="text-gray-500 mt-2 text-lg">لديك ١٢ طالباً اليوم بانتظار المتابعة</p>
           </div>
           
-          <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex items-center gap-4">
+            <PWAInstallButton />
+            <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
             <div className="px-6 border-l border-gray-100 text-center">
               <div className="text-2xl font-black text-emerald-600">٢٤</div>
               <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">تسميع منجز</div>
@@ -68,6 +71,7 @@ export default function TeacherDashboard() {
             <div className="px-6 text-center">
               <div className="text-2xl font-black text-amber-500">٥</div>
               <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">مهام معلقة</div>
+            </div>
             </div>
           </div>
         </header>

@@ -1,13 +1,14 @@
-const CACHE_NAME = 'thimar-shell-v6'
-const DATA_CACHE = 'thimar-api-v1'
+const CACHE_NAME = 'thimar-shell-v7'
+const DATA_CACHE = 'thimar-api-v2'
 
 const SHELL_ASSETS = [
   '/',
   '/login',
+  '/signup',
   '/app.html',
-  '/student.html',
-  '/parent.html',
-  '/admin.html',
+  '/student',
+  '/teacher',
+  '/parent',
   '/islamic-hub.css',
   '/prayer-screen.css',
   '/country-fields.css',
