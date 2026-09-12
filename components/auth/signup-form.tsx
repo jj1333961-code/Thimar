@@ -63,27 +63,99 @@ export function SignupForm() {
   }
 
   if (success) {
+    const waText = encodeURIComponent(`السلام عليكم ورحمة الله، لقد قمت بإنشاء حساب جديد في منصة ثمار باسم: ${formData.name || 'مستخدم جديد'} كـ (${role === 'teacher' ? 'معلم' : role === 'student' ? 'طالب' : 'ولي أمر'})، وأود متابعة حالة تفعيل الحساب.`);
+
     return (
-      <div className="text-center space-y-8 py-12 px-6">
-        <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-          <BadgeCheck className="w-14 h-14" />
+      <div className="text-center space-y-6 py-8 px-4 max-w-xl mx-auto" dir="rtl">
+        <div className="w-20 h-20 bg-emerald-100 text-emerald-700 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-inner border border-emerald-200">
+          <BadgeCheck className="w-12 h-12" />
         </div>
-        <h2 className="text-3xl font-black text-gray-900 italic">شكراً لثقتك في ثمار</h2>
-        <div className="bg-amber-50 p-6 rounded-[2rem] border border-amber-100 text-amber-800 text-sm leading-relaxed max-w-md mx-auto italic">
-          "تم استلام طلبك بنجاح. حسابك حالياً <span className="font-bold underline">معلق</span> قيد المراجعة الأمنية من قبل الإدارة لضمان جودة البيئة التعليمية. سيتم التواصل معك عبر واتساب أو البريد الإلكتروني فور الموافقة."
+
+        <div className="space-y-2">
+          <span className="px-3.5 py-1 bg-emerald-50 text-emerald-800 rounded-full text-xs font-bold border border-emerald-100">
+            تم استلام طلبك بنجاح
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-black text-gray-900">
+            مرحباً بك في أسرة ثِمار القرآنية
+          </h2>
+          <p className="text-gray-600 text-sm max-w-md mx-auto leading-relaxed">
+            تم تسجيل بياناتك بنجاح، وحسابك الآن قيد المراجعة الإدارية السريعة لضمان أفضل بيئة تعليمية وقرآنية.
+          </p>
         </div>
-        <p className="text-gray-500 max-w-md mx-auto font-medium">
-          يمكنك التواصل مع المسؤولين مباشرة عبر أيقونة الدردشة في أسفل الشاشة إذا كان لديك أي استفسار.
-        </p>
-        <div className="flex flex-col gap-4 pt-4">
+
+        {/* Contact Options Box */}
+        <div className="bg-white rounded-3xl p-6 border border-emerald-100 shadow-sm text-right space-y-4">
+          <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2 border-b border-gray-100 pb-3">
+            <Users className="w-4 h-4 text-emerald-600" />
+            <span>خيارات الرد والتواصل الفوري معك:</span>
+          </h4>
+
+          <div className="space-y-3 text-xs">
+            {/* Option 1: WhatsApp */}
+            <div className="p-3.5 bg-emerald-50/70 border border-emerald-100 rounded-2xl flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 bg-[#25D366] text-white rounded-xl flex items-center justify-center shrink-0">
+                  <Phone className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900">المراسلة الفورية عبر واتساب</p>
+                  <p className="text-gray-500 text-[11px]">رد سريع من المشرفين وتأكيد الحساب</p>
+                </div>
+              </div>
+              <a
+                href={`https://wa.me/201012345678?text=${waText}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-2 bg-[#25D366] text-white rounded-xl font-bold hover:brightness-105 transition-all text-center whitespace-nowrap"
+              >
+                تواصل واتساب
+              </a>
+            </div>
+
+            {/* Option 2: Google / Email */}
+            <div className="p-3.5 bg-blue-50/70 border border-blue-100 rounded-2xl flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center shrink-0">
+                  <User className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900">حساب جوجل والبريد الإلكتروني</p>
+                  <p className="text-gray-500 text-[11px]">{formData.email || 'سيصلك إشعار القبول على بريدك'}</p>
+                </div>
+              </div>
+              <span className="px-3 py-1.5 bg-white text-blue-700 border border-blue-200 rounded-xl font-bold text-[11px]">
+                تم التسجيل
+              </span>
+            </div>
+
+            {/* Option 3: Circular Chat Bubble */}
+            <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 bg-amber-500 text-white rounded-xl flex items-center justify-center shrink-0">
+                  <BadgeCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900">الأيقونة الدائرية في الأسفل</p>
+                  <p className="text-gray-500 text-[11px]">تحدث مباشرة مع مساعد ثمار أو المسؤول</p>
+                </div>
+              </div>
+              <span className="text-[11px] text-amber-800 font-bold bg-white px-2.5 py-1 rounded-lg border border-amber-200">
+                زر الدردشة ↙
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <button
             onClick={() => router.push('/login')}
-            className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100"
+            className="flex-1 py-3.5 px-6 bg-emerald-600 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
           >
-            العودة لتسجيل الدخول
+            الانتقال لتسجيل الدخول
           </button>
         </div>
-        <AIChatBubble />
+
+        <AIChatBubble initialRole="guest" />
       </div>
     )
   }
@@ -276,6 +348,7 @@ export function SignupForm() {
           </button>
         </p>
       </div>
+      <AIChatBubble initialRole="guest" />
     </div>
   )
 }

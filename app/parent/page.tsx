@@ -38,7 +38,7 @@ function ParentContent() {
       case 'home':
         return <ParentHome childrenList={childrenList} selectedChild={selectedChild} setSelectedChild={setSelectedChild} />
       case 'messages':
-        return <MessagesView currentUser={{ id: 'parent_id' }} />
+        return <MessagesView currentUser={{ id: 'parent@thimar.app', email: 'parent@thimar.app', name: 'أبو عمر', role: 'parent' }} />
       case 'tasks':
         return <TasksView role="parent" currentUserId="parent_id" />
       case 'reports':
@@ -81,7 +81,7 @@ function ParentContent() {
       </section>
 
       <BottomNav role="parent" />
-      <AIChatBubble />
+      <AIChatBubble initialRole="parent" />
     </>
   )
 }

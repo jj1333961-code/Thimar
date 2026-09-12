@@ -25,36 +25,16 @@ import { t } from '@/lib/i18n'
 
 // Admin Home View
 export function AdminHome({ requests, notifications, loading, handleAction, setLiveSessionMode }: any) {
-  const [showAIWelcome, setShowAIWelcome] = useState(true)
-
   return (
     <div className="space-y-8 pb-24">
+      <WelcomeMessage role="admin" userName="المسؤول العام" />
+
       <header className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-black text-gray-900 italic">{t('لوحة التحكم')}</h2>
-          <p className="text-gray-500 mt-2">{t('مرحباً بك مجدداً، المسؤول thimar')}</p>
+          <p className="text-gray-500 mt-2">{t('مرحباً بك مجدداً في الإشراف العام لمنصة ثمار')}</p>
         </div>
       </header>
-
-      <AnimatePresence>
-        {showAIWelcome && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-emerald-600 p-8 rounded-[3rem] text-white shadow-2xl relative overflow-hidden group"
-          >
-            <button onClick={() => setShowAIWelcome(false)} className="absolute top-6 left-6 p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-all"><X className="w-4 h-4" /></button>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
-                <Brain className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t('تحليل ثمار AI')}</span>
-            </div>
-            <p className="text-lg font-medium leading-relaxed italic max-w-2xl">
-              {t(`"مرحباً بك يا مسؤول! في غيابك، تم تقديم ${requests.length} طلبات انضمام جديدة، أحدهم من خارج البلاد. كما تم رصد نشاط غير معتاد في قسم التسميع يحتاج مراجعتك."`)}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <section className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm space-y-6">

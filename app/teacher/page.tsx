@@ -168,7 +168,7 @@ export default function TeacherDashboard() {
         )}
       </section>
 
-      <AIChatBubble />
+      <AIChatBubble initialRole="teacher" />
     </main>
   )
 }

@@ -9,7 +9,7 @@ import {
   GoogleAuthProvider, 
   signInWithEmailAndPassword 
 } from 'firebase/auth'
-import { auth, googleProvider } from '@/lib/firebase'
+import { auth, googleProvider, setGoogleAccessToken } from '@/lib/firebase'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
@@ -69,6 +69,13 @@ export function LoginForm() {
     try {
       const result = await signInWithPopup(auth, googleProvider)
       const user = result.user
+      const credential = GoogleAuthProvider.credentialFromResult(result)
+      const accessToken = credential?.accessToken || null
+      
+      if (accessToken) {
+        setGoogleAccessToken(accessToken)
+      }
+
       const idToken = await user.getIdToken()
       
       // Save token for app-core.js and other legacy scripts
@@ -193,10 +200,15 @@ export function LoginForm() {
               إنشاء حساب جديد
             </button>
           </p>
+
+          <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-center gap-2 text-xs text-emerald-800 bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
+            <span className="font-semibold">استفسار أو مساعدة؟</span>
+            <span className="text-gray-600">تحدث مع المساعد الذكي أو المسؤول عبر الزر الدائري في الأسفل ↙</span>
+          </div>
         </div>
       </div>
 
-      <AIChatBubble />
+      <AIChatBubble initialRole="guest" />
     </div>
   )
 }

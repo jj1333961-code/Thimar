@@ -72,7 +72,7 @@ function AdminContent() {
       case 'home':
         return <AdminHome requests={requests} notifications={notifications} loading={loading} handleAction={handleAction} setLiveSessionMode={setLiveSessionMode} />
       case 'messages':
-        return <MessagesView currentUser={{ id: 'admin_id' }} />
+        return <MessagesView currentUser={{ id: 'admin@thimar.org', email: 'admin@thimar.org', name: 'المسؤول العام', role: 'admin' }} />
       case 'notifications':
         return <NotificationsView />
       case 'reports':
@@ -121,7 +121,7 @@ function AdminContent() {
       </section>
 
       <BottomNav role="admin" />
-      <AIChatBubble />
+      <AIChatBubble initialRole="admin" />
 
       <AnimatePresence>
         {liveSessionMode && (

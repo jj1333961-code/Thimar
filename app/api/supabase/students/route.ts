@@ -36,7 +36,24 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
-    const query = searchParams.get('q')
+    const query = searchParams.get('query') || searchParams.get('q')
+
+    const userRole = (auth.user as any)?.role || 'user'
+    const userEmail = (auth.user as any)?.email || ''
+    const userId = (auth.user as any)?.id || ''
+
+    // If caller is student, enforce strict data isolation
+    if (userRole === 'student') {
+      if (id && id !== userId && id !== userEmail) {
+        return json({ error: 'غير مصرح لك بالوصول لبيانات طلاب آخرين' }, 403)
+      }
+      let student = await studentsDb.getById(id || userId)
+      if (!student && userEmail) {
+        const found = await studentsDb.search(userEmail)
+        student = found.find(s => s.email?.toLowerCase() === userEmail.toLowerCase()) || null
+      }
+      return json({ students: student ? [student] : [], student })
+    }
 
     if (id) {
       const student = await studentsDb.getById(id)

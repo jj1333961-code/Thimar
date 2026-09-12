@@ -9,7 +9,7 @@ import {
   Search, Award, Sparkles, Clock, Users, X, Music, Loader2
 } from 'lucide-react'
 
-import { WelcomeWalkthrough } from '@/components/ui/welcome-walkthrough'
+import { WelcomeWalkthrough, isWalkthroughDismissedForever } from '@/components/ui/welcome-walkthrough'
 import { AIChatBubble } from '@/components/ui/ai-chat-bubble'
 import { WelcomeMessage } from '@/components/ui/welcome-message'
 import { PWAInstallButton } from '@/components/pwa-install-button'
@@ -34,6 +34,9 @@ function StudentContent() {
   const [liveSessionMode, setLiveSessionMode] = useState<'ai' | 'teacher' | null>(null)
 
   useEffect(() => {
+    if (isWalkthroughDismissedForever()) {
+      return
+    }
     const hasSeenWalkthrough = localStorage.getItem('thimar_walkthrough_seen')
     if (!hasSeenWalkthrough) {
       setShowWalkthrough(true)
@@ -50,7 +53,7 @@ function StudentContent() {
       case 'home':
         return <StudentHome />
       case 'messages':
-        return <MessagesView currentUser={{ id: 'student_id' }} />
+        return <MessagesView currentUser={{ id: 'y@thimar.app', email: 'y@thimar.app', name: 'ياسين عمر', role: 'student' }} />
       case 'tasks':
         return <TasksView role="student" currentUserId="student_id" />
       case 'reports':
@@ -76,7 +79,15 @@ function StudentContent() {
             <h1 className="text-xl font-black text-gray-900 italic">ثمار الطالب</h1>
           </div>
           
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowWalkthrough(true)}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold border border-emerald-200 transition-colors"
+              title="عرض دليل المنصة وجولة الاستخدام"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>جولة المنصة</span>
+            </button>
             <PWAInstallButton />
             <div className="flex items-center gap-3 bg-gray-50 p-1 pr-4 rounded-full border border-gray-100">
               <span className="text-sm font-bold text-gray-700">ياسين عمر</span>
@@ -101,7 +112,7 @@ function StudentContent() {
       </section>
 
       <BottomNav role="student" />
-      <AIChatBubble />
+      <AIChatBubble initialRole="student" />
       
       <AnimatePresence>
         {liveSessionMode && (
