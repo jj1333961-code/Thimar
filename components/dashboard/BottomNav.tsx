@@ -40,7 +40,9 @@ interface BottomNavProps {
 export function BottomNav({ role, unreadNotificationsCount = 0, unreadMessagesCount = 0 }: BottomNavProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const activeTab = searchParams.get('tab') || 'home'
+  const requestedTab = searchParams.get('tab') || 'home'
+  const filteredItems = navItems.filter(item => item.roles.includes(role))
+  const activeTab = filteredItems.some(item => item.id === requestedTab) ? requestedTab : 'home'
 
   const [unreadNotifs, setUnreadNotifs] = useState(unreadNotificationsCount)
   const [unreadMsgs, setUnreadMsgs] = useState(unreadMessagesCount)
@@ -76,8 +78,6 @@ export function BottomNav({ role, unreadNotificationsCount = 0, unreadMessagesCo
     }
   }, [role, activeTab])
 
-  const filteredItems = navItems.filter(item => item.roles.includes(role))
-
   const handleTabChange = (tabId: string) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set('tab', tabId)
@@ -98,7 +98,7 @@ export function BottomNav({ role, unreadNotificationsCount = 0, unreadMessagesCo
     <nav 
       id="bottomNavigation"
       aria-label="التنقل الرئيسي"
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-t border-gray-200/80 dark:border-gray-800 px-3 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_24px_rgba(0,0,0,0.04)]"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 px-2 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_24px_rgba(0,0,0,0.06)] backdrop-blur-xl"
     >
       <div className="max-w-xl mx-auto flex items-center justify-around h-16 md:h-18">
         {filteredItems.map((item) => {
