@@ -23,12 +23,14 @@ import { ReportsView } from '@/components/dashboard/ReportsView'
 import { SettingsView } from '@/components/dashboard/SettingsView'
 import { TasksView } from '@/components/dashboard/TasksView'
 import { useSearchParams } from 'next/navigation'
+import { getClientSession } from '@/lib/client-session'
 
 function ParentContent() {
   const searchParams = useSearchParams()
   const activeTab = searchParams.get('tab') || 'home'
   
   const [selectedChild, setSelectedChild] = useState(0)
+  const session = getClientSession()
   const [showWalkthrough, setShowWalkthrough] = useState(false)
   const childrenList = [
     { name: 'ياسين عمر', level: 'الجزء ٢٤', progress: 82, teacher: 'أ. أحمد علي' },
@@ -63,11 +65,11 @@ function ParentContent() {
       case 'home':
         return <ParentHome childrenList={childrenList} selectedChild={selectedChild} setSelectedChild={setSelectedChild} />
       case 'messages':
-        return <MessagesView currentUser={{ id: 'parent@thimar.app', email: 'parent@thimar.app', name: 'أبو عمر', role: 'parent' }} />
+        return <MessagesView currentUser={{ id: session?.id || 'parent', email: session?.email || '', name: session?.name || 'ولي الأمر', role: 'parent' }} />
       case 'tasks':
-        return <TasksView role="parent" currentUserId="parent_id" />
+        return <TasksView role="parent" currentUserId={session?.id || ''} />
       case 'reports':
-        return <ReportsView role="parent" currentUserId="parent_id" />
+        return <ReportsView role="parent" currentUserId={session?.id || ''} />
       case 'settings':
         return <SettingsView />
       default:

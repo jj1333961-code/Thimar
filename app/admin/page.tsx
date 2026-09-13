@@ -23,12 +23,14 @@ import { ReportsView } from '@/components/dashboard/ReportsView'
 import { SettingsView } from '@/components/dashboard/SettingsView'
 import { useSearchParams } from 'next/navigation'
 import { requestJson } from '@/lib/api-client'
+import { getClientSession } from '@/lib/client-session'
 
 function AdminContent() {
   const searchParams = useSearchParams()
   const activeTab = searchParams.get('tab') || 'home'
   
   const [liveSessionMode, setLiveSessionMode] = useState<'ai' | 'teacher' | null>(null)
+  const session = getClientSession()
   const [requests, setRequests] = useState<any[]>([])
   const [notifications, setNotifications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -91,7 +93,7 @@ function AdminContent() {
       case 'home':
         return <AdminHome requests={requests} notifications={notifications} loading={loading} handleAction={handleAction} setLiveSessionMode={setLiveSessionMode} />
       case 'messages':
-        return <MessagesView currentUser={{ id: 'admin@thimar.org', email: 'admin@thimar.org', name: 'المسؤول العام', role: 'admin' }} />
+        return <MessagesView currentUser={{ id: session?.id || 'admin', email: session?.email || '', name: session?.name || 'المسؤول العام', role: 'admin' }} />
       case 'notifications':
         return <NotificationsView />
       case 'reports':

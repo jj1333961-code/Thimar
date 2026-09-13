@@ -35,63 +35,8 @@ interface Task {
   surahOrSubject?: string
 }
 
-const INITIAL_TASKS: Task[] = [
-  { 
-    id: 1, 
-    type: 'recitation', 
-    title: 'تسميع سورة النور (الآيات ١ - ٢٠)', 
-    description: 'تسميع غيباً مع مراعاة أحكام المدود ومخارج الحروف وترقيق الراء.',
-    status: 'new', 
-    deadline: 'اليوم، ٨:٠٠ م', 
-    studentName: 'ياسين عمر',
-    surahOrSubject: 'سورة النور'
-  },
-  { 
-    id: 2, 
-    type: 'exam', 
-    title: 'اختبار الجزء الرابع والعشرين (الحفظ المتقن)', 
-    description: 'اختبار تجريبي للتأكد من ربط الآيات والمتشابهات اللفظية.',
-    status: 'completed', 
-    score: '٩٥٪', 
-    deadline: 'أمس، ٥:٠٠ م',
-    studentName: 'ياسين عمر',
-    surahOrSubject: 'الجزء ٢٤'
-  },
-  { 
-    id: 3, 
-    type: 'homework', 
-    title: 'حفظ أبيات تحفة الأطفال من ١ إلى ١٠', 
-    description: 'تدوين معاني الكلمات وحفظ الأبيات مع الاستماع للتسجيل النموذجي.',
-    status: 'in-progress', 
-    deadline: 'غداً، ٤:٠٠ م', 
-    studentName: 'لينا عمر',
-    surahOrSubject: 'تجويد - تحفة الأطفال'
-  },
-  { 
-    id: 4, 
-    type: 'recitation', 
-    title: 'تسميع سورة المؤمنون (الآيات ٨٠ - ١١٨)', 
-    description: 'تسجيل الورد اليومي مع الشيخ المشرف.',
-    status: 'graded', 
-    score: '٩٨٪', 
-    deadline: 'منذ يومين', 
-    studentName: 'ياسين عمر',
-    surahOrSubject: 'سورة المؤمنون'
-  },
-  { 
-    id: 5, 
-    type: 'activity', 
-    title: 'نشاط استخراج أحكام النون الساكنة من سورة يس', 
-    description: 'استخراج ٥ أمثلة لكل حكم من أحكام النون الساكنة والتنوين.',
-    status: 'new', 
-    deadline: 'الخميس، ٦:٠٠ م', 
-    studentName: 'لينا عمر',
-    surahOrSubject: 'تطبيق عملي تجويد'
-  },
-]
-
 export function TasksView({ role, currentUserId }: { role: 'student' | 'parent', currentUserId: string }) {
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS)
+  const [tasks, setTasks] = useState<Task[]>([])
   const [filterType, setFilterType] = useState<'all' | 'recitation' | 'exam' | 'homework'>('all')
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'completed'>('all')
   const [selectedChild, setSelectedChild] = useState<string>('all')
@@ -102,6 +47,29 @@ export function TasksView({ role, currentUserId }: { role: 'student' | 'parent',
   const [isRecording, setIsRecording] = useState(false)
   const [recordingSeconds, setRecordingSeconds] = useState(0)
   const [submittedSuccess, setSubmittedSuccess] = useState(false)
+
+  React.useEffect(() => {
+    let active = true
+    fetch('/api/data', { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .then(payload => {
+        if (!active) return
+        const records = Array.isArray(payload?.data?.tasks) ? payload.data.tasks : []
+        setTasks(records.map((record: Record<string, unknown>, index: number) => ({
+          id: Number(record.id || index),
+          type: (record.type === 'recitation' || record.type === 'exam' || record.type === 'homework' || record.type === 'activity') ? record.type : 'activity',
+          title: String(record.title || record.name || ''),
+          description: record.description ? String(record.description) : undefined,
+          status: (record.status === 'new' || record.status === 'in-progress' || record.status === 'completed' || record.status === 'graded') ? record.status : 'new',
+          deadline: record.deadline ? String(record.deadline) : undefined,
+          score: record.score ? String(record.score) : undefined,
+          studentName: record.studentName ? String(record.studentName) : undefined,
+          surahOrSubject: record.surahOrSubject ? String(record.surahOrSubject) : undefined,
+        })))
+      })
+      .catch(() => { if (active) setTasks([]) })
+    return () => { active = false }
+  }, [currentUserId, role])
 
   // Recording timer
   React.useEffect(() => {

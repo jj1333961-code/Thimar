@@ -25,12 +25,14 @@ import { ReportsView } from '@/components/dashboard/ReportsView'
 import { SettingsView } from '@/components/dashboard/SettingsView'
 import { TasksView } from '@/components/dashboard/TasksView'
 import { useSearchParams } from 'next/navigation'
+import { getClientSession } from '@/lib/client-session'
 
 function StudentContent() {
   const searchParams = useSearchParams()
   const activeTab = searchParams.get('tab') || 'home'
   
   const [showWalkthrough, setShowWalkthrough] = useState(false)
+  const session = getClientSession()
   const [liveSessionMode, setLiveSessionMode] = useState<'ai' | 'teacher' | null>(null)
 
   useEffect(() => {
@@ -61,11 +63,11 @@ function StudentContent() {
       case 'home':
         return <StudentHome />
       case 'messages':
-        return <MessagesView currentUser={{ id: 'y@thimar.app', email: 'y@thimar.app', name: 'ياسين عمر', role: 'student' }} />
+        return <MessagesView currentUser={{ id: session?.id || 'student', email: session?.email || '', name: session?.name || 'الطالب', role: 'student' }} />
       case 'tasks':
-        return <TasksView role="student" currentUserId="student_id" />
+        return <TasksView role="student" currentUserId={session?.id || ''} />
       case 'reports':
-        return <ReportsView role="student" currentUserId="student_id" />
+        return <ReportsView role="student" currentUserId={session?.id || ''} />
       case 'settings':
         return <SettingsView />
       default:
