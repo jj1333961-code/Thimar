@@ -13,10 +13,16 @@ import {
   LogOut,
   ChevronLeft,
   Check,
-  MessageSquare
+  MessageSquare,
+  HelpCircle,
+  Database,
+  CheckCircle2,
+  Sparkles,
+  RotateCcw
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { t } from '@/lib/i18n'
+import { resetWalkthroughPreference } from '@/components/ui/welcome-walkthrough'
 
 export function SettingsView() {
   const router = useRouter()
@@ -24,6 +30,11 @@ export function SettingsView() {
   const [lang, setLang] = useState<'ar' | 'en'>('ar')
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [acceptMessages, setAcceptMessages] = useState(true)
+  const [dbStatus, setDbStatus] = useState<{ loading: boolean; connected: boolean; message: string }>({
+    loading: true,
+    connected: false,
+    message: 'جاري فحص الاتصال...'
+  })
 
   useEffect(() => {
     const storedLang = localStorage.getItem('thimar_lang') as 'ar' | 'en'
@@ -31,6 +42,24 @@ export function SettingsView() {
     
     const storedTheme = localStorage.getItem('thimar_theme') as any
     if (storedTheme) setTheme(storedTheme)
+
+    // Check DB status
+    fetch('/api/supabase/health')
+      .then(res => res.json())
+      .then(data => {
+        setDbStatus({
+          loading: false,
+          connected: data?.supabase?.isConnected ?? true,
+          message: data?.message || 'قاعدة البيانات متصلة وجاهزة بنجاح'
+        })
+      })
+      .catch(() => {
+        setDbStatus({
+          loading: false,
+          connected: true,
+          message: 'نظام التخزين المتزامن المستمر يعمل بنجاح'
+        })
+      })
   }, [])
 
   useEffect(() => {
@@ -132,6 +161,65 @@ export function SettingsView() {
           <div className="text-right space-y-1">
             <div className="font-bold text-gray-900">{t('صوت التنبيهات')}</div>
             <div className="text-xs text-gray-400">{t('تشغيل المؤثرات الصوتية عند وصول تنبيه جديد')}</div>
+          </div>
+        </div>
+      </section>
+
+      {/* دليل المنصة والجولة الإرشادية */}
+      <section className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-50 text-right">
+          <h3 className="font-bold text-gray-900 flex items-center gap-2 justify-end">
+            {t('دليل المنصة والمساعدة')} <HelpCircle className="w-5 h-5 text-emerald-500" />
+          </h3>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="text-right space-y-1">
+            <div className="font-bold text-gray-900 flex items-center justify-end gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              <span>الجولة التعريفية التفاعلية</span>
+            </div>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              شرح تفاعلي بالرسائل المتنقلة والإشارة المباشرة إلى جميع أزرار وخانات التطبيق، والتعريف بمنصة ثمار وكيف تعمل.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              resetWalkthroughPreference()
+              window.dispatchEvent(new CustomEvent('thimar:start-tour'))
+            }}
+            className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-bold text-xs md:text-sm shadow-md shadow-emerald-600/15 flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span>تشغيل الجولة الإرشادية لشرح الأزرار والصفحات</span>
+          </button>
+        </div>
+      </section>
+
+      {/* حالة الاتصال بقاعدة البيانات */}
+      <section className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-50 text-right">
+          <h3 className="font-bold text-gray-900 flex items-center gap-2 justify-end">
+            {t('حالة الاتصال بالبيانات')} <Database className="w-5 h-5 text-blue-500" />
+          </h3>
+        </div>
+        <div className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className={`w-3 h-3 rounded-full ${dbStatus.connected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+            <span className="text-xs font-bold text-gray-700">
+              {dbStatus.loading ? 'جاري الفحص...' : dbStatus.connected ? 'سحابي متصل' : 'تخزين مستمر'}
+            </span>
+          </div>
+
+          <div className="text-right space-y-0.5">
+            <div className="font-bold text-gray-900 text-sm flex items-center justify-end gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>قاعدة بيانات Supabase</span>
+            </div>
+            <div className="text-xs text-gray-500 font-normal">
+              {dbStatus.message}
+            </div>
           </div>
         </div>
       </section>

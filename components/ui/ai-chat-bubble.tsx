@@ -384,6 +384,7 @@ export function AIChatBubble({ initialRole = 'guest' }: AIChatBubbleProps) {
 
       {/* The Floating Circular Button (خانت الرسالة التي تشبه الدائرة في أسفل الشاشة) */}
       <button
+        id="floatingChatButton"
         onClick={() => setIsOpen(!isOpen)}
         className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-tr from-emerald-800 via-emerald-700 to-teal-600 text-white rounded-full flex items-center justify-center shadow-xl shadow-emerald-900/25 hover:scale-105 active:scale-95 transition-all group relative border-2 border-white/20"
         title="تحدث مع مساعد ثمار أو الإدارة"

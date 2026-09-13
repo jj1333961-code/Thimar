@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Sparkles, X, Brain, Calendar, Bell, RefreshCw, ChevronDown, ChevronUp, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react'
+import { Sparkles, X, Brain, Calendar, Bell, RefreshCw, ChevronDown, ChevronUp, CheckCircle, AlertCircle, ArrowLeft, HelpCircle } from 'lucide-react'
 import { generateWelcomeSummary, WelcomeBriefingData } from '@/lib/ai-service'
+import { resetWalkthroughPreference } from '@/components/ui/welcome-walkthrough'
 
 interface WelcomeMessageProps {
   role: 'admin' | 'teacher' | 'student' | 'parent'
@@ -79,6 +80,17 @@ export function WelcomeMessage({ role, userName, onActionClick }: WelcomeMessage
           </div>
 
           <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => {
+                resetWalkthroughPreference()
+                window.dispatchEvent(new CustomEvent('thimar:start-tour'))
+              }}
+              title="جولة إرشادية وشرح أزرار المنصة"
+              className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-emerald-100 hover:text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 border border-white/10"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-amber-300" />
+              <span className="hidden sm:inline">دليل الأزرار</span>
+            </button>
             <button
               onClick={() => fetchSummary(true)}
               disabled={refreshing || loading}

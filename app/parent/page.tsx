@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { 
   Users, TrendingUp, Calendar, 
@@ -12,6 +12,7 @@ import {
 import { AIChatBubble } from '@/components/ui/ai-chat-bubble'
 import { WelcomeMessage } from '@/components/ui/welcome-message'
 import { PWAInstallButton } from '@/components/pwa-install-button'
+import { WelcomeWalkthrough, isWalkthroughDismissedForever } from '@/components/ui/welcome-walkthrough'
 import { Brain, X } from 'lucide-react'
 
 import { Suspense } from 'react'
@@ -28,10 +29,34 @@ function ParentContent() {
   const activeTab = searchParams.get('tab') || 'home'
   
   const [selectedChild, setSelectedChild] = useState(0)
+  const [showWalkthrough, setShowWalkthrough] = useState(false)
   const childrenList = [
     { name: 'ياسين عمر', level: 'الجزء ٢٤', progress: 82, teacher: 'أ. أحمد علي' },
     { name: 'لينا عمر', level: 'الجزء ٥', progress: 45, teacher: 'أ. سارة خالد' },
   ]
+
+  useEffect(() => {
+    if (isWalkthroughDismissedForever()) {
+      const handleRelaunchTour = () => setShowWalkthrough(true)
+      window.addEventListener('thimar:start-tour', handleRelaunchTour)
+      return () => window.removeEventListener('thimar:start-tour', handleRelaunchTour)
+    }
+
+    const hasSeen = localStorage.getItem('thimar_walkthrough_seen') || localStorage.getItem('thimar_new_user_welcomed')
+    if (!hasSeen) {
+      setShowWalkthrough(true)
+    }
+
+    const handleRelaunchTour = () => setShowWalkthrough(true)
+    window.addEventListener('thimar:start-tour', handleRelaunchTour)
+    return () => window.removeEventListener('thimar:start-tour', handleRelaunchTour)
+  }, [])
+
+  const closeWalkthrough = () => {
+    localStorage.setItem('thimar_walkthrough_seen', 'true')
+    localStorage.setItem('thimar_new_user_welcomed', 'true')
+    setShowWalkthrough(false)
+  }
 
   const renderContent = () => {
     switch (activeTab) {
@@ -52,6 +77,10 @@ function ParentContent() {
 
   return (
     <>
+      <AnimatePresence>
+        {showWalkthrough && <WelcomeWalkthrough onClose={closeWalkthrough} userRole="parent" />}
+      </AnimatePresence>
+
       {/* Top Navbar */}
       <nav className="bg-white/80 backdrop-blur-lg border-b border-gray-100 px-6 py-4 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">

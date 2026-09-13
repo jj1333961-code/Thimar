@@ -35,16 +35,24 @@ function StudentContent() {
 
   useEffect(() => {
     if (isWalkthroughDismissedForever()) {
-      return
+      // Continue to register listener so user can relaunch if clicked from Settings
+      const handleRelaunchTour = () => setShowWalkthrough(true)
+      window.addEventListener('thimar:start-tour', handleRelaunchTour)
+      return () => window.removeEventListener('thimar:start-tour', handleRelaunchTour)
     }
-    const hasSeenWalkthrough = localStorage.getItem('thimar_walkthrough_seen')
+    const hasSeenWalkthrough = localStorage.getItem('thimar_walkthrough_seen') || localStorage.getItem('thimar_new_user_welcomed')
     if (!hasSeenWalkthrough) {
       setShowWalkthrough(true)
     }
+
+    const handleRelaunchTour = () => setShowWalkthrough(true)
+    window.addEventListener('thimar:start-tour', handleRelaunchTour)
+    return () => window.removeEventListener('thimar:start-tour', handleRelaunchTour)
   }, [])
 
   const closeWalkthrough = () => {
     localStorage.setItem('thimar_walkthrough_seen', 'true')
+    localStorage.setItem('thimar_new_user_welcomed', 'true')
     setShowWalkthrough(false)
   }
 
@@ -68,7 +76,7 @@ function StudentContent() {
   return (
     <>
       <AnimatePresence>
-        {showWalkthrough && <WelcomeWalkthrough onClose={closeWalkthrough} />}
+        {showWalkthrough && <WelcomeWalkthrough onClose={closeWalkthrough} userRole="student" />}
       </AnimatePresence>
 
       {/* Top Navbar */}

@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation'
 
 import { AIChatBubble } from '@/components/ui/ai-chat-bubble'
 import { LiveRecitationSession } from '@/components/ui/live-recitation-session'
+import { WelcomeWalkthrough, isWalkthroughDismissedForever } from '@/components/ui/welcome-walkthrough'
 
 import { Suspense } from 'react'
 import { BottomNav } from '@/components/dashboard/BottomNav'
@@ -31,11 +32,29 @@ function AdminContent() {
   const [requests, setRequests] = useState<any[]>([])
   const [notifications, setNotifications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [showWalkthrough, setShowWalkthrough] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     fetchData()
+
+    if (!isWalkthroughDismissedForever()) {
+      const hasSeen = localStorage.getItem('thimar_walkthrough_seen') || localStorage.getItem('thimar_new_user_welcomed')
+      if (!hasSeen) {
+        setShowWalkthrough(true)
+      }
+    }
+
+    const handleRelaunchTour = () => setShowWalkthrough(true)
+    window.addEventListener('thimar:start-tour', handleRelaunchTour)
+    return () => window.removeEventListener('thimar:start-tour', handleRelaunchTour)
   }, [])
+
+  const closeWalkthrough = () => {
+    localStorage.setItem('thimar_walkthrough_seen', 'true')
+    localStorage.setItem('thimar_new_user_welcomed', 'true')
+    setShowWalkthrough(false)
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -86,6 +105,10 @@ function AdminContent() {
 
   return (
     <>
+      <AnimatePresence>
+        {showWalkthrough && <WelcomeWalkthrough onClose={closeWalkthrough} userRole="admin" />}
+      </AnimatePresence>
+
       {/* Top Navbar */}
       <nav className="bg-white/80 backdrop-blur-lg border-b border-gray-100 px-6 py-4 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
