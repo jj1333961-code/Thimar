@@ -42,8 +42,13 @@ export function SettingsView() {
     const storedLang = localStorage.getItem('thimar_lang') as 'ar' | 'en'
     if (storedLang) setLang(storedLang)
     
-    const storedTheme = localStorage.getItem('thimar_theme') as any
-    if (storedTheme) setTheme(storedTheme)
+    const storedTheme = localStorage.getItem('thimar_theme') as 'light' | 'dark' | 'system' | null
+    if (storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system') setTheme(storedTheme)
+
+    const storedSound = localStorage.getItem('thimar_sound_enabled')
+    if (storedSound !== null) setSoundEnabled(storedSound !== 'false')
+    const storedMessages = localStorage.getItem('thimar_accept_messages')
+    if (storedMessages !== null) setAcceptMessages(storedMessages !== 'false')
 
     // Check DB status
     fetch('/api/supabase/health')
@@ -74,6 +79,14 @@ export function SettingsView() {
     }
     localStorage.setItem('thimar_theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    localStorage.setItem('thimar_sound_enabled', String(soundEnabled))
+  }, [soundEnabled])
+
+  useEffect(() => {
+    localStorage.setItem('thimar_accept_messages', String(acceptMessages))
+  }, [acceptMessages])
 
   const changeLanguage = (newLang: 'ar' | 'en') => {
     setLang(newLang)

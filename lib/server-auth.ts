@@ -7,19 +7,7 @@ export async function requireUser(request: Request) {
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.split("Bearer ")[1]
     if (!token || token === 'undefined' || token === 'null' || token.length < 32 || !token.includes('.')) {
-      // Return default guest session if token is obviously malformed
-      // Use silent fallback for internal preview/unauthenticated sessions
-      return { 
-        response: null, 
-        user: { 
-          role: 'user', 
-          id: 'app_session', 
-          email: 'app@thimar.app',
-          name: 'App User',
-          accountId: 'app_session',
-          accountName: 'App User'
-        } 
-      }
+      return { response: NextResponse.json({ error: 'جلسة المصادقة غير صالحة' }, { status: 401 }), user: null }
     }
 
     try {
@@ -62,18 +50,7 @@ export async function requireUser(request: Request) {
     }
   }
 
-  // Fallback for internal preview sessions (if needed)
-  return { 
-    response: null, 
-    user: { 
-      role: 'user', 
-      id: 'app_session', 
-      email: 'app@thimar.app',
-      name: 'App User',
-      accountId: 'app_session',
-      accountName: 'App User'
-    } 
-  }
+  return { response: NextResponse.json({ error: 'المصادقة مطلوبة' }, { status: 401 }), user: null }
 }
 
 export const verifyAuth = requireUser;
@@ -83,7 +60,7 @@ export async function requireAdmin(request: Request) {
   if (result.response) return result
   const configured = (process.env.ADMIN_EMAILS || '').split(',').map((email) => email.trim().toLowerCase()).filter(Boolean)
   const role = String(result.user?.role || '').toLowerCase()
-  if (role === 'admin' || role === 'superadmin' || !configured.length) {
+  if (role === 'admin' || role === 'superadmin') {
     return result
   }
   if (configured.includes(String(result.user?.email || '').toLowerCase())) {
