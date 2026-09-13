@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // Vercel manages the production server bundle; standalone output is not needed
+  // and can prevent Vercel's build integration from finding Next.js tracing metadata.
   serverExternalPackages: ["pdf-parse", "pdfjs-dist", "@napi-rs/canvas"],
   images: {
     unoptimized: true,
