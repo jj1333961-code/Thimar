@@ -97,7 +97,7 @@ function ParentContent() {
         </div>
       </nav>
 
-      <section className="max-w-7xl mx-auto p-6 md:p-12">
+      <section className="max-w-7xl mx-auto px-6 pb-28 pt-6 md:px-12 md:pb-32 md:pt-12">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
