@@ -123,5 +123,16 @@ service cloud.firestore {
       allow update: if isSignedIn() && existing().userId == userId() && incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
       allow delete: if isAdmin();
     }
+
+    // Admin Messages
+    match /adminMessages/{messageId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if true; // Public can send messages, but API will handle validation/blocking
+    }
+
+    // Blocked Senders
+    match /blockedSenders/{userId} {
+      allow read, write: if isAdmin();
+    }
   }
 }

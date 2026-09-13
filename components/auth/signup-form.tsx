@@ -7,6 +7,7 @@ import { COUNTRY_RULES, CountryRule } from '@/lib/country-rules'
 import { Check, ChevronRight, Loader2, User, Phone, MapPin, BadgeCheck, GraduationCap, Users } from 'lucide-react'
 
 import { AIChatBubble } from '@/components/ui/ai-chat-bubble'
+import { SocialAuthButtons } from './social-auth-buttons'
 
 export function SignupForm() {
   const router = useRouter()
@@ -173,6 +174,14 @@ export function SignupForm() {
             {error}
           </div>
         )}
+
+        <div className="mb-8">
+          <SocialAuthButtons />
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100"></div></div>
+            <div className="relative flex justify-center text-xs"><span className="px-4 bg-white text-gray-400 font-medium">أو التسجيل اليدوي</span></div>
+          </div>
+        </div>
 
         <form onSubmit={handleSignup} className="space-y-8">
           <AnimatePresence mode="wait">

@@ -11,11 +11,11 @@ import {
   GoogleAuthProvider, 
   signInWithEmailAndPassword 
 } from 'firebase/auth'
-import { auth, googleProvider, setGoogleAccessToken } from '@/lib/firebase'
+import { auth, db, setGoogleAccessToken } from '@/lib/firebase'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
 
 import { AIChatBubble } from '@/components/ui/ai-chat-bubble'
+import { SocialAuthButtons } from './social-auth-buttons'
 
 export function LoginForm() {
   const router = useRouter()
@@ -107,69 +107,6 @@ export function LoginForm() {
     }
   }
 
-  const handleGoogleLogin = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      let result
-      try {
-        result = await signInWithPopup(auth, googleProvider)
-      } catch (popupErr: any) {
-        if (
-          popupErr.code === 'auth/popup-blocked' ||
-          popupErr.code === 'auth/cancelled-popup-request' ||
-          popupErr.code === 'auth/operation-not-supported-in-this-environment'
-        ) {
-          // Inside WebView/Capacitor or restricted popup environments, use redirect
-          await signInWithRedirect(auth, googleProvider)
-          return
-        }
-        throw popupErr
-      }
-      const user = result.user
-      const credential = GoogleAuthProvider.credentialFromResult(result)
-      const accessToken = credential?.accessToken || null
-      
-      if (accessToken) {
-        setGoogleAccessToken(accessToken)
-      }
-
-      const idToken = await user.getIdToken()
-      
-      // Save token for app-core.js and other legacy scripts
-      localStorage.setItem('thimar_auth_token', idToken)
-
-      // Check if user exists in Firestore
-      const userDoc = await getDoc(doc(db, 'users', user.uid))
-      
-      if (!userDoc.exists()) {
-        // New user from Google - redirect to role selection or create basic profile
-        // For this demo, let's create a student profile if they don't exist
-        await setDoc(doc(db, 'users', user.uid), {
-          name: user.displayName || 'مستخدم جديد',
-          email: user.email,
-          role: 'student',
-          isApproved: true,
-          createdAt: serverTimestamp(),
-          lastLogin: serverTimestamp()
-        })
-        router.push('/student')
-      } else {
-        const userData = userDoc.data()
-        // Update last login
-        await setDoc(doc(db, 'users', user.uid), { lastLogin: serverTimestamp() }, { merge: true })
-        
-        // Redirect based on role
-        router.push(`/${userData.role}`)
-      }
-    } catch (err: any) {
-      console.error('Google Login Error:', err)
-      setError('فشل تسجيل الدخول عبر جوجل. يرجى المحاولة مرة أخرى.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <div className="w-full max-w-md mx-auto space-y-8">
       <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-xl border border-emerald-100 overflow-hidden">
@@ -235,22 +172,10 @@ export function LoginForm() {
 
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-            <div className="relative flex justify-center text-sm"><span className="px-4 bg-white text-gray-500 uppercase">أو عبر</span></div>
+            <div className="relative flex justify-center text-sm"><span className="px-4 bg-white text-gray-500 font-bold">أو المتابعة السريعة عبر</span></div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <button 
-              type="button"
-              onClick={handleGoogleLogin}
-              className="flex items-center justify-center gap-2 py-3 px-4 bg-white border border-gray-200 rounded-xl font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
-              disabled={loading}
-            >
-              <Globe className="w-5 h-5 text-red-500" /> جوجل
-            </button>
-            <button className="flex items-center justify-center gap-2 py-3 px-4 bg-white border border-gray-200 rounded-xl font-medium hover:bg-gray-50 transition-colors">
-              <Share2 className="w-5 h-5 text-blue-600" /> فيسبوك
-            </button>
-          </div>
+          <SocialAuthButtons />
 
           <p className="mt-8 text-center text-gray-500">
             ليس لديك حساب؟{' '}

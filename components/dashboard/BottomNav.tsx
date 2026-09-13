@@ -48,12 +48,28 @@ export function BottomNav({ role, unreadNotificationsCount = 0, unreadMessagesCo
   useEffect(() => {
     // Quick poll for notification / message badges if admin or user
     if (role === 'admin') {
+      // Fetch notifications
       fetch('/api/supabase/notifications')
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data?.notifications)) {
             const unread = data.notifications.filter((n: any) => !n.isRead && !n.read).length
             setUnreadNotifs(unread)
+          }
+        })
+        .catch(() => {})
+
+      // Fetch admin messages unread count
+      const token = localStorage.getItem('thimar_auth_token')
+      fetch('/api/admin/messages/unread-count', {
+        headers: { 
+          'Authorization': `Bearer ${token}` 
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (typeof data.count === 'number') {
+            setUnreadMsgs(data.count)
           }
         })
         .catch(() => {})

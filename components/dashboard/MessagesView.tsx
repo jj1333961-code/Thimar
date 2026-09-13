@@ -10,6 +10,7 @@ import {
   Video, 
   ChevronRight,
   MessageCircle,
+  Mail,
   Loader2,
   Check,
   CheckCheck,
@@ -20,6 +21,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react'
 import { requestJson } from '@/lib/api-client'
 import { GoogleChatView } from './GoogleChatView'
+import { AdminInboxView } from './AdminInboxView'
 import { t } from '@/lib/i18n'
 
 interface Message {
@@ -48,7 +50,8 @@ interface Contact {
 }
 
 export function MessagesView({ currentUser }: { currentUser?: { id?: string; email?: string; name?: string; role?: string } }) {
-  const [activeMode, setActiveMode] = useState<'direct' | 'google_chat'>('direct')
+  const role = currentUser?.role || 'admin'
+  const [activeMode, setActiveMode] = useState<'direct' | 'google_chat' | 'admin_inbox'>(role === 'admin' ? 'admin_inbox' : 'direct')
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [contacts, setContacts] = useState<Contact[]>([])
   const [messages, setMessages] = useState<Message[]>([])
@@ -58,7 +61,6 @@ export function MessagesView({ currentUser }: { currentUser?: { id?: string; ema
   const [searchQuery, setSearchQuery] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const role = currentUser?.role || 'admin'
   const myId = currentUser?.id || currentUser?.email || 'admin@thimar.org'
   const myName = currentUser?.name || (role === 'admin' ? 'المسؤول العام' : role === 'student' ? 'ياسين عمر' : 'ولي الأمر')
 
@@ -301,6 +303,19 @@ export function MessagesView({ currentUser }: { currentUser?: { id?: string; ema
         </div>
 
         <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl border border-gray-200 dark:border-gray-700 self-start">
+          {role === 'admin' && (
+            <button
+              onClick={() => setActiveMode('admin_inbox')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                activeMode === 'admin_inbox'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900'
+              }`}
+            >
+              <Mail className="w-4 h-4" />
+              <span>بريد المسؤول</span>
+            </button>
+          )}
           <button
             onClick={() => setActiveMode('direct')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
@@ -329,6 +344,8 @@ export function MessagesView({ currentUser }: { currentUser?: { id?: string; ema
       {/* View Switcher */}
       {activeMode === 'google_chat' ? (
         <GoogleChatView />
+      ) : activeMode === 'admin_inbox' ? (
+        <AdminInboxView />
       ) : (
         <div className="h-[calc(100vh-16rem)] min-h-[550px] flex bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
           {/* Contacts Sidebar (List) */}

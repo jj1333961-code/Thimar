@@ -100,17 +100,40 @@ export function AIChatBubble({ initialRole = 'guest' }: AIChatBubbleProps) {
 
   const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!adminForm.inquiry.trim()) return
+    if (!adminForm.inquiry.trim() || !adminForm.name.trim()) return
 
     setAdminSending(true)
-    // Simulate / log admin ticket submission
+    setError('')
     try {
-      await new Promise(res => setTimeout(res, 800))
+      const token = localStorage.getItem('thimar_auth_token')
+      const response = await fetch('/api/contact/send', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          name: adminForm.name,
+          message: adminForm.inquiry,
+          // We can also send phoneOrEmail if we want, but the requirement specifically said name and message.
+          // I'll include it in the message body or add a field to the API if needed.
+          // The requirement said: "اسم المرسل - نص الرسالة - زر إرسال"
+        })
+      })
+
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'فشل إرسال الرسالة')
+
       setAdminSentSuccess(true)
+    } catch (err: any) {
+      console.error(err)
+      setError(err.message)
     } finally {
       setAdminSending(false)
     }
   }
+
+  const [error, setError] = useState('')
 
   return (
     <div className="fixed bottom-6 left-6 z-[110] flex flex-col items-start gap-3" dir="rtl">
@@ -284,6 +307,11 @@ export function AIChatBubble({ initialRole = 'guest' }: AIChatBubbleProps) {
 
                 {/* Direct In-App Message to Admin */}
                 <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex-1 flex flex-col">
+                  {error && (
+                    <div className="mb-3 p-2 bg-red-50 text-red-600 rounded-lg border border-red-100 text-[10px] text-center">
+                      {error}
+                    </div>
+                  )}
                   {adminSentSuccess ? (
                     <div className="text-center py-6 space-y-3 my-auto">
                       <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
@@ -291,7 +319,7 @@ export function AIChatBubble({ initialRole = 'guest' }: AIChatBubbleProps) {
                       </div>
                       <h5 className="font-bold text-sm text-gray-900">تم إرسال رسالتك بنجاح!</h5>
                       <p className="text-xs text-gray-500 leading-relaxed max-w-xs mx-auto">
-                        تم تسجيل طلبك لدى مسؤولي ثمار، وسيتم التواصل معك عبر الواتساب أو البريد في أقرب وقت.
+                        تم إرسال رسالتك إلى المسؤول بنجاح. سيتم الرد عليك في أقرب وقت ممكن.
                       </p>
                       <button
                         onClick={() => {
@@ -305,46 +333,43 @@ export function AIChatBubble({ initialRole = 'guest' }: AIChatBubbleProps) {
                     </div>
                   ) : (
                     <form onSubmit={handleAdminSubmit} className="space-y-2.5">
-                      <h5 className="font-bold text-xs text-gray-800">أرسل استفسارك للإدارة مباشرة:</h5>
+                      <h5 className="font-bold text-xs text-gray-800">أرسل رسالة للمسؤول:</h5>
                       
-                      <input
-                        type="text"
-                        placeholder="اسمك الكريم"
-                        required
-                        value={adminForm.name}
-                        onChange={e => setAdminForm({ ...adminForm, name: e.target.value })}
-                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-1 focus:ring-emerald-500 focus:bg-white"
-                      />
+                      <div>
+                        <label className="block text-[10px] text-gray-500 mb-1 mr-1">اسمك الكريم</label>
+                        <input
+                          type="text"
+                          placeholder="أدخل اسمك"
+                          required
+                          value={adminForm.name}
+                          onChange={e => setAdminForm({ ...adminForm, name: e.target.value })}
+                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-1 focus:ring-emerald-500 focus:bg-white"
+                        />
+                      </div>
 
-                      <input
-                        type="text"
-                        placeholder="رقم الواتساب أو البريد الإلكتروني"
-                        required
-                        value={adminForm.phoneOrEmail}
-                        onChange={e => setAdminForm({ ...adminForm, phoneOrEmail: e.target.value })}
-                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-1 focus:ring-emerald-500 focus:bg-white"
-                      />
-
-                      <textarea
-                        placeholder="اكتب استفسارك أو طلبك هنا بالتفصيل..."
-                        rows={3}
-                        required
-                        value={adminForm.inquiry}
-                        onChange={e => setAdminForm({ ...adminForm, inquiry: e.target.value })}
-                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-1 focus:ring-emerald-500 focus:bg-white resize-none"
-                      />
+                      <div>
+                        <label className="block text-[10px] text-gray-500 mb-1 mr-1">نص الرسالة</label>
+                        <textarea
+                          placeholder="اكتب رسالتك هنا..."
+                          rows={4}
+                          required
+                          value={adminForm.inquiry}
+                          onChange={e => setAdminForm({ ...adminForm, inquiry: e.target.value })}
+                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-1 focus:ring-emerald-500 focus:bg-white resize-none"
+                        />
+                      </div>
 
                       <button
                         type="submit"
-                        disabled={adminSending || !adminForm.inquiry.trim()}
-                        className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-xl font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2"
+                        disabled={adminSending || !adminForm.inquiry.trim() || !adminForm.name.trim()}
+                        className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-xl font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2"
                       >
                         {adminSending ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <>
                             <Send className="w-3.5 h-3.5 rotate-180" />
-                            <span>إرسال للإدارة</span>
+                            <span>إرسال الرسالة</span>
                           </>
                         )}
                       </button>

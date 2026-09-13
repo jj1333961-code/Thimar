@@ -136,6 +136,31 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["type", "title", "message", "isRead", "createdAt"]
+    },
+    "AdminMessage": {
+      "title": "Admin Message",
+      "description": "A message sent to the platform administrator",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderId": { "type": "string" },
+        "body": { "type": "string" },
+        "status": { "type": "string", "enum": ["unread", "read"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderName", "body", "status", "createdAt"]
+    },
+    "BlockedSender": {
+      "title": "Blocked Sender",
+      "description": "A record of a blocked user from sending messages to admin",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "reason": { "type": "string" },
+        "blockedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "blockedAt"]
     }
   },
   "firestore": {
@@ -170,6 +195,14 @@
     "/notifications/{notificationId}": {
       "schema": "Notification",
       "description": "User notifications"
+    },
+    "/adminMessages/{messageId}": {
+      "schema": "AdminMessage",
+      "description": "Messages sent to admin"
+    },
+    "/blockedSenders/{userId}": {
+      "schema": "BlockedSender",
+      "description": "Blocked senders"
     }
   }
 }
