@@ -74,6 +74,242 @@ html, body {
   .nav-bar { flex-wrap: wrap; }
 }
 
+/* ===== Fixed Bottom Navigation Bar Styling ===== */
+.app-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  background: color-mix(in srgb, var(--card-bg) 95%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  transition: transform 0.25s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+.app-bottom-nav.hidden {
+  display: none !important;
+}
+.app-bottom-nav-inner {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  max-width: 680px;
+  margin: 0 auto;
+  gap: 4px;
+}
+.app-nav-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 2px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--text-light);
+  font-size: 0.78rem;
+  font-weight: 600;
+  position: relative;
+  transition: all 0.2s ease;
+  min-width: 0;
+  text-decoration: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.app-nav-tab:hover {
+  color: var(--primary);
+  background: rgba(49, 92, 75, 0.07);
+}
+.app-nav-tab.active {
+  color: var(--primary);
+  font-weight: 800;
+  background: rgba(49, 92, 75, 0.12);
+}
+.app-nav-tab-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.app-nav-tab-label {
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+  font-size: 0.75rem;
+}
+.app-nav-badge {
+  position: absolute;
+  top: -4px;
+  inset-inline-end: -10px;
+  background: #dc3545;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+  line-height: 1.2;
+}
+
+/* ===== Styling for Reports, Tasks & Settings Pages ===== */
+.report-section {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+.report-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.eval-card {
+  background: color-mix(in srgb, var(--card-bg) 85%, var(--primary) 15%);
+  border: 2px solid var(--primary);
+  border-radius: 16px;
+  padding: 22px;
+  margin-top: 25px;
+}
+.eval-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-top: 15px;
+}
+.eval-item {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.eval-item-label {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  font-weight: 600;
+}
+.eval-item-val {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.eval-stars {
+  color: #f59e0b;
+  font-size: 1rem;
+}
+.task-badge-new { background: #3b82f6; color: #fff; }
+.task-badge-notstarted { background: #6b7280; color: #fff; }
+.task-badge-inprogress { background: #f59e0b; color: #000; }
+.task-badge-completed { background: #10b981; color: #fff; }
+.task-badge-rejected { background: #ef4444; color: #fff; }
+.task-hub-filter {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+  -webkit-overflow-scrolling: touch;
+}
+.task-hub-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.task-hub-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.student-report-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.student-report-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+  border-color: var(--primary);
+}
+.settings-option-group {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 18px;
+}
+.settings-option-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-btn-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.settings-toggle-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+.settings-toggle-btn.active {
+  border-color: var(--primary);
+  background: rgba(49, 92, 75, 0.1);
+  color: var(--primary);
+  font-weight: 800;
+}
 </style>
   <script src="/islamic-data.js" defer></script>
   <script src="/country-data.js" defer></script>
@@ -1233,41 +1469,124 @@ window.goBack = function() {
   <div id="adminsTable"></div>
 </div>
 
-<!-- إعدادت المسؤول -->
-<div id="adminSettings" class="page hidden" style="max-width:600px;">
+<!-- صفحة تقارير المسؤول -->
+<div id="adminReportsPage" class="page hidden">
+  <div class="page-header">
+    <h2>📊 تقارير وسجلات الطلاب</h2>
+    <button type="button" class="btn btn-outline btn-sm" onclick="renderAdminReports()">🔄 تحديث</button>
+  </div>
+  <div id="adminReportsListView">
+    <p style="color:var(--text-light);margin-bottom:18px;">اختر أي طالب من القائمة أدناه لعرض تقريره التعليمي الكامل: نتائج التسميع، نتائج الاختبارات، نتائج المهام، التسجيلات الصوتية، ومعدل الإنجاز والتقييم الشامل.</p>
+    <div class="form-group" style="margin-bottom:20px;">
+      <input type="search" id="adminReportsSearch" placeholder="🔍 ابحث عن طالب بالاسم أو اسم المستخدم أو الجزء..." oninput="filterAdminReportsStudents(this.value)">
+    </div>
+    <div id="adminReportsStudentsList"></div>
+  </div>
+  <div id="adminReportsDetailView" class="hidden">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="closeAdminStudentReport()">← العودة لقائمة الطلاب</button>
+      <div id="adminReportStudentBadge"></div>
+    </div>
+    <div id="adminReportsDetailContent"></div>
+  </div>
+</div>
+
+<!-- إعدادات المسؤول -->
+<div id="adminSettings" class="page hidden" style="max-width:700px;">
   <div class="page-header"><h2>⚙️ إعدادات المسؤول</h2></div>
   <div id="adminSettingsAlert"></div>
-  <h4 style="color:var(--primary); margin:20px 0 15px; border-bottom:2px solid var(--border); padding-bottom:10px;">🔐 تأكيد الهوية</h4>
-  <div class="form-group">
-    <label>رقم الموبايل الحالي (للتأكيد)</label>
-    <div class="country-input-row" style="position:relative;">
-      <select id="confirmMobileCountry" data-country-selector data-phone-id="confirmMobile" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="password" id="confirmMobile" data-phone-input class="phone-input" placeholder="أدخل رقم الموبايل الحالي للتأكيد" autocomplete="tel" style="padding-left:45px;">
-      <span onclick="togglePassVisibility('confirmMobile', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span>
+
+  <!-- خيارات المظهر والسمة -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🎨 مظهر التطبيق (السمة)</div>
+    <div class="settings-btn-row">
+      <button type="button" class="settings-toggle-btn" id="adminThemeLightBtn" onclick="setAppTheme('light')">☀️ فاتح</button>
+      <button type="button" class="settings-toggle-btn" id="adminThemeDarkBtn" onclick="setAppTheme('dark')">🌙 داكن</button>
+      <button type="button" class="settings-toggle-btn" id="adminThemeAutoBtn" onclick="setAppTheme('auto')">💻 تلقائي حسب النظام</button>
     </div>
   </div>
-  <div class="form-group">
-    <label>الرقم السري الحالي (للتأكيد)</label>
-    <div style="position:relative;">
-      <input type="password" id="confirmPass" placeholder="أدخل الرقم السري الحالي للتأكيد" style="padding-left:45px;">
-      <span onclick="togglePassVisibility('confirmPass', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span>
+
+  <!-- خيارات اللغة -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🌐 لغة التطبيق (Language)</div>
+    <div class="settings-btn-row">
+      <button type="button" class="settings-toggle-btn" id="adminLangArBtn" onclick="setAppLang('ar')">🇸🇦 العربية</button>
+      <button type="button" class="settings-toggle-btn" id="adminLangEnBtn" onclick="setAppLang('en')">🇬🇧 English</button>
     </div>
   </div>
-  <h4 style="color:var(--success); margin:25px 0 15px; border-bottom:2px solid var(--border); padding-bottom:10px;">✏️ البيانات الجديدة</h4>
-  <div class="form-group">
-    <label>رقم الموبايل الجديد</label>
-    <div class="country-input-row" style="position:relative;">
-      <select id="newMobileCountry" data-country-selector data-phone-id="newMobile" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="password" id="newMobile" data-phone-input class="phone-input" placeholder="أدخل الرقم الجديد" autocomplete="tel" style="padding-left:45px;">
-      <span onclick="togglePassVisibility('newMobile', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span>
+
+  <!-- صوت التنبيهات -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🔔 صوت التنبيهات</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+      <div>
+        <label style="font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="adminSoundCheckbox" onchange="toggleAppSound(this.checked)" style="width:18px; height:18px; accent-color:var(--primary); cursor:pointer;">
+          <span>تشغيل أصوات التنبيهات والرسائل</span>
+        </label>
+        <small style="color:var(--text-light); display:block; margin-top:4px;">إصدار نغمة رقيقة عند وصول رسالة جديدة أو تنبيه مهم</small>
+      </div>
+      <button type="button" class="btn btn-outline btn-sm" onclick="testNotificationSound()">🎵 تجربة النغمة</button>
     </div>
   </div>
-  <div class="form-group">
-    <label>الرقم السري الجديد</label>
-    <div style="position:relative;">
-      <input type="password" id="newPass" placeholder="أدخل الرقم السري الجديد" style="padding-left:45px;">
-      <span onclick="togglePassVisibility('newPass', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span>
+
+  <!-- الخصوصية والتحكم في الرسائل -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🔒 الخصوصية والتحكم في الرسائل</div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>استقبال الرسائل والمحادثات:</label>
+      <select id="adminMsgPreference" onchange="setAppMessageFilter(this.value)">
+        <option value="all">السماح باستقبال الرسائل من الجميع</option>
+        <option value="contacts">السماح فقط بالطلاب وأولياء الأمور المسجلين</option>
+        <option value="strict">حظر واستبعاد الرسائل غير المرغوبة</option>
+      </select>
     </div>
   </div>
-  <button class="btn btn-success" onclick="saveAdminSettings()">💾 حفظ التغييرات</button>
+
+  <!-- تعديل البيانات السرية -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🔐 تعديل بيانات الدخول</div>
+    <h4 style="color:var(--primary); margin:10px 0 15px; border-bottom:1px solid var(--border); padding-bottom:8px; font-size:0.95rem;">تأكيد الهوية الحالية</h4>
+    <div class="form-group">
+      <label>رقم الموبايل الحالي (للتأكيد)</label>
+      <div class="country-input-row" style="position:relative;">
+        <select id="confirmMobileCountry" data-country-selector data-phone-id="confirmMobile" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="password" id="confirmMobile" data-phone-input class="phone-input" placeholder="أدخل رقم الموبايل الحالي للتأكيد" autocomplete="tel" style="padding-left:45px;">
+        <span onclick="togglePassVisibility('confirmMobile', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>الرقم السري الحالي (للتأكيد)</label>
+      <div style="position:relative;">
+        <input type="password" id="confirmPass" placeholder="أدخل الرقم السري الحالي للتأكيد" style="padding-left:45px;">
+        <span onclick="togglePassVisibility('confirmPass', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span>
+      </div>
+    </div>
+    <h4 style="color:var(--success); margin:20px 0 15px; border-bottom:1px solid var(--border); padding-bottom:8px; font-size:0.95rem;">البيانات الجديدة</h4>
+    <div class="form-group">
+      <label>رقم الموبايل الجديد</label>
+      <div class="country-input-row" style="position:relative;">
+        <select id="newMobileCountry" data-country-selector data-phone-id="newMobile" aria-label="دولة رقم الهاتف"><option value="EG">مصر (+20)</option></select><input type="password" id="newMobile" data-phone-input class="phone-input" placeholder="أدخل الرقم الجديد" autocomplete="tel" style="padding-left:45px;">
+        <span onclick="togglePassVisibility('newMobile', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>الرقم السري الجديد</label>
+      <div style="position:relative;">
+        <input type="password" id="newPass" placeholder="أدخل الرقم السري الجديد" style="padding-left:45px;">
+        <span onclick="togglePassVisibility('newPass', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span>
+      </div>
+    </div>
+    <button class="btn btn-success" onclick="saveAdminSettings()">💾 حفظ التغييرات</button>
+  </div>
+
+  <!-- تسجيل الخروج -->
+  <div style="margin-top:25px; padding:18px; border:2px solid rgba(220,53,69,0.3); border-radius:16px; background:rgba(220,53,69,0.05); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+    <div>
+      <strong style="color:var(--danger); display:block; font-size:1rem;">تسجيل الخروج من الحساب</strong>
+      <small style="color:var(--text-light)">إنهاء الجلسة والعودة لشاشة الدخول الرئيسية</small>
+    </div>
+    <button type="button" class="btn btn-danger" onclick="confirmAppLogout()">🚪 تسجيل الخروج</button>
+  </div>
 </div>
 
 <!-- إضافة طالب -->
@@ -1601,14 +1920,114 @@ window.goBack = function() {
   </div>
 </div>
 
-<!-- إعدادات الطلب -->
-<div id="studentSettings" class="page hidden" style="max-width:500px;">
-  <div class="page-header"><h2>️ تغيير الرقم السري</h2></div>
-  <div id="studentSettingsAlert"></div>
-  <div class="form-group"><label>الرقم السري الحالي</label><input type="password" id="currentStudentPass" placeholder="أدخل الرقم السري الحالي"></div>
-  <div class="form-group"><label>الرقم السي الجديد</label><input type="password" id="newStudentPass" placeholder="أدخل الرقم السري الجديد"></div>
-  <button class="btn btn-success" onclick="saveStudentPass()">💾 حفظ</button>
+<!-- صفحة مهمات الطالب (المهمات المركزية) -->
+<div id="studentTasksPage" class="page hidden">
+  <div class="page-header">
+    <h2>📝 مهماتي التعليمية</h2>
+    <button type="button" class="btn btn-outline btn-sm" onclick="renderStudentTasksHub()">🔄 تحديث</button>
+  </div>
+  <p style="color:var(--text-light);margin-bottom:15px;">مركز المهام اليومية: تسميع الآيات، حل الواجبات، القراءة والمحاكاة، والاختبارات الدورية.</p>
   
+  <div class="task-hub-filter" role="tablist">
+    <button type="button" class="task-hub-btn active" onclick="filterStudentTasksHub('all', this)">الكل (<span id="countStudentTasksAll">0</span>)</button>
+    <button type="button" class="task-hub-btn" onclick="filterStudentTasksHub('pending', this)">⏳ جديدة / بانتظار الإنجاز (<span id="countStudentTasksPending">0</span>)</button>
+    <button type="button" class="task-hub-btn" onclick="filterStudentTasksHub('submitted', this)">🔍 قيد المراجعة (<span id="countStudentTasksReview">0</span>)</button>
+    <button type="button" class="task-hub-btn" onclick="filterStudentTasksHub('completed', this)">✅ مكتملة ومقبولة (<span id="countStudentTasksCompleted">0</span>)</button>
+    <button type="button" class="task-hub-btn" onclick="filterStudentTasksHub('rejected', this)">⚠️ بحاجة لإعادة (<span id="countStudentTasksRejected">0</span>)</button>
+  </div>
+
+  <div id="studentTasksHubContent"></div>
+</div>
+
+<!-- صفحة تقرير الطالب الخاص (أدائي التعليمي) -->
+<div id="studentReportsPage" class="page hidden">
+  <div class="page-header">
+    <h2>📊 تقريري التعليمي وسجل أدائي</h2>
+    <button type="button" class="btn btn-outline btn-sm" onclick="renderStudentSelfReport()">🔄 تحديث</button>
+  </div>
+  <p style="color:var(--text-light);margin-bottom:18px;">سجل تفصيلي لنتائج التسميع، نتائج الاختبارات، أرشيف المهام المنجزة، والتسجيلات الصوتية مع التقييم العام لأدائك واجتهادك.</p>
+  <div id="studentReportsContent"></div>
+</div>
+
+<!-- إعدادات الطالب -->
+<div id="studentSettings" class="page hidden" style="max-width:650px;">
+  <div class="page-header"><h2>⚙️ إعدادات الطالب</h2></div>
+  <div id="studentSettingsAlert"></div>
+
+  <!-- خيارات المظهر والسمة -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🎨 مظهر التطبيق (السمة)</div>
+    <div class="settings-btn-row">
+      <button type="button" class="settings-toggle-btn" id="studentThemeLightBtn" onclick="setAppTheme('light')">☀️ فاتح</button>
+      <button type="button" class="settings-toggle-btn" id="studentThemeDarkBtn" onclick="setAppTheme('dark')">🌙 داكن</button>
+      <button type="button" class="settings-toggle-btn" id="studentThemeAutoBtn" onclick="setAppTheme('auto')">💻 تلقائي حسب النظام</button>
+    </div>
+  </div>
+
+  <!-- خيارات اللغة -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🌐 لغة التطبيق (Language)</div>
+    <div class="settings-btn-row">
+      <button type="button" class="settings-toggle-btn" id="studentLangArBtn" onclick="setAppLang('ar')">🇸🇦 العربية</button>
+      <button type="button" class="settings-toggle-btn" id="studentLangEnBtn" onclick="setAppLang('en')">🇬🇧 English</button>
+    </div>
+  </div>
+
+  <!-- صوت التنبيهات -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🔔 صوت التنبيهات والرسائل</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+      <div>
+        <label style="font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="studentSoundCheckbox" onchange="toggleAppSound(this.checked)" style="width:18px; height:18px; accent-color:var(--primary); cursor:pointer;">
+          <span>تشغيل أصوات الرسائل والمهمات</span>
+        </label>
+        <small style="color:var(--text-light); display:block; margin-top:4px;">تنبيه صوتي عند إرسال المعلم لمهمة أو رسالة جديدة</small>
+      </div>
+      <button type="button" class="btn btn-outline btn-sm" onclick="testNotificationSound()">🎵 تجربة النغمة</button>
+    </div>
+  </div>
+
+  <!-- الخصوصية والتحكم في الرسائل -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🔒 الخصوصية والمراسلة</div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>خيارات التواصل:</label>
+      <select id="studentMsgPreference" onchange="setAppMessageFilter(this.value)">
+        <option value="all">التواصل مع المعلمين وإدارة المنصة</option>
+        <option value="strict">تلقي رسائل المعلم فقط وتجاهل الإشعارات العامة</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- تغيير الرقم السري -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🔐 تغيير الرقم السري</div>
+    <div class="form-group">
+      <label>الرقم السري الحالي</label>
+      <div style="position:relative;">
+        <input type="password" id="currentStudentPass" placeholder="أدخل الرقم السري الحالي" style="padding-left:45px;">
+        <span onclick="togglePassVisibility('currentStudentPass', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>الرقم السري الجديد</label>
+      <div style="position:relative;">
+        <input type="password" id="newStudentPass" placeholder="أدخل الرقم السري الجديد" style="padding-left:45px;">
+        <span onclick="togglePassVisibility('newStudentPass', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span>
+      </div>
+    </div>
+    <button class="btn btn-success" onclick="saveStudentPass()">💾 حفظ الرقم السري الجديد</button>
+  </div>
+
+  <!-- تسجيل الخروج -->
+  <div style="margin-top:20px; padding:18px; border:2px solid rgba(220,53,69,0.3); border-radius:16px; background:rgba(220,53,69,0.05); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+    <div>
+      <strong style="color:var(--danger); display:block; font-size:1rem;">تسجيل الخروج</strong>
+      <small style="color:var(--text-light)">الخروج الآمن والعودة للشاشة الرئيسية</small>
+    </div>
+    <button type="button" class="btn btn-danger" onclick="confirmAppLogout()">🚪 تسجيل الخروج</button>
+  </div>
 </div>
 
 <!-- دخول ولي الأمر -->
@@ -1689,6 +2108,109 @@ window.goBack = function() {
     
   </div>
   <div id="parentPendingTasksContent"></div>
+</div>
+
+<!-- صفحة المهام المركزية لولي الأمر -->
+<div id="parentTasksPage" class="page hidden">
+  <div class="page-header">
+    <h2>📝 متابعة مهام الأبناء</h2>
+    <button type="button" class="btn btn-outline btn-sm" onclick="renderParentTasksHub()">🔄 تحديث</button>
+  </div>
+  <p style="color:var(--text-light);margin-bottom:15px;">عرض المهام والتسميعات والاختبارات المطلوبة من كل ابن ومتابعة إنجازها خطوة بخطوة.</p>
+  <div id="parentTasksHubContent"></div>
+</div>
+
+<!-- صفحة تقارير الأبناء لولي الأمر -->
+<div id="parentReportsPage" class="page hidden">
+  <div class="page-header">
+    <h2>📊 تقارير الأبناء ومستويات الأداء</h2>
+    <button type="button" class="btn btn-outline btn-sm" onclick="renderParentReportsHub()">🔄 تحديث</button>
+  </div>
+  <p style="color:var(--text-light);margin-bottom:15px;">تقارير تفصيلية شاملة للأبناء المرتبطين بحسابك فقط: التسميع، الاختبارات، الواجبات، والتسجيلات والتقييم.</p>
+  
+  <div id="parentReportsChildTabs" style="display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap;"></div>
+  <div id="parentReportsDetailContent"></div>
+</div>
+
+<!-- إعدادات ولي الأمر -->
+<div id="parentSettings" class="page hidden" style="max-width:650px;">
+  <div class="page-header"><h2>⚙️ إعدادات ولي الأمر</h2></div>
+  <div id="parentSettingsAlert"></div>
+
+  <!-- خيارات المظهر والسمة -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🎨 مظهر التطبيق (السمة)</div>
+    <div class="settings-btn-row">
+      <button type="button" class="settings-toggle-btn" id="parentThemeLightBtn" onclick="setAppTheme('light')">☀️ فاتح</button>
+      <button type="button" class="settings-toggle-btn" id="parentThemeDarkBtn" onclick="setAppTheme('dark')">🌙 داكن</button>
+      <button type="button" class="settings-toggle-btn" id="parentThemeAutoBtn" onclick="setAppTheme('auto')">💻 تلقائي حسب النظام</button>
+    </div>
+  </div>
+
+  <!-- خيارات اللغة -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🌐 لغة التطبيق (Language)</div>
+    <div class="settings-btn-row">
+      <button type="button" class="settings-toggle-btn" id="parentLangArBtn" onclick="setAppLang('ar')">🇸🇦 العربية</button>
+      <button type="button" class="settings-toggle-btn" id="parentLangEnBtn" onclick="setAppLang('en')">🇬🇧 English</button>
+    </div>
+  </div>
+
+  <!-- صوت التنبيهات -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🔔 صوت التنبيهات والرسائل</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+      <div>
+        <label style="font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="parentSoundCheckbox" onchange="toggleAppSound(this.checked)" style="width:18px; height:18px; accent-color:var(--primary); cursor:pointer;">
+          <span>تشغيل أصوات الرسائل ومستجدات الأبناء</span>
+        </label>
+        <small style="color:var(--text-light); display:block; margin-top:4px;">تنبيه صوتي عند وصول نتائج أو رسائل من معلمي أبنائك</small>
+      </div>
+      <button type="button" class="btn btn-outline btn-sm" onclick="testNotificationSound()">🎵 تجربة النغمة</button>
+    </div>
+  </div>
+
+  <!-- الخصوصية والتحكم في الرسائل -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🔒 الخصوصية والتواصل</div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>خيارات استقبال الرسائل:</label>
+      <select id="parentMsgPreference" onchange="setAppMessageFilter(this.value)">
+        <option value="all">استقبال رسائل المعلمين والإدارة</option>
+        <option value="strict">استقبال الرسائل الضرورية الخاصة بنتائج الأبناء فقط</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- تغيير الرقم السري -->
+  <div class="settings-option-group">
+    <div class="settings-option-title">🔐 تغيير الرقم السري لولي الأمر</div>
+    <div class="form-group">
+      <label>الرقم السري الحالي</label>
+      <div style="position:relative;">
+        <input type="password" id="currentParentPass" placeholder="أدخل الرقم السري الحالي" style="padding-left:45px;">
+        <span onclick="togglePassVisibility('currentParentPass', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>الرقم السري الجديد</label>
+      <div style="position:relative;">
+        <input type="password" id="newParentPass" placeholder="أدخل الرقم السري الجديد" style="padding-left:45px;">
+        <span onclick="togglePassVisibility('newParentPass', this)" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.2rem; user-select:none;">👁️</span>
+      </div>
+    </div>
+    <button class="btn btn-success" onclick="saveParentPass()">💾 حفظ الرقم السري الجديد</button>
+  </div>
+
+  <!-- تسجيل الخروج -->
+  <div style="margin-top:20px; padding:18px; border:2px solid rgba(220,53,69,0.3); border-radius:16px; background:rgba(220,53,69,0.05); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+    <div>
+      <strong style="color:var(--danger); display:block; font-size:1rem;">تسجيل الخروج</strong>
+      <small style="color:var(--text-light)">إنهاء جلسة ولي الأمر والعودة لشاشة الدخول</small>
+    </div>
+    <button type="button" class="btn btn-danger" onclick="confirmAppLogout()">🚪 تسجيل الخروج</button>
+  </div>
 </div>
 
 <!-- صفحة المفات المرفوعة -->
@@ -2144,6 +2666,10 @@ try { window.alert = function(m){ showToast(m); }; } catch(e){}
 })();
 </script>
 <link rel="stylesheet" href="/messaging.css">
+
+<nav id="appBottomNav" class="app-bottom-nav hidden" aria-label="شريط التنقل السفلي">
+  <div class="app-bottom-nav-inner" id="appBottomNavInner"></div>
+</nav>
 
 <script src="/legacy-i18n.js" defer></script>
 <script src="/prayer-screen.js" defer></script>
