@@ -60,6 +60,7 @@ export function WelcomeMessage({ role, userName, onActionClick }: WelcomeMessage
   return (
     <AnimatePresence>
       <motion.div
+        id="home-welcome-card"
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96 }}
@@ -82,13 +83,23 @@ export function WelcomeMessage({ role, userName, onActionClick }: WelcomeMessage
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => {
+                window.dispatchEvent(new CustomEvent('thimar:start-home-tour'))
+              }}
+              title="جولة إرشادية تفاعلية في عناصر الصفحة الرئيسية"
+              className="px-2.5 py-1 bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 hover:text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 border border-amber-400/30 shadow-sm"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span className="hidden sm:inline">جولة الصفحة</span>
+            </button>
+            <button
+              onClick={() => {
                 resetWalkthroughPreference()
                 window.dispatchEvent(new CustomEvent('thimar:start-tour'))
               }}
               title="جولة إرشادية وشرح أزرار المنصة"
               className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-emerald-100 hover:text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 border border-white/10"
             >
-              <HelpCircle className="w-3.5 h-3.5 text-amber-300" />
+              <HelpCircle className="w-3.5 h-3.5 text-emerald-200" />
               <span className="hidden sm:inline">دليل الأزرار</span>
             </button>
             <button

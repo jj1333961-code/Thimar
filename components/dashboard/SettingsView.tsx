@@ -18,11 +18,13 @@ import {
   Database,
   CheckCircle2,
   Sparkles,
-  RotateCcw
+  RotateCcw,
+  Compass
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { t } from '@/lib/i18n'
 import { resetWalkthroughPreference } from '@/components/ui/welcome-walkthrough'
+import { resetHomeTourPreference } from '@/components/ui/home-tour'
 
 export function SettingsView() {
   const router = useRouter()
@@ -183,17 +185,37 @@ export function SettingsView() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              resetWalkthroughPreference()
-              window.dispatchEvent(new CustomEvent('thimar:start-tour'))
-            }}
-            className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-bold text-xs md:text-sm shadow-md shadow-emerald-600/15 flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
-          >
-            <RotateCcw className="w-4 h-4" />
-            <span>تشغيل الجولة الإرشادية لشرح الأزرار والصفحات</span>
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                resetHomeTourPreference()
+                // Navigate to home tab if needed or dispatch event
+                const url = new URL(window.location.href)
+                url.searchParams.set('tab', 'home')
+                window.history.pushState({}, '', url.toString())
+                window.dispatchEvent(new CustomEvent('thimar:start-home-tour'))
+                // Also trigger router refresh if on settings tab
+                window.location.href = `${window.location.pathname}?tab=home`
+              }}
+              className="py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-2xl font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+            >
+              <Compass className="w-4 h-4 text-emerald-600" />
+              <span>جولة عناصر الصفحة الرئيسية</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                resetWalkthroughPreference()
+                window.dispatchEvent(new CustomEvent('thimar:start-tour'))
+              }}
+              className="py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-bold text-xs md:text-sm shadow-md shadow-emerald-600/15 flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>جولة شرح أزرار المنصة</span>
+            </button>
+          </div>
         </div>
       </section>
 

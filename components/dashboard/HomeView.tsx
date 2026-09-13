@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { 
   Brain, 
@@ -18,26 +18,55 @@ import {
   Heart, 
   ChevronRight,
   BookOpen,
-  Award
+  Award,
+  Sparkles,
+  Compass
 } from 'lucide-react'
 import { WelcomeMessage } from '@/components/ui/welcome-message'
+import { HomeTour, isHomeTourDismissed } from '@/components/ui/home-tour'
 import { t } from '@/lib/i18n'
 
 // Admin Home View
 export function AdminHome({ requests, notifications, loading, handleAction, setLiveSessionMode }: any) {
+  const [showHomeTour, setShowHomeTour] = useState(false)
+
+  useEffect(() => {
+    if (!isHomeTourDismissed()) {
+      const seen = localStorage.getItem('thimar_home_tour_seen')
+      if (!seen) {
+        setShowHomeTour(true)
+        localStorage.setItem('thimar_home_tour_seen', 'true')
+      }
+    }
+    const handleStart = () => setShowHomeTour(true)
+    window.addEventListener('thimar:start-home-tour', handleStart)
+    return () => window.removeEventListener('thimar:start-home-tour', handleStart)
+  }, [])
+
   return (
     <div className="space-y-8 pb-24">
+      <HomeTour isOpen={showHomeTour} onClose={() => setShowHomeTour(false)} userRole="admin" />
+
       <WelcomeMessage role="admin" userName="المسؤول العام" />
 
-      <header className="flex items-center justify-between">
+      <header id="home-admin-header" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-gray-900 italic">{t('لوحة التحكم')}</h2>
           <p className="text-gray-500 mt-2">{t('مرحباً بك مجدداً في الإشراف العام لمنصة ثمار')}</p>
         </div>
+
+        <button
+          onClick={() => setShowHomeTour(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-2xl text-xs md:text-sm font-bold border border-emerald-200 shadow-sm transition-all active:scale-95"
+          title="شرح مبسط لجميع عناصر وخانات الصفحة الرئيسية"
+        >
+          <Compass className="w-4 h-4 text-emerald-600 animate-spin-slow" />
+          <span>جولة إرشادية في عناصر الصفحة</span>
+        </button>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <section className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm space-y-6">
+        <section id="home-pending-requests" className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-emerald-500" /> {t('طلبات الانضمام المعلقة')}
@@ -67,7 +96,7 @@ export function AdminHome({ requests, notifications, loading, handleAction, setL
           </div>
         </section>
 
-        <section className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm space-y-6">
+        <section id="home-live-sessions" className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <Video className="w-5 h-5 text-blue-500" /> {t('جلسات مباشرة')}
@@ -78,7 +107,7 @@ export function AdminHome({ requests, notifications, loading, handleAction, setL
             <p className="text-sm text-gray-500 italic">{t('ابدأ جلسة تسميع مباشرة مع أحد الطلاب الآن')}</p>
             <button 
               onClick={() => setLiveSessionMode('teacher')}
-              className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-emerald-100"
+              className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all"
             >
               {t('فتح غرفة اتصال')}
             </button>
@@ -91,11 +120,40 @@ export function AdminHome({ requests, notifications, loading, handleAction, setL
 
 // Student Home View
 export function StudentHome() {
+  const [showHomeTour, setShowHomeTour] = useState(false)
+
+  useEffect(() => {
+    if (!isHomeTourDismissed()) {
+      const seen = localStorage.getItem('thimar_home_tour_seen')
+      if (!seen) {
+        setShowHomeTour(true)
+        localStorage.setItem('thimar_home_tour_seen', 'true')
+      }
+    }
+    const handleStart = () => setShowHomeTour(true)
+    window.addEventListener('thimar:start-home-tour', handleStart)
+    return () => window.removeEventListener('thimar:start-home-tour', handleStart)
+  }, [])
+
   return (
     <div className="space-y-8 pb-24 text-right">
+      <HomeTour isOpen={showHomeTour} onClose={() => setShowHomeTour(false)} userRole="student" />
+
       <WelcomeMessage role="student" userName="ياسين عمر" />
+
+      {/* Guide button banner */}
+      <div className="flex justify-start">
+        <button
+          onClick={() => setShowHomeTour(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-2xl text-xs md:text-sm font-bold border border-emerald-200 shadow-sm transition-all active:scale-95"
+          title="شرح مبسط لجميع عناصر وخانات الصفحة الرئيسية"
+        >
+          <Compass className="w-4 h-4 text-emerald-600 animate-spin-slow" />
+          <span>جولة إرشادية في عناصر الصفحة الرئيسية</span>
+        </button>
+      </div>
       
-      <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm relative overflow-hidden">
+      <div id="home-daily-task" className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 left-0 w-32 h-32 bg-emerald-50 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="p-4 bg-emerald-50 rounded-2xl flex items-center gap-4 order-2 md:order-1">
@@ -115,7 +173,7 @@ export function StudentHome() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
+        <div id="home-reciters" className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
           <h3 className="text-xl font-bold flex items-center gap-3 text-gray-800 italic justify-end">
              {t('استمع للمقرئين')} <Headphones className="text-emerald-500" />
           </h3>
@@ -129,7 +187,7 @@ export function StudentHome() {
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
+        <div id="home-achievements" className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
           <h3 className="text-xl font-bold flex items-center gap-3 text-gray-800 italic justify-end">
             {t('آخر الإنجازات')} <Award className="text-amber-500" />
           </h3>
@@ -148,13 +206,39 @@ export function StudentHome() {
 
 // Parent Home View
 export function ParentHome({ childrenList, selectedChild, setSelectedChild }: any) {
+  const [showHomeTour, setShowHomeTour] = useState(false)
+
+  useEffect(() => {
+    if (!isHomeTourDismissed()) {
+      const seen = localStorage.getItem('thimar_home_tour_seen')
+      if (!seen) {
+        setShowHomeTour(true)
+        localStorage.setItem('thimar_home_tour_seen', 'true')
+      }
+    }
+    const handleStart = () => setShowHomeTour(true)
+    window.addEventListener('thimar:start-home-tour', handleStart)
+    return () => window.removeEventListener('thimar:start-home-tour', handleStart)
+  }, [])
+
   return (
     <div className="space-y-12 pb-24 text-right">
+      <HomeTour isOpen={showHomeTour} onClose={() => setShowHomeTour(false)} userRole="parent" />
+
       <WelcomeMessage role="parent" userName="أبا عمر" />
       
-      <section>
-        <div className="flex items-center justify-between mb-8">
-          <button className="text-emerald-600 font-bold hover:underline">{t('إضافة ابن جديد +')}</button>
+      <section id="home-children-section">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-3">
+            <button className="text-emerald-600 font-bold hover:underline">{t('إضافة ابن جديد +')}</button>
+            <button
+              onClick={() => setShowHomeTour(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold border border-emerald-200 shadow-sm transition-all"
+            >
+              <Compass className="w-3.5 h-3.5 text-emerald-600" />
+              <span>جولة عناصر الصفحة</span>
+            </button>
+          </div>
           <h2 className="text-3xl font-black text-gray-900 italic">{t('أبنائي')}</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -193,7 +277,7 @@ export function ParentHome({ childrenList, selectedChild, setSelectedChild }: an
 
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm space-y-8">
+          <div id="home-child-activities" className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm space-y-8">
             <h3 className="text-2xl font-black text-gray-900 italic flex items-center gap-3 justify-end">
               {t('آخر نشاطات')} {childrenList[selectedChild].name} <TrendingUp className="text-emerald-500" />
             </h3>
@@ -218,7 +302,7 @@ export function ParentHome({ childrenList, selectedChild, setSelectedChild }: an
         </div>
 
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-amber-500 p-8 rounded-[3rem] text-white shadow-2xl relative overflow-hidden group">
+          <div id="home-parent-tip" className="bg-amber-500 p-8 rounded-[3rem] text-white shadow-2xl relative overflow-hidden group">
             <Heart className="absolute -bottom-4 -left-4 w-24 h-24 opacity-10 group-hover:scale-110 transition-transform" />
             <h4 className="text-lg font-bold mb-2 italic text-right">{t('نصيحة اليوم')}</h4>
             <p className="text-xs opacity-80 leading-relaxed italic mb-6 text-right">{t('"أفضل هدية تقدمها لطفلك هي تشجيعه على ملازمة القرآن."')}</p>
@@ -233,3 +317,4 @@ export function ParentHome({ childrenList, selectedChild, setSelectedChild }: an
     </div>
   )
 }
+
