@@ -1114,6 +1114,78 @@ export const recitationsDb = {
 // ============================================================
 
 export const notificationsDb = {
+  async getAll(unreadOnly = false): Promise<Notification[]> {
+    const supabase = createSupabaseAdmin()
+    if (!supabase) {
+      const table = getMemoryTable('notifications')
+      if (table.size === 0) {
+        // Seed default administrative and platform notifications
+        const defaultNotifs: Notification[] = [
+          {
+            id: 'notif_1',
+            type: 'recitation',
+            category: 'recitations',
+            title: 'تسميع جديد بانتظار المراجعة',
+            message: 'قام الطالب ياسين عمر بتسجيل تسميع جديد لسورة النور (الآيات ١ - ٢٠) بتقييم ممتاز.',
+            read: false,
+            created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString()
+          },
+          {
+            id: 'notif_2',
+            type: 'exam',
+            category: 'exams',
+            title: 'اجتياز اختبار قرآني بنجاح',
+            message: 'أتم الطالب عبدالرحمن خالد اختبار الجزء التاسع والعشرين (تبارك) بنسبة ٩٩٪.',
+            read: false,
+            created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString()
+          },
+          {
+            id: 'notif_3',
+            type: 'task',
+            category: 'tasks',
+            title: 'تسليم تكليف مدرسي',
+            message: 'تم تسليم تكليف حفظ أبيات تحفة الأطفال من الطالبة لينا عمر.',
+            read: false,
+            created_at: new Date(Date.now() - 5 * 3600 * 1000).toISOString()
+          },
+          {
+            id: 'notif_4',
+            type: 'signup',
+            category: 'students',
+            title: 'طلب انضمام طالب جديد',
+            message: 'وصل طلب انضمام جديد من الطالب عمر بن عبدالعزيز، يرجى مراجعة البيانات.',
+            read: true,
+            created_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+          },
+          {
+            id: 'notif_5',
+            type: 'admin',
+            category: 'administrative',
+            title: 'تذكير إداري أسبوعي',
+            message: 'تذكير: موعد الجلسة الإدارية الأسبوعية لتوزيع الحلقات غداً الساعة ٤:٠٠ عصراً.',
+            read: true,
+            created_at: new Date(Date.now() - 48 * 3600 * 1000).toISOString()
+          }
+        ]
+        defaultNotifs.forEach(n => table.set(n.id, n))
+      }
+      let records = Array.from(table.values()) as Notification[]
+      if (unreadOnly) records = records.filter((n) => !n.read)
+      return records.slice(0, 100)
+    }
+    try {
+      let query = supabase.from('notifications').select('*')
+      if (unreadOnly) {
+        query = query.eq('read', false)
+      }
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(100)
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      handleError(error, 'جلب جميع الإشعارات')
+    }
+  },
+
   async getByUser(userId: string, unreadOnly = false): Promise<Notification[]> {
     const supabase = createSupabaseAdmin()
     if (!supabase) {

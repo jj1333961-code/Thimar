@@ -26,11 +26,12 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId')
     const unreadOnly = searchParams.get('unreadOnly') === 'true'
 
-    if (!userId) {
-      return json({ error: 'معرف المستخدم مطلوب' }, 400)
+    let notifications
+    if (userId) {
+      notifications = await notificationsDb.getByUser(userId, unreadOnly)
+    } else {
+      notifications = await notificationsDb.getAll(unreadOnly)
     }
-
-    const notifications = await notificationsDb.getByUser(userId, unreadOnly)
     return json({ notifications })
   } catch (error) {
     console.error('[API/supabase/notifications] GET error:', error)
