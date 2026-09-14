@@ -79,10 +79,9 @@ export function BottomNav({ role, unreadNotificationsCount = 0, unreadMessagesCo
   }, [role, activeTab])
 
   const handleTabChange = (tabId: string) => {
-    if (tabId === activeTab) return
     const params = new URLSearchParams(searchParams.toString())
     params.set('tab', tabId)
-    router.push(`?${params.toString()}`, { scroll: false })
+    router.replace(`?${params.toString()}`, { scroll: false })
   }
 
   const getBadge = (itemId: string) => {

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'motion/react'
-import { LogIn, Mail, Lock, Loader2, MessageCircle, HelpCircle, Globe, Share2 } from 'lucide-react'
+import { LogIn, Mail, Lock, Loader2, MessageCircle, HelpCircle, Globe, Share2, Sparkles, UserCheck, Shield } from 'lucide-react'
 import { 
   signInWithPopup, 
   signInWithRedirect,
@@ -170,7 +170,38 @@ export function LoginForm() {
             </button>
           </form>
 
-          <div className="relative my-8">
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
+            <div className="relative flex justify-center text-xs"><span className="px-3 bg-white text-emerald-700 font-bold">تجربة ومعاينة المنصة مباشرة</span></div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem('thimar_auth_token', 'demo_student_token')
+                router.push('/student')
+              }}
+              className="py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              <span>دخول كطالب (معاينة)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem('thimar_auth_token', 'admin_local_bypass_token')
+                router.push('/admin')
+              }}
+              className="py-2.5 px-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs"
+            >
+              <Shield className="w-3.5 h-3.5 text-gray-600" />
+              <span>دخول كإدارة (معاينة)</span>
+            </button>
+          </div>
+
+          <div className="relative my-6">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
             <div className="relative flex justify-center text-sm"><span className="px-4 bg-white text-gray-500 font-bold">أو المتابعة السريعة عبر</span></div>
           </div>
