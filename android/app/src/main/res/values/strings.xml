@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ثمار</string>
+    <string name="title_activity_main">ثمار</string>
+    <string name="package_name">com.thimar.app</string>
+    <string name="custom_url_scheme">com.thimar.app</string>
+</resources>

@@ -1,0 +1,302 @@
+/* ============================================================
+   شاشة الصلاة والأذان — واجهة واحدة ديناميكية
+   واجهة ملء الشاشة تظهر عند دخول وقت أي صلاة.
+   البيانات (اسم الصلاة/الوقت/التاريخ/النص) تتغير تلقائيًا.
+   RTL عربي بالكامل + متجاوبة مع الهواتف.
+   ============================================================ */
+
+:root {
+  --ps-green: #0f3f36;
+  --ps-green-2: #1c5a49;
+  --ps-gold: #d9ab5c;
+  --ps-gold-soft: #e7c98a;
+  --ps-cream: #f6efe0;
+  --ps-cream-2: #efe4cd;
+  --ps-ink: #123a32;
+}
+
+/* الحاوية الرئيسية — ملء الشاشة */
+.ps-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000; /* فوق كل شيء بما في ذلك النوافذ الأخرى */
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  direction: rtl;
+  font-family: "Cairo", "Noto Kufi Arabic", "Segoe UI", Tahoma, sans-serif;
+  color: var(--ps-green);
+  background: #0f3f36;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .45s ease;
+  overscroll-behavior: contain;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ps-screen[data-open="1"] {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* الخلفية: صورة المسجد الواحدة + تعتيم متدرّج لضمان وضوح النص */
+.ps-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url("/images/prayer-screen-bg.png");
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+}
+.ps-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, rgba(246,239,224,.55) 0%, rgba(246,239,224,.15) 30%, rgba(15,63,54,.15) 70%, rgba(15,63,54,.35) 100%);
+}
+
+/* منطقة المحتوى القابلة للتمرير على الشاشات القصيرة */
+.ps-scroll {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 560px;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: max(env(safe-area-inset-top), 18px) 20px
+           max(env(safe-area-inset-bottom), 18px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+  scrollbar-width: none;
+}
+.ps-scroll::-webkit-scrollbar { display: none; }
+
+/* زر الإغلاق */
+.ps-close {
+  position: absolute;
+  top: calc(max(env(safe-area-inset-top), 10px) + 6px);
+  left: 14px;
+  z-index: 5;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(15,63,54,.25);
+  background: rgba(246,239,224,.85);
+  color: var(--ps-green);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  backdrop-filter: blur(4px);
+}
+.ps-close:active { transform: scale(.94); }
+
+/* الهلال والنجمة */
+.ps-crescent {
+  margin: 6px auto 0;
+  width: 60px;
+  height: 60px;
+  color: var(--ps-gold);
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.15));
+}
+.ps-crescent svg { width: 100%; height: 100%; }
+
+/* العنوان الرئيسي */
+.ps-kicker {
+  font-size: clamp(1rem, 4.5vw, 1.35rem);
+  font-weight: 700;
+  color: var(--ps-green);
+  margin: 0;
+  letter-spacing: .5px;
+}
+.ps-title {
+  font-size: clamp(2.6rem, 13vw, 4.6rem);
+  font-weight: 900;
+  line-height: 1.05;
+  margin: -4px 0 2px;
+  color: var(--ps-green);
+  text-shadow: 0 2px 10px rgba(246,239,224,.6);
+}
+.ps-sub {
+  font-size: clamp(.95rem, 4vw, 1.2rem);
+  font-weight: 700;
+  color: var(--ps-green-2);
+  margin: 0;
+  line-height: 1.5;
+}
+.ps-sub small {
+  display: block;
+  font-size: .85em;
+  font-weight: 600;
+  opacity: .85;
+  margin-top: 2px;
+}
+
+/* فاصل ذهبي مزخرف */
+.ps-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--ps-gold);
+  margin: 4px 0;
+}
+.ps-divider::before,
+.ps-divider::after {
+  content: "";
+  height: 1px;
+  width: 70px;
+  background: linear-gradient(to var(--_d, left), transparent, var(--ps-gold));
+}
+.ps-divider::after { --_d: right; }
+.ps-divider span { font-size: 1.1rem; }
+
+/* بطاقة اسم الصلاة والوقت (خضراء داكنة) */
+.ps-prayer-card {
+  background: linear-gradient(135deg, var(--ps-green) 0%, var(--ps-green-2) 100%);
+  border: 1.5px solid rgba(217,171,92,.55);
+  border-radius: 20px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--ps-cream);
+  box-shadow: 0 10px 30px rgba(15,63,54,.35);
+}
+.ps-prayer-name {
+  font-size: clamp(1.4rem, 6.5vw, 2rem);
+  font-weight: 800;
+  color: var(--ps-cream);
+  white-space: nowrap;
+}
+.ps-prayer-time {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: clamp(1.8rem, 9vw, 2.8rem);
+  font-weight: 900;
+  color: var(--ps-gold-soft);
+  direction: ltr;
+  font-variant-numeric: tabular-nums;
+}
+.ps-prayer-time small {
+  font-size: .5em;
+  font-weight: 700;
+}
+.ps-prayer-card .ps-sep {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(217,171,92,.4);
+}
+.ps-prayer-icon {
+  width: 34px;
+  height: 34px;
+  color: var(--ps-gold);
+  flex: 0 0 auto;
+}
+
+/* بطاقة التاريخ الميلادي والهجري */
+.ps-date-card {
+  background: rgba(246,239,224,.9);
+  border: 1px solid rgba(217,171,92,.4);
+  border-radius: 16px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--ps-ink);
+  backdrop-filter: blur(3px);
+}
+.ps-date-card .ps-cal {
+  width: 30px;
+  height: 30px;
+  color: var(--ps-green);
+  flex: 0 0 auto;
+}
+.ps-date-lines { line-height: 1.5; }
+.ps-greg { font-size: clamp(.95rem, 4vw, 1.1rem); font-weight: 700; }
+.ps-hijri { font-size: clamp(.85rem, 3.6vw, 1rem); font-weight: 600; color: var(--ps-green-2); }
+
+/* بطاقة الآية / النص الديني */
+.ps-ayah-card {
+  background: rgba(246,239,224,.92);
+  border: 1px solid rgba(217,171,92,.4);
+  border-radius: 16px;
+  padding: 16px 18px;
+  color: var(--ps-ink);
+  backdrop-filter: blur(3px);
+}
+.ps-ayah-head { font-size: .95rem; font-weight: 700; color: var(--ps-green-2); margin: 0 0 6px; }
+.ps-ayah-text {
+  font-family: "Amiri", "Cairo", serif;
+  font-size: clamp(1.05rem, 5vw, 1.3rem);
+  font-weight: 700;
+  line-height: 1.9;
+  margin: 0;
+  color: var(--ps-green);
+}
+.ps-ayah-ref { font-size: .85rem; font-weight: 600; opacity: .8; margin: 6px 0 0; }
+
+/* بطاقة "قم إلى الصلاة الآن" */
+.ps-cta {
+  background: linear-gradient(135deg, var(--ps-green) 0%, var(--ps-green-2) 100%);
+  border: 1.5px solid rgba(217,171,92,.5);
+  border-radius: 18px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--ps-cream);
+  box-shadow: 0 8px 24px rgba(15,63,54,.3);
+}
+.ps-cta-icon { width: 40px; height: 40px; color: var(--ps-gold); flex: 0 0 auto; }
+.ps-cta-text { text-align: right; }
+.ps-cta-title { font-size: clamp(1.1rem, 5vw, 1.4rem); font-weight: 800; }
+.ps-cta-sub { font-size: clamp(.8rem, 3.6vw, .95rem); font-weight: 500; opacity: .9; margin-top: 2px; }
+
+/* شريط التحكم بالأذان */
+.ps-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-bottom: 4px;
+}
+.ps-btn {
+  border: 1px solid rgba(217,171,92,.55);
+  background: rgba(246,239,224,.9);
+  color: var(--ps-green);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-family: inherit;
+  font-size: .9rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.ps-btn:active { transform: scale(.96); }
+.ps-btn.is-muted { opacity: .75; }
+.ps-btn svg { width: 18px; height: 18px; }
+
+/* شاشات قصيرة/عريضة (وضع أفقي على الهاتف) */
+@media (max-height: 620px) {
+  .ps-title { font-size: clamp(2rem, 9vh, 3rem); }
+  .ps-crescent { width: 44px; height: 44px; }
+  .ps-scroll { gap: 10px; }
+}
+
+/* دعم الوضع الداكن للنظام — نُبقي التصميم الفاتح لأنه جزء من الهوية البصرية */
+@media (prefers-reduced-motion: reduce) {
+  .ps-screen { transition: none; }
+}
