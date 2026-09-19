@@ -107,7 +107,7 @@ function StudentContent() {
         </div>
       </nav>
 
-      <section className="max-w-7xl mx-auto p-6 md:p-12">
+      <section className="max-w-7xl mx-auto p-6 md:p-12 pb-28 md:pb-32">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}

@@ -931,6 +931,8 @@ function saveSessionState() {
   recordCurrentDevice();
   try {
     if(currentUser && currentType) {
+      window.currentUser = currentUser;
+      window.currentType = currentType;
       const session = { user: currentUser, type: currentType, adminId: currentAdminId || null, adminVisitState: adminVisitState || null, logoutGate: logoutGate || null, page: document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)')?.id || defaultPageForRole(currentType), savedAt: Date.now() };
       sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
       sessionStorage.setItem('currentType', currentType);
@@ -944,6 +946,7 @@ function saveSessionState() {
 function applySavedSession(saved) {
   if(!saved || !saved.user || !saved.type) return false;
   currentUser = saved.user; currentType = saved.type; currentAdminId = saved.adminId || null; adminVisitState = saved.adminVisitState || null; logoutGate = saved.logoutGate || null;
+  window.currentUser = currentUser; window.currentType = currentType;
   restoredSessionPage = saved.page || defaultPageForRole(saved.type);
   return true;
 }
@@ -1013,7 +1016,7 @@ function pageFromUrl() {
 
 function pageAllowedForUser(id) {
   if (!id) return true;
-  if (id.startsWith('admin') || ['studentsList','messagesPage','subjectsPage','adminsPage','addStudent','filesPage','adminSettings'].includes(id)) return currentType === 'admin';
+  if (id.startsWith('admin') || ['studentsList','messagesPage','notificationsPage','subjectsPage','adminsPage','addStudent','filesPage','adminSettings'].includes(id)) return currentType === 'admin';
   if (id.startsWith('student')) return currentType === 'student';
   if (id.startsWith('parent')) return currentType === 'parent';
   return true;
@@ -1084,6 +1087,13 @@ function roleShellPath(role) {
   if(id === 'studentExamPage') renderStudentExam();
   if(id === 'parentPendingTasksPage') renderParentPendingTasks();
   if(id === 'parentChartPage') renderParentFullChart();
+  if(id === 'adminReportsPage' && typeof window.renderAdminReports === 'function') window.renderAdminReports();
+  if(id === 'studentTasksPage' && typeof window.renderStudentTasks === 'function') window.renderStudentTasks();
+  if(id === 'studentReportsPage' && typeof window.renderStudentReports === 'function') window.renderStudentReports();
+  if(id === 'parentTasksPage' && typeof window.renderParentTasks === 'function') window.renderParentTasks();
+  if(id === 'parentReportsPage' && typeof window.renderParentReports === 'function') window.renderParentReports();
+  if(id === 'parentSettings' && typeof window.renderParentSettings === 'function') window.renderParentSettings();
+  if(typeof window.thimarOnPageShown === 'function') window.thimarOnPageShown(id);
   applyLangToDom();
   window.scrollTo(0,0);
   saveSessionState();
