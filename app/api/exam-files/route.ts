@@ -57,20 +57,24 @@ let pinnedFilesCache: Promise<ExamFileMeta[]> | null = null
 function getPinnedFiles() {
   if (!pinnedFilesCache) {
     pinnedFilesCache = Promise.all(PINNED_FILES.map(async (definition) => {
-      const buffer = await readFile(path.join(process.cwd(), "references", definition.filename))
-      const text = await extractText(buffer, "pdf")
-      return {
-        id: definition.id,
-        name: definition.name,
-        pathname: `references/${definition.filename}`,
-        metadataPathname: "",
-        type: "pdf",
-        size: buffer.byteLength,
-        uploadedAt: "2026-08-15T00:00:00.000Z",
-        text,
-        pinned: true,
+      try {
+        const buffer = await readFile(path.join(process.cwd(), "references", definition.filename))
+        const text = await extractText(buffer, "pdf")
+        return {
+          id: definition.id,
+          name: definition.name,
+          pathname: `references/${definition.filename}`,
+          metadataPathname: "",
+          type: "pdf",
+          size: buffer.byteLength,
+          uploadedAt: "2026-08-15T00:00:00.000Z",
+          text,
+          pinned: true,
+        }
+      } catch {
+        return null
       }
-    })).catch((error) => {
+    })).then((files) => files.filter(Boolean) as ExamFileMeta[]).catch((error) => {
       pinnedFilesCache = null
       throw error
     })

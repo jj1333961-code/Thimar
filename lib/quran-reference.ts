@@ -29,20 +29,28 @@ async function readReference(pathname: string) {
     const localFile = await readFile(path.join(process.cwd(), "references", path.basename(pathname)))
     return new Uint8Array(localFile)
   } catch (localError) {
-    if (!(process.env.BLOB_READ_WRITE_TOKEN || "").trim()) {
-      throw new Error(`تعذر قراءة المرجع المحلي: ${pathname}`, { cause: localError })
+    if ((process.env.BLOB_READ_WRITE_TOKEN || "").trim()) {
+      try {
+        const result = await get(pathname, { access: "private" })
+        if (result && result.statusCode === 200) {
+          return new Uint8Array(await new Response(result.stream).arrayBuffer())
+        }
+      } catch {
+        // Fallback to empty
+      }
     }
-    const result = await get(pathname, { access: "private" })
-    if (!result || result.statusCode !== 200) throw new Error(`تعذر قراءة المرجع الخاص: ${pathname}`)
-    return new Uint8Array(await new Response(result.stream).arrayBuffer())
+    return new Uint8Array(0)
   }
 }
 
 async function extractPdf(data: Uint8Array) {
+  if (!data || data.length === 0) return ""
   const parser = new PDFParse({ data })
   try {
     const result = await parser.getText()
     return result.text.replace(/\u0000/g, "").replace(/\s+/g, " ").trim().slice(0, MAX_REFERENCE_CHARS)
+  } catch {
+    return ""
   } finally {
     await parser.destroy().catch(() => undefined)
   }
