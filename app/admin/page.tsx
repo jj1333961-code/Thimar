@@ -25,8 +25,6 @@ import { useSearchParams } from 'next/navigation'
 import { requestJson } from '@/lib/api-client'
 import { getClientSession } from '@/lib/client-session'
 
-import { RoleNavHeader } from '@/components/dashboard/RoleNavHeader'
-
 function AdminContent() {
   const searchParams = useSearchParams()
   const activeTab = searchParams.get('tab') || 'home'
@@ -41,6 +39,13 @@ function AdminContent() {
 
   useEffect(() => {
     fetchData()
+
+    if (!isWalkthroughDismissedForever()) {
+      const hasSeen = localStorage.getItem('thimar_walkthrough_seen') || localStorage.getItem('thimar_new_user_welcomed')
+      if (!hasSeen) {
+        setShowWalkthrough(true)
+      }
+    }
 
     const handleRelaunchTour = () => setShowWalkthrough(true)
     window.addEventListener('thimar:start-tour', handleRelaunchTour)
@@ -106,16 +111,27 @@ function AdminContent() {
         {showWalkthrough && <WelcomeWalkthrough onClose={closeWalkthrough} userRole="admin" />}
       </AnimatePresence>
 
-      {/* Top Navbar with live role switcher */}
-      <RoleNavHeader 
-        currentRole="admin" 
-        userName={session?.name || 'المسؤول العام'} 
-        onRefresh={fetchData} 
-        onStartTour={() => setShowWalkthrough(true)}
-        loading={loading}
-      />
+      {/* Top Navbar */}
+      <nav className="bg-white/80 backdrop-blur-lg border-b border-gray-100 px-6 py-4 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold">ث</div>
+            <h1 className="text-xl font-black text-gray-900 italic">ثمار المسؤول</h1>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={fetchData}
+              className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:bg-emerald-50 hover:text-emerald-600 transition-all"
+            >
+              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <div className="w-10 h-10 bg-emerald-100 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-emerald-700 font-bold">T</div>
+          </div>
+        </div>
+      </nav>
 
-      <section className="max-w-7xl mx-auto p-6 md:p-12 pb-28 md:pb-32">
+      <section className="max-w-7xl mx-auto px-6 pb-28 pt-6 md:px-12 md:pb-32 md:pt-12">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}

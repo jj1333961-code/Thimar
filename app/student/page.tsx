@@ -18,7 +18,6 @@ import { QuranReader } from '@/components/ui/quran-reader'
 import { LiveRecitationSession } from '@/components/ui/live-recitation-session'
 
 import { Suspense } from 'react'
-import { RoleNavHeader } from '@/components/dashboard/RoleNavHeader'
 import { BottomNav } from '@/components/dashboard/BottomNav'
 import { StudentHome } from '@/components/dashboard/HomeView'
 import { MessagesView } from '@/components/dashboard/MessagesView'
@@ -37,6 +36,17 @@ function StudentContent() {
   const [liveSessionMode, setLiveSessionMode] = useState<'ai' | 'teacher' | null>(null)
 
   useEffect(() => {
+    if (isWalkthroughDismissedForever()) {
+      // Continue to register listener so user can relaunch if clicked from Settings
+      const handleRelaunchTour = () => setShowWalkthrough(true)
+      window.addEventListener('thimar:start-tour', handleRelaunchTour)
+      return () => window.removeEventListener('thimar:start-tour', handleRelaunchTour)
+    }
+    const hasSeenWalkthrough = localStorage.getItem('thimar_walkthrough_seen') || localStorage.getItem('thimar_new_user_welcomed')
+    if (!hasSeenWalkthrough) {
+      setShowWalkthrough(true)
+    }
+
     const handleRelaunchTour = () => setShowWalkthrough(true)
     window.addEventListener('thimar:start-tour', handleRelaunchTour)
     return () => window.removeEventListener('thimar:start-tour', handleRelaunchTour)
@@ -53,7 +63,7 @@ function StudentContent() {
       case 'home':
         return <StudentHome />
       case 'messages':
-        return <MessagesView currentUser={{ id: session?.id || 'student', email: session?.email || '', name: session?.name || 'ياسين عمر', role: 'student' }} />
+        return <MessagesView currentUser={{ id: session?.id || 'student', email: session?.email || '', name: session?.name || 'الطالب', role: 'student' }} />
       case 'tasks':
         return <TasksView role="student" currentUserId={session?.id || ''} />
       case 'reports':
@@ -71,14 +81,33 @@ function StudentContent() {
         {showWalkthrough && <WelcomeWalkthrough onClose={closeWalkthrough} userRole="student" />}
       </AnimatePresence>
 
-      {/* Top Navbar with live role switcher */}
-      <RoleNavHeader 
-        currentRole="student" 
-        userName={session?.name || 'ياسين عمر'} 
-        onStartTour={() => setShowWalkthrough(true)}
-      />
+      {/* Top Navbar */}
+      <nav className="bg-white/80 backdrop-blur-lg border-b border-gray-100 px-6 py-4 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold">ث</div>
+            <h1 className="text-xl font-black text-gray-900 italic">ثمار الطالب</h1>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowWalkthrough(true)}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold border border-emerald-200 transition-colors"
+              title="عرض دليل المنصة وجولة الاستخدام"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>جولة المنصة</span>
+            </button>
+            <PWAInstallButton />
+            <div className="flex items-center gap-3 bg-gray-50 p-1 pr-4 rounded-full border border-gray-100">
+              <span className="text-sm font-bold text-gray-700">ياسين عمر</span>
+              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold">ي</div>
+            </div>
+          </div>
+        </div>
+      </nav>
 
-      <section className="max-w-7xl mx-auto p-6 md:p-12 pb-28 md:pb-32">
+      <section className="max-w-7xl mx-auto px-6 pb-28 pt-6 md:px-12 md:pb-32 md:pt-12">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}

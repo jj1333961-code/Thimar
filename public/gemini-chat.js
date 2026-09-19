@@ -26,8 +26,8 @@
     style.textContent = `
       .gemini-fab {
         position: fixed;
-        bottom: 24px;
-        left: 24px;
+        bottom: calc(75px + env(safe-area-inset-bottom, 0px) + 16px);
+        left: 20px;
         width: 58px;
         height: 58px;
         border-radius: 50%;
@@ -38,8 +38,8 @@
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        z-index: 99999;
-        transition: transform 0.2s, box-shadow 0.2s;
+        z-index: 10001;
+        transition: transform 0.2s, box-shadow 0.2s, bottom 0.25s ease;
         border: 2px solid rgba(255, 255, 255, 0.3);
       }
       .gemini-fab:hover {
@@ -52,12 +52,12 @@
       }
       .gemini-modal {
         position: fixed;
-        bottom: 92px;
-        left: 24px;
+        bottom: calc(75px + env(safe-area-inset-bottom, 0px) + 78px);
+        left: 20px;
         width: 420px;
-        max-width: calc(100vw - 48px);
-        height: 600px;
-        max-height: calc(100vh - 120px);
+        max-width: calc(100vw - 40px);
+        height: 560px;
+        max-height: calc(100vh - 165px);
         background: var(--card-bg, #ffffff);
         color: var(--text-color, #1e293b);
         border: 1px solid var(--border, #e2e8f0);
@@ -65,7 +65,7 @@
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
         display: flex;
         flex-direction: column;
-        z-index: 99999;
+        z-index: 10001;
         overflow: hidden;
         animation: geminiSlideUp 0.25s ease-out;
       }

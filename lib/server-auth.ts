@@ -6,19 +6,6 @@ export async function requireUser(request: Request) {
   
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.split("Bearer ")[1]
-    if (token === 'admin_local_bypass_token') {
-      return {
-        response: null,
-        user: {
-          id: 'admin',
-          email: 'admin@thimar.org',
-          name: 'المسؤول العام',
-          role: 'admin',
-          accountId: 'admin',
-          accountName: 'المسؤول العام'
-        }
-      }
-    }
     if (!token || token === 'undefined' || token === 'null' || token.length < 32 || !token.includes('.')) {
       return { response: NextResponse.json({ error: 'جلسة المصادقة غير صالحة' }, { status: 401 }), user: null }
     }

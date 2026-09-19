@@ -931,8 +931,6 @@ function saveSessionState() {
   recordCurrentDevice();
   try {
     if(currentUser && currentType) {
-      window.currentUser = currentUser;
-      window.currentType = currentType;
       const session = { user: currentUser, type: currentType, adminId: currentAdminId || null, adminVisitState: adminVisitState || null, logoutGate: logoutGate || null, page: document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)')?.id || defaultPageForRole(currentType), savedAt: Date.now() };
       sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
       sessionStorage.setItem('currentType', currentType);
@@ -946,7 +944,6 @@ function saveSessionState() {
 function applySavedSession(saved) {
   if(!saved || !saved.user || !saved.type) return false;
   currentUser = saved.user; currentType = saved.type; currentAdminId = saved.adminId || null; adminVisitState = saved.adminVisitState || null; logoutGate = saved.logoutGate || null;
-  window.currentUser = currentUser; window.currentType = currentType;
   restoredSessionPage = saved.page || defaultPageForRole(saved.type);
   return true;
 }
@@ -1016,9 +1013,9 @@ function pageFromUrl() {
 
 function pageAllowedForUser(id) {
   if (!id) return true;
-  if (id.startsWith('admin') || ['studentsList','messagesPage','notificationsPage','subjectsPage','adminsPage','addStudent','filesPage','adminSettings'].includes(id)) return currentType === 'admin';
-  if (id.startsWith('student')) return currentType === 'student';
-  if (id.startsWith('parent')) return currentType === 'parent';
+  if (id.startsWith('admin') || ['studentsList','messagesPage','notificationsPage','subjectsPage','adminsPage','addStudent','filesPage','adminSettings','adminReportsPage'].includes(id)) return currentType === 'admin';
+  if (id.startsWith('student') || ['studentTasksPage','studentReportsPage','studentSettings','studentInbox','studentDashboard'].includes(id)) return currentType === 'student';
+  if (id.startsWith('parent') || ['parentTasksPage','parentReportsPage','parentSettings','parentInbox','parentDashboard'].includes(id)) return currentType === 'parent';
   return true;
 }
 
@@ -1068,15 +1065,23 @@ function roleShellPath(role) {
   if(id === 'adminDashboard') { renderAdminStats(); updateMsgBadge(); renderActiveDrafts(); }
   if(id === 'studentsList') renderStudents();
   if(id === 'messagesPage') { renderMessages(); markAdminMessagesRead(); }
+  if(id === 'notificationsPage') { renderNotifications(); }
+  if(id === 'adminReportsPage') { renderAdminReports(); }
   if(id === 'subjectsPage') renderSubjects();
   if(id === 'adminsPage') renderAdmins();
-  if(id === 'addStudent') { renderSubjectSelect(); initJuzSelect(); voiceBlob = null; voiceFingerprint = null; voiceDataUrl = null; voiceProfileGemini = null; document.getElementById('voicePreview').style.display='none'; document.getElementById('voiceRecordStatus').textContent='اضغط للتسجيءء (20 ثانية)'; }
+  if(id === 'addStudent') { renderSubjectSelect(); initJuzSelect(); voiceBlob = null; voiceFingerprint = null; voiceDataUrl = null; voiceProfileGemini = null; document.getElementById('voicePreview').style.display='none'; document.getElementById('voiceRecordStatus').textContent='اضغط للتسجيل (20 ثانية)'; }
   if(id === 'adminSettings') loadAdminSettings();
   if(id === 'studentDashboard' && currentType === 'student') { renderStudentDashboard(); updateStudentMsgBadge(); }
   if(id === 'studentInbox') { renderStudentInbox(); markStudentMessagesRead(); }
+  if(id === 'studentTasksPage') renderStudentTasksHub();
+  if(id === 'studentReportsPage') renderStudentSelfReport();
+  if(id === 'studentSettings') loadStudentSettings();
   if(id === 'studentRecordsPage') renderStudentRecordsBox();
   if(id === 'parentDashboard' && currentType === 'parent') { renderParentDashboard(); updateParentMsgBadge(); }
   if(id === 'parentInbox') { renderParentInbox(); markParentMessagesRead(); }
+  if(id === 'parentTasksPage') renderParentTasksHub();
+  if(id === 'parentReportsPage') renderParentReportsHub();
+  if(id === 'parentSettings') loadParentSettings();
   if (id === 'studentDashboard' || id === 'parentDashboard') {
     if (typeof window.mountIslamicHub === 'function') window.mountIslamicHub();
   }
@@ -1087,13 +1092,7 @@ function roleShellPath(role) {
   if(id === 'studentExamPage') renderStudentExam();
   if(id === 'parentPendingTasksPage') renderParentPendingTasks();
   if(id === 'parentChartPage') renderParentFullChart();
-  if(id === 'adminReportsPage' && typeof window.renderAdminReports === 'function') window.renderAdminReports();
-  if(id === 'studentTasksPage' && typeof window.renderStudentTasks === 'function') window.renderStudentTasks();
-  if(id === 'studentReportsPage' && typeof window.renderStudentReports === 'function') window.renderStudentReports();
-  if(id === 'parentTasksPage' && typeof window.renderParentTasks === 'function') window.renderParentTasks();
-  if(id === 'parentReportsPage' && typeof window.renderParentReports === 'function') window.renderParentReports();
-  if(id === 'parentSettings' && typeof window.renderParentSettings === 'function') window.renderParentSettings();
-  if(typeof window.thimarOnPageShown === 'function') window.thimarOnPageShown(id);
+  updateBottomNav(id);
   applyLangToDom();
   window.scrollTo(0,0);
   saveSessionState();
@@ -5080,74 +5079,131 @@ function saveStudentPass() {
 function renderStudentDashboard() {
   checkAndFinalizeDrafts();
   const s = currentUser;
-  const isQuran = s.subjects && s.subjects.some(sub => sub.name.includes('قرآن'));
+  if (!s) return;
+  const isQuran = s.subjects && s.subjects.some(sub => sub.name && sub.name.includes('قرآن'));
 
   checkExpiredTasks(s.id);
 
   const welcomeMsgs = generateWelcomeMessages(s);
-  document.getElementById('studentWelcome').innerHTML = '<div class="welcome-msg"><h4>🌟 '+welcomeMsgs.title+'</h4><p>'+welcomeMsgs.body+'</p></div>';
+  const welcomeEl = document.getElementById('studentWelcome');
+  if (welcomeEl) {
+    welcomeEl.innerHTML = '<div class="welcome-msg"><h4>🌟 ' + welcomeMsgs.title + '</h4><p>' + welcomeMsgs.body + '</p></div>';
+  }
 
   let html = '<div class="student-identity-cards" aria-label="بيانات الطالب الأساسية">';
-  html += '<div class="student-identity-card"><div class="identity-value">'+escapeHtml(s.name || '-')+'</div><div class="identity-label">اسم الطالب</div></div>';
-  html += '<div class="student-identity-card"><div class="identity-value">'+escapeHtml(String(s.age || '-'))+'</div><div class="identity-label">سن لطالب</div></div>';
+  html += '<div class="student-identity-card"><div class="identity-value">' + escapeHtml(s.name || '-') + '</div><div class="identity-label">اسم الطالب</div></div>';
+  html += '<div class="student-identity-card"><div class="identity-value">' + escapeHtml(String(s.age || '-')) + '</div><div class="identity-label">سن الطالب</div></div>';
   html += '</div>';
 
-  html += '<div style="display:flex; gap:20px; flex-wrap:wrap;"><div style="flex:1; min-width:300px;">';
-  html += '<div class="page" style="margin-top:0;"><h4 style="color:var(--primary); margin-bottom:15px;">📋 البيانات</h4>';
-  html += '<p><strong>المدرس:</strong> '+(s.subjects ? s.subjects.map(sub => sub.teacher || '-').join('<br>') : '-')+'</p>';
-  html += '<p><strong>رق المدرس:</strong> '+(s.subjects && s.subjects[0] && s.subjects[0].phone ? s.subjects[0].phone : '-')+'</p>';
-  html += '<p><strong>ولي الأمر:</strong> '+s.parent+'</p>';
-  html += '<p><strong>تاريخ التسجيل:</strong> '+s.createdAt+'</p>';
-  if(isQuran && s.juz) html += '<p><strong>الجزء:</strong> <span class="score-badge">'+s.juz+'</span></p>';
-  if(isQuran && s.surah) html += '<p><strong>السورة:</strong> <span class="score-badge">'+s.surah+'</span></p>';
+  html += '<div style="display:flex; gap:20px; flex-wrap:wrap; margin-top:16px;"><div style="flex:1; min-width:300px;">';
+  html += '<div class="page" style="margin-top:0;"><h4 style="color:var(--primary); margin-bottom:15px;">📋 البيانات الأكاديمية</h4>';
+  html += '<p><strong>المدرس:</strong> ' + (s.subjects ? s.subjects.map(sub => sub.teacher || '-').join('<br>') : '-') + '</p>';
+  html += '<p><strong>رقم المدرس:</strong> ' + (s.subjects && s.subjects[0] && s.subjects[0].phone ? s.subjects[0].phone : '-') + '</p>';
+  html += '<p><strong>ولي الأمر:</strong> ' + escapeHtml(s.parent || '-') + '</p>';
+  html += '<p><strong>تاريخ التسجيل:</strong> ' + escapeHtml(s.createdAt || '-') + '</p>';
+  if (isQuran && s.juz) html += '<p><strong>الجزء الحالي:</strong> <span class="score-badge">' + escapeHtml(String(s.juz)) + '</span></p>';
+  if (isQuran && s.surah) html += '<p><strong>السورة الحالية:</strong> <span class="score-badge">' + escapeHtml(String(s.surah)) + '</span></p>';
   html += '</div></div></div>';
-  document.getElementById('studentInfo').innerHTML = html;
 
-  if(s.activeExam && s.activeExam.status==='pending'){
-    document.getElementById('studentInfo').innerHTML += '<div class="alert alert-warning" style="margin-top:15px;border:2px solid var(--warning);font-size:1.05rem"><strong>🔔 لديك اختبار جءءيد!</strong><br>أرسءءه المسؤئل ويجب حله. <button class="btn btn-warning" style="margin-top:8px" onclick="showPage(\'studentExamPage\')">🧪 فتح الاختبار الآن</button></div>';
-    notifyStudentExamOnce(s);
+  const infoEl = document.getElementById('studentInfo');
+  if (infoEl) infoEl.innerHTML = html;
+
+  // Mount Islamic Hub if available
+  if (typeof window.mountIslamicHub === 'function') {
+    try { window.mountIslamicHub(); } catch(e) {}
   }
 
-  // Render active draft if exists
-  const draft = s.sessions ? s.sessions.find(sess => sess.isDraft) : null;
-  if(draft && isQuran) {
-    let draftHtml = '<div class="page draft-card" style="margin-top:20px;"><h4 style="color:var(--warning); margin-bottom:15px;"> ءءسميع اليوم (مسودة - قيد التديل)</h4>';
-    draftHtml += '<p><strong>التارخ:</strong> '+draft.date+'</p>';
-    draft.elements.forEach((el, ei) => {
-      draftHtml += '<div style="padding:10px; background:var(--input-bg); border-radius:8px; margin-bottom:8px; border-right:3px solid '+(el.color || 'var(--primary)')+';">';
-      draftHtml += '<strong>'+el.name+'</strong> - '+(el.surah || 'بدون سرة')+'<br>';
-      draftHtml += 'من آية '+(el.from || '-')+' إلى '+(el.to || '-')+' | ';
-      draftHtml += 'التقءءيم: <span class="badge '+getRatingClass(el.rating)+'">'+getRatingLabel(el.rating)+'</span>';
-      draftHtml += '</div>';
-    });
-    const timeLeft = Math.max(0, 24 - ((Date.now() - draft.draftCreatedAt) / (60 * 60 * 1000)));
-    draftHtml += '<div style="margin-top:10px; color:var(--text-light);">⏰ متبقي '+timeLeft.toFixed(1)+' ساعة حتى الإغلاق التلقائي</div>';
-    draftHtml += '<div style="margin-top:10px;"><span class="score-badge">المجموع: '+draft.totalScore+' درجة</span></div>';
-    draftHtml += '</div>';
-    document.getElementById('studentDraftSection').innerHTML = draftHtml;
-  } else {
-    document.getElementById('studentDraftSection').innerHTML = '';
+  // Calculate high-level summary metrics (without duplicating task lists or records)
+  const pendingTasks = (s.tasks || []).filter(t => !t.completed && !t.approved).length;
+  const hasActiveExam = (s.activeExam && s.activeExam.status === 'pending') ? 1 : 0;
+  const hasDraft = (s.sessions && s.sessions.some(sess => sess.isDraft)) ? 1 : 0;
+  const activeTasksTotal = pendingTasks + hasActiveExam + hasDraft;
+
+  const finalizedCount = (s.sessions || []).filter(sess => !sess.isDraft).length;
+  const completedCount = (s.completedTasks || []).length + (s.tasks || []).filter(t => t.approved).length;
+
+  const msgs = getData('messages', []);
+  const unreadMsgs = msgs.filter(m => (m.receiverType === 'student' && (m.receiverId === s.id || m.receiverName === s.name) && !m.read)).length;
+
+  // Render clean Navigation Hub Cards on the Student Home Page
+  const summaryContainer = document.getElementById('studentHomeSummary');
+  if (summaryContainer) {
+    summaryContainer.innerHTML = `
+      <div class="student-summary-card">
+        <div>
+          <div class="student-summary-card-header">
+            <div class="student-summary-card-icon">📝</div>
+            <h4 class="student-summary-card-title">المهمات والتسميع والواجبات</h4>
+          </div>
+          <p class="student-summary-card-desc">
+            ${activeTasksTotal > 0 
+              ? ('لديك <strong style="color:var(--primary);">' + activeTasksTotal + '</strong> مهمات وتسميع واختبارات بانتظار إنجازك في صفحة المهمات.') 
+              : 'جميع مهامك الحالية مكتملة، بارك الله فيك ومستعد للمهام القادمة.'}
+          </p>
+        </div>
+        <button type="button" class="student-summary-btn" onclick="showPage('studentTasksPage')">
+          <span>الانتقال إلى المهمات والتسميع</span>
+          <span aria-hidden="true">←</span>
+        </button>
+      </div>
+
+      <div class="student-summary-card">
+        <div>
+          <div class="student-summary-card-header">
+            <div class="student-summary-card-icon">📊</div>
+            <h4 class="student-summary-card-title">التقارير وسجل الأداء</h4>
+          </div>
+          <p class="student-summary-card-desc">
+            سجل التسميعات النهائية المعتمدة (<strong style="color:var(--primary);">${finalizedCount}</strong> جلسة)، نتائج الاختبارات، ومخطط تقييم الأداء في صفحة التقارير.
+          </p>
+        </div>
+        <button type="button" class="student-summary-btn" onclick="showPage('studentReportsPage')">
+          <span>عرض التقارير والسجلات</span>
+          <span aria-hidden="true">←</span>
+        </button>
+      </div>
+
+      <div class="student-summary-card">
+        <div>
+          <div class="student-summary-card-header">
+            <div class="student-summary-card-icon">💬</div>
+            <h4 class="student-summary-card-title">صندوق الرسائل</h4>
+          </div>
+          <p class="student-summary-card-desc">
+            ${unreadMsgs > 0 
+              ? ('لديك <strong style="color:var(--warning);">' + unreadMsgs + '</strong> رسائل جديدة غير مقروءة من المعلم وإدارة المنصة.') 
+              : 'تواصل مباشر وتلقي التوجيهات والملاحظات من معلم الحلقة.'}
+          </p>
+        </div>
+        <button type="button" class="student-summary-btn" onclick="showPage('studentInbox')">
+          <span>فتح صندوق الرسائل</span>
+          <span aria-hidden="true">←</span>
+        </button>
+      </div>
+
+      <div class="student-summary-card">
+        <div>
+          <div class="student-summary-card-header">
+            <div class="student-summary-card-icon">📖</div>
+            <h4 class="student-summary-card-title">المصحف الشريف</h4>
+          </div>
+          <p class="student-summary-card-desc">
+            متابعة الورد والتلاوة اليومية وتصفح سور وآيات القرآن الكريم مع ميزة التكبير السلس.
+          </p>
+        </div>
+        <button type="button" class="student-summary-btn" onclick="openQuranReader()">
+          <span>فتح المصحف الكريم</span>
+          <span aria-hidden="true">←</span>
+        </button>
+      </div>
+    `;
   }
 
-  renderStudentTasks();
-  if(s.nextTaskDate && (!s.tasks || s.tasks.length===0)) document.getElementById('studentTasksSection').innerHTML += '<div class="alert alert-info" style="margin-top:10px">📅 تم إغلاق مهام اليوم. اليوم التالي المقرر: <strong>'+s.nextTaskDate+'</strong></div>';
-
-  const sessions = s.sessions || [];
-  const finalizedSessions = sessions.filter(sess => !sess.isDraft);
-  if(finalizedSessions.length > 0 && isQuran) {
-    let sessHtml = '<div class="page" style="margin-top:20px;"><h4 style="color:var(--primary); margin-bottom:15px;">📋 سجل التسميعات النهائية</h4>';
-    finalizedSessions.slice().reverse().forEach(sess => {
-      const elementsText = sess.elements.map(e => e.name+': '+(e.surah || '-')+' من آية '+(e.from || '-')+' إلى '+(e.to || '-')+' ('+e.rating+')').join(' | ');
-      sessHtml += '<div class="session-card"><h5>📅 '+sess.date+' — المجموع: <span style="color:var(--primary)">'+sess.totalScore+'</span> درجة</h5><p>'+elementsText+'</p>'+(sess.notes ? '<p><strong>ملاحظات:</strong> '+sess.notes+'</p>' : '')+'</div>';
-    });
-    sessHtml += '</div>';
-    document.getElementById('studentSessionsSection').innerHTML = sessHtml;
-  } else {
-    document.getElementById('studentSessionsSection').innerHTML = '';
-  }
-  if(isQuran) renderStudentChart(); else document.getElementById('studentChartSection').innerHTML = '';
-  renderStudentCompletedTasks();
-  renderStudentExam();
+  // Clear all legacy sections on the home page to ensure zero duplicate widgets
+  ['studentDraftSection', 'studentTasksSection', 'studentSessionsSection', 'studentChartSection', 'studentCompletedTasksSection'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
 }
 
 function renderStudentCompletedTasks() {
@@ -5339,8 +5395,9 @@ function uploadTaskFile(taskIdx, input, type) {
     }
 
     // Show success and re-render
-    alert('✅ تم إرسال الملف للمؤو جاح! انتظر الموافقة.');
+    showToast('✅ تم إرسال الملف للمسؤول بنجاح! انتظر الموافقة.', 'success');
     renderStudentTasks();
+    if (typeof renderStudentTasksHub === 'function') renderStudentTasksHub();
   };
   reader.readAsDataURL(file);
 }
@@ -5583,6 +5640,7 @@ async function verifyAndSubmitRecitation(taskIdx, blob, dataUrl, transcript, aiB
   proctorStop(true);
   showToast('✅ تم التحقق من الصوت والمحتوى وإرسال التسجيل للمسؤول', 'success');
   renderStudentTasks();
+  if (typeof renderStudentTasksHub === 'function') renderStudentTasksHub();
   return true;
 }
 
@@ -6633,6 +6691,1118 @@ async function logout() {
   showPage('lockScreen');
 }
 
+/* ==========================================================
+   NAVIGATION & BOTTOM BAR CONTROLLER (ADMIN, STUDENT, PARENT)
+   ========================================================== */
+
+function updateBottomNav(activePageId) {
+  const nav = document.getElementById('appBottomNav');
+  const inner = document.getElementById('appBottomNavInner');
+  if (!nav || !inner) return;
+
+  const isAuthPage = !currentType || activePageId === 'lockScreen' || activePageId === 'parentLogin' || (activePageId && activePageId.startsWith('signup'));
+  if (isAuthPage) {
+    nav.classList.add('hidden');
+    return;
+  }
+
+  nav.classList.remove('hidden');
+
+  let items = [];
+  let currentTab = 'home';
+
+  if (currentType === 'admin') {
+    const unreadMsgs = getData('messages', []).filter(m => (m.receiverType === 'admin' || !m.receiverType) && !m.read).length;
+    const unreadNotifs = getUnreadNotificationsCount();
+
+    if (activePageId === 'messagesPage') currentTab = 'messages';
+    else if (activePageId === 'notificationsPage') currentTab = 'notifications';
+    else if (activePageId === 'adminReportsPage') currentTab = 'reports';
+    else if (activePageId === 'adminSettings') currentTab = 'settings';
+    else currentTab = 'home';
+
+    items = [
+      { id: 'home', label: 'الرئيسية', icon: '🏠', pageId: 'adminDashboard' },
+      { id: 'messages', label: 'الرسائل', icon: '💬', pageId: 'messagesPage', badge: unreadMsgs },
+      { id: 'notifications', label: 'التنبيهات', icon: '🔔', pageId: 'notificationsPage', badge: unreadNotifs },
+      { id: 'reports', label: 'التقارير', icon: '📊', pageId: 'adminReportsPage' },
+      { id: 'settings', label: 'الإعدادات', icon: '⚙️', pageId: 'adminSettings' }
+    ];
+  } else if (currentType === 'student') {
+    const msgs = getData('messages', []);
+    const unreadMsgs = currentUser ? msgs.filter(m => m.receiverType === 'student' && m.receiverId === currentUser.id && !m.read).length : 0;
+    const pendingTasks = currentUser?.tasks ? currentUser.tasks.filter(t => !t.completed && !t.approved).length : 0;
+    const hasActiveExam = (currentUser?.activeExam && currentUser.activeExam.status === 'pending') ? 1 : 0;
+    const totalPending = pendingTasks + hasActiveExam;
+
+    if (activePageId === 'studentInbox') currentTab = 'messages';
+    else if (activePageId === 'studentTasksPage' || activePageId === 'studentExamPage') currentTab = 'tasks';
+    else if (activePageId === 'studentReportsPage' || activePageId === 'studentRecordsPage') currentTab = 'reports';
+    else if (activePageId === 'studentSettings') currentTab = 'settings';
+    else currentTab = 'home';
+
+    items = [
+      { id: 'home', label: 'الرئيسية', icon: '🏠', pageId: 'studentDashboard' },
+      { id: 'messages', label: 'الرسائل', icon: '💬', pageId: 'studentInbox', badge: unreadMsgs },
+      { id: 'tasks', label: 'المهمات', icon: '📝', pageId: 'studentTasksPage', badge: totalPending },
+      { id: 'reports', label: 'التقارير', icon: '📊', pageId: 'studentReportsPage' },
+      { id: 'settings', label: 'الإعدادات', icon: '⚙️', pageId: 'studentSettings' }
+    ];
+  } else if (currentType === 'parent') {
+    const msgs = getData('messages', []);
+    const parentName = Array.isArray(currentUser) && currentUser[0] ? currentUser[0].parent : (currentUser?.parent || null);
+    const unreadMsgs = parentName ? msgs.filter(m => m.receiverType === 'parent' && m.receiverName === parentName && !m.read).length : 0;
+
+    const children = Array.isArray(currentUser) ? currentUser : (currentUser ? [currentUser] : []);
+    let parentPendingCount = 0;
+    children.forEach(c => {
+      if (c && c.tasks) {
+        parentPendingCount += c.tasks.filter(t => !t.completed && !t.approved).length;
+      }
+      if (c && c.activeExam && c.activeExam.status === 'pending') {
+        parentPendingCount++;
+      }
+    });
+
+    if (activePageId === 'parentInbox') currentTab = 'messages';
+    else if (activePageId === 'parentTasksPage' || activePageId === 'parentPendingTasksPage') currentTab = 'tasks';
+    else if (activePageId === 'parentReportsPage' || activePageId === 'parentRecordsPage') currentTab = 'reports';
+    else if (activePageId === 'parentSettings') currentTab = 'settings';
+    else currentTab = 'home';
+
+    items = [
+      { id: 'home', label: 'الرئيسية', icon: '🏠', pageId: 'parentDashboard' },
+      { id: 'messages', label: 'الرسائل', icon: '💬', pageId: 'parentInbox', badge: unreadMsgs },
+      { id: 'tasks', label: 'المهمات', icon: '📝', pageId: 'parentTasksPage', badge: parentPendingCount },
+      { id: 'reports', label: 'التقارير', icon: '📊', pageId: 'parentReportsPage' },
+      { id: 'settings', label: 'الإعدادات', icon: '⚙️', pageId: 'parentSettings' }
+    ];
+  }
+
+  inner.innerHTML = items.map(item => {
+    const isActive = item.id === currentTab;
+    const badgeHtml = (item.badge && item.badge > 0) ? `<span class="app-nav-badge">${item.badge > 99 ? '99+' : item.badge}</span>` : '';
+    return `
+      <button type="button" class="app-nav-tab ${isActive ? 'active' : ''}" onclick="navToRoleTab('${currentType}', '${item.id}')" aria-label="${item.label}">
+        <span class="app-nav-tab-icon">${item.icon}${badgeHtml}</span>
+        <span class="app-nav-tab-label">${item.label}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function navToRoleTab(role, tabId) {
+  if (role === 'admin') {
+    if (tabId === 'home') showPage('adminDashboard');
+    else if (tabId === 'messages') showPage('messagesPage');
+    else if (tabId === 'notifications') showPage('notificationsPage');
+    else if (tabId === 'reports') showPage('adminReportsPage');
+    else if (tabId === 'settings') showPage('adminSettings');
+  } else if (role === 'student') {
+    if (tabId === 'home') showPage('studentDashboard');
+    else if (tabId === 'messages') showPage('studentInbox');
+    else if (tabId === 'tasks') showPage('studentTasksPage');
+    else if (tabId === 'reports') showPage('studentReportsPage');
+    else if (tabId === 'settings') showPage('studentSettings');
+  } else if (role === 'parent') {
+    if (tabId === 'home') showPage('parentDashboard');
+    else if (tabId === 'messages') showPage('parentInbox');
+    else if (tabId === 'tasks') showPage('parentTasksPage');
+    else if (tabId === 'reports') showPage('parentReportsPage');
+    else if (tabId === 'settings') showPage('parentSettings');
+  }
+}
+
+/* ==========================================================
+   SETTINGS & PREFERENCES (THEME, LANG, SOUND, MESSAGING)
+   ========================================================== */
+
+function setAppTheme(mode) {
+  localStorage.setItem('thimar_theme_mode', mode);
+  localStorage.setItem('theme', mode);
+  if (mode === 'light') {
+    document.documentElement.removeAttribute('data-theme');
+  } else if (mode === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    // auto
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (isDark) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+  }
+  syncSettingsThemeButtons(mode);
+}
+
+function syncSettingsThemeButtons(mode) {
+  const currentMode = mode || localStorage.getItem('thimar_theme_mode') || 'auto';
+  ['admin', 'student', 'parent'].forEach(role => {
+    const lightBtn = document.getElementById(`${role}ThemeLightBtn`);
+    const darkBtn = document.getElementById(`${role}ThemeDarkBtn`);
+    const autoBtn = document.getElementById(`${role}ThemeAutoBtn`);
+    if (lightBtn) lightBtn.classList.toggle('active', currentMode === 'light');
+    if (darkBtn) darkBtn.classList.toggle('active', currentMode === 'dark');
+    if (autoBtn) autoBtn.classList.toggle('active', currentMode === 'auto');
+  });
+}
+
+function setAppLang(lang) {
+  localStorage.setItem('thimar_lang', lang);
+  localStorage.setItem('lang', lang);
+  syncSettingsLangButtons(lang);
+  if (typeof window.applyLangToDom === 'function') {
+    window.applyLangToDom();
+  }
+}
+
+function syncSettingsLangButtons(lang) {
+  const currentLang = lang || localStorage.getItem('thimar_lang') || 'ar';
+  ['admin', 'student', 'parent'].forEach(role => {
+    const arBtn = document.getElementById(`${role}LangArBtn`);
+    const enBtn = document.getElementById(`${role}LangEnBtn`);
+    if (arBtn) arBtn.classList.toggle('active', currentLang === 'ar');
+    if (enBtn) enBtn.classList.toggle('active', currentLang === 'en');
+  });
+}
+
+function toggleAppSound(enabled) {
+  localStorage.setItem('thimar_sound_enabled', enabled ? 'true' : 'false');
+  if (enabled) {
+    playNotificationSound();
+  }
+}
+
+function testNotificationSound() {
+  playNotificationSound();
+  showToast('🎵 تم تجربة نغمة التنبيه', 'info');
+}
+
+function playNotificationSound() {
+  if (localStorage.getItem('thimar_sound_enabled') === 'false') return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12); // A5
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.35);
+  } catch (e) {}
+}
+
+function setAppMessageFilter(val) {
+  localStorage.setItem('thimar_msg_pref', val);
+  showToast('✅ تم حفظ خيارات الخصوصية والمراسلة', 'success');
+}
+
+function confirmAppLogout() {
+  if (confirm('هل أنت متأكد من رغبتك في تسجيل الخروج من الحساب؟')) {
+    if (typeof logout === 'function') {
+      logout();
+    } else {
+      showPage('lockScreen');
+    }
+  }
+}
+
+function loadParentSettings() {
+  const alertBox = document.getElementById('parentSettingsAlert');
+  if (alertBox) alertBox.innerHTML = '';
+  const curEl = document.getElementById('currentParentPass');
+  const newEl = document.getElementById('newParentPass');
+  if (curEl) curEl.value = '';
+  if (newEl) newEl.value = '';
+
+  syncSettingsThemeButtons();
+  syncSettingsLangButtons();
+  const soundCb = document.getElementById('parentSoundCheckbox');
+  if (soundCb) soundCb.checked = localStorage.getItem('thimar_sound_enabled') !== 'false';
+  const pref = document.getElementById('parentMsgPreference');
+  if (pref) pref.value = localStorage.getItem('thimar_msg_pref') || 'all';
+}
+
+function saveParentPass() {
+  const curEl = document.getElementById('currentParentPass');
+  const newEl = document.getElementById('newParentPass');
+  const alertBox = document.getElementById('parentSettingsAlert');
+  const current = curEl ? curEl.value : '';
+  const newPass = newEl ? newEl.value : '';
+
+  const children = Array.isArray(currentUser) ? currentUser : (currentUser ? [currentUser] : []);
+  const firstChild = children[0];
+  if (!firstChild) {
+    if (alertBox) alertBox.innerHTML = '<div class="alert alert-danger">❌ لم يتم العثور على بيانات الحساب</div>';
+    return;
+  }
+
+  if (firstChild.parentPass !== current) {
+    if (alertBox) alertBox.innerHTML = '<div class="alert alert-danger">❌ الرقم السري الحالي غير صحيح</div>';
+    return;
+  }
+  if (!newPass) {
+    if (alertBox) alertBox.innerHTML = '<div class="alert alert-danger">❌ يرجى إدخال رقم سري جديد</div>';
+    return;
+  }
+
+  let students = getData('students');
+  students.forEach(s => {
+    if (s.parent === firstChild.parent || (firstChild.parentPhone && s.parentPhone === firstChild.parentPhone)) {
+      s.parentPass = newPass;
+    }
+  });
+  setData('students', students);
+
+  if (Array.isArray(currentUser)) {
+    currentUser.forEach(c => c.parentPass = newPass);
+  } else if (currentUser) {
+    currentUser.parentPass = newPass;
+  }
+
+  if (alertBox) alertBox.innerHTML = '<div class="alert alert-success">✅ تم حفظ الرقم السري الجديد لولي الأمر بنجاح</div>';
+  if (curEl) curEl.value = '';
+  if (newEl) newEl.value = '';
+}
+
+/* ==========================================================
+   COMPREHENSIVE STUDENT EDUCATIONAL REPORT GENERATOR
+   ========================================================== */
+
+function calculateStudentEvaluation(student) {
+  const sessions = (student.sessions || []).filter(s => !s.isDraft);
+  const exams = student.examResults || [];
+  const tasks = student.tasks || [];
+  const completedTasks = (student.completedTasks || []).concat(tasks.filter(t => t.approved || t.completed));
+  const records = student.records || [];
+
+  // 1. نشاط الطالب (Activity)
+  const totalInteractions = (sessions.length * 2) + exams.length + completedTasks.length + records.length;
+  let activityScore = Math.min(100, Math.max(35, totalInteractions * 8));
+  let activityDesc = activityScore >= 85 ? 'ممتاز جدًا - نشاط وتفاعل ملحوظ' :
+                     activityScore >= 70 ? 'جيد جدًا - نشاط ملموس ومستمر' :
+                     activityScore >= 50 ? 'جيد - نشاط دوري' : 'بحاجة لزيادة التفاعل';
+
+  // 2. اجتهاد الطالب (Diligence)
+  const totalAssignedTasks = tasks.length + (student.completedTasks || []).length;
+  let diligenceScore = 82;
+  if (totalAssignedTasks > 0) {
+    diligenceScore = Math.min(100, Math.round((completedTasks.length / totalAssignedTasks) * 100));
+  } else if (sessions.length > 0) {
+    diligenceScore = Math.min(100, Math.max(70, Math.round(sessions.reduce((acc, s) => acc + (s.totalScore || 85), 0) / sessions.length)));
+  }
+  let diligenceDesc = diligenceScore >= 85 ? 'مجتهد ومبادر في تسليم المطلوب' :
+                      diligenceScore >= 70 ? 'مبادر ومتابع بانتظام' : 'يحتاج لمزيد من المتابعة لإتمام الواجبات';
+
+  // 3. مذاكرته (Study Mastery & Accuracy)
+  let scoreSum = 0;
+  let scoreCount = 0;
+  sessions.forEach(s => { if (typeof s.totalScore === 'number') { scoreSum += s.totalScore; scoreCount++; } });
+  exams.forEach(e => {
+    if (typeof e.score === 'number') {
+      const pct = e.totalQuestions ? (e.score / e.totalQuestions) * 100 : e.score;
+      scoreSum += pct; scoreCount++;
+    }
+  });
+  let studyScore = scoreCount > 0 ? Math.round(scoreSum / scoreCount) : 88;
+  let studyDesc = studyScore >= 90 ? 'متقن ومتمكن من الحفظ والتجويد' :
+                  studyScore >= 75 ? 'جيد جدًا مع دقة مقبولة في الأحكام' :
+                  studyScore >= 60 ? 'جيد وبحاجة لتكرار المراجعة والتثبيت' : 'يحتاج مراجعة مكثفة للحفظ';
+
+  // 4. انتظامه (Regularity & Attendance)
+  let regularityScore = sessions.length >= 8 ? 95 :
+                        sessions.length >= 4 ? 85 :
+                        sessions.length >= 2 ? 75 : 65;
+  let regularityDesc = regularityScore >= 85 ? 'ملتزم ومنتظم في الحضور والتسميع' :
+                       regularityScore >= 75 ? 'انتظام جيد ومتابعة دورية' : 'يحتاج للحرص على التواجد المنتظم';
+
+  // 5. مستوى تقدمه (Progress)
+  const currentJuzNum = parseInt(student.juz || '1', 10) || 1;
+  const progressPct = Math.min(100, Math.round((currentJuzNum / 30) * 100));
+  let progressDesc = `متقدم في الجزء (${currentJuzNum}) - نسبة إنجاز ${progressPct}% من المصحف الشريف`;
+
+  return {
+    activity: { score: activityScore, desc: activityDesc },
+    diligence: { score: diligenceScore, desc: diligenceDesc },
+    study: { score: studyScore, desc: studyDesc },
+    regularity: { score: regularityScore, desc: regularityDesc },
+    progress: { score: progressPct, desc: progressDesc, juz: currentJuzNum }
+  };
+}
+
+function generateComprehensiveReportHtml(student, isParentOrAdminView) {
+  if (!student) return '<div class="alert alert-warning">لا توجد بيانات متاحة لهذا الطالب.</div>';
+
+  const evalData = calculateStudentEvaluation(student);
+  const finalizedSessions = (student.sessions || []).filter(s => !s.isDraft);
+  const exams = student.examResults || [];
+  const tasks = student.tasks || [];
+  const completedTasks = student.completedTasks || [];
+  const taskArchive = student.taskArchive || [];
+  const records = student.records || [];
+
+  // Header Banner
+  let html = `
+    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:18px; padding:22px; margin-bottom:24px; box-shadow:var(--shadow);">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; border-bottom:1px solid var(--border); padding-bottom:15px; margin-bottom:15px;">
+        <div>
+          <h3 style="margin:0 0 6px; font-size:1.4rem; color:var(--primary); font-weight:800;">👤 ${escapeHtml(student.name || '-')}</h3>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; font-size:0.88rem; color:var(--text-light);">
+            <span>اسم المستخدم: <strong>${escapeHtml(student.username || '-')}</strong></span>
+            <span>•</span>
+            <span>السن: <strong>${escapeHtml(String(student.age || '-'))} سنة</strong></span>
+            <span>•</span>
+            <span>ولي الأمر: <strong>${escapeHtml(student.parent || '-')}</strong></span>
+          </div>
+        </div>
+        <div style="text-align:end;">
+          <span class="badge badge-primary" style="font-size:0.95rem; padding:6px 14px;">الجزء الحالي: ${escapeHtml(String(student.juz || '1'))}</span>
+        </div>
+      </div>
+      
+      <!-- Quick Metric Counters -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px;">
+        <div style="background:rgba(49,92,75,0.06); border-radius:12px; padding:12px; text-align:center;">
+          <div style="font-size:1.3rem; font-weight:800; color:var(--primary);">${finalizedSessions.length}</div>
+          <div style="font-size:0.8rem; color:var(--text-light); font-weight:600;">تسميعات نهائية</div>
+        </div>
+        <div style="background:rgba(59,130,246,0.06); border-radius:12px; padding:12px; text-align:center;">
+          <div style="font-size:1.3rem; font-weight:800; color:#2563eb;">${exams.length}</div>
+          <div style="font-size:0.8rem; color:var(--text-light); font-weight:600;">اختبارات مجتازة</div>
+        </div>
+        <div style="background:rgba(16,185,129,0.06); border-radius:12px; padding:12px; text-align:center;">
+          <div style="font-size:1.3rem; font-weight:800; color:#059669;">${completedTasks.length + tasks.filter(t => t.approved).length}</div>
+          <div style="font-size:0.8rem; color:var(--text-light); font-weight:600;">مهام مكتملة</div>
+        </div>
+        <div style="background:rgba(245,158,11,0.06); border-radius:12px; padding:12px; text-align:center;">
+          <div style="font-size:1.3rem; font-weight:800; color:#d97706;">${evalData.study.score}%</div>
+          <div style="font-size:0.8rem; color:var(--text-light); font-weight:600;">معدل الإتقان</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // SECTION 1: Recitation Sessions (نتائج وسجلات التسميع)
+  html += `
+    <div class="report-section">
+      <div class="report-section-title">
+        <span>📖 نتائج وسجلات التسميع</span>
+        <span class="badge badge-outline" style="font-size:0.75rem;">${finalizedSessions.length} جلسة</span>
+      </div>
+  `;
+  if (!finalizedSessions.length) {
+    html += '<p style="color:var(--text-light); margin:0;">لا توجد جلسات تسميع معتمدة مسجلة حتى الآن.</p>';
+  } else {
+    html += '<div style="display:flex; flex-direction:column; gap:12px;">';
+    finalizedSessions.slice().reverse().forEach((session, idx) => {
+      const elementsText = (session.elements || []).map(el => `سورة ${el.surah || ''} (${el.from || 1} إلى ${el.to || 'الآخر'})`).join(' • ');
+      const scoreBadge = typeof session.totalScore === 'number' 
+        ? `<span class="badge ${session.totalScore >= 90 ? 'badge-success' : session.totalScore >= 75 ? 'badge-primary' : 'badge-warning'}">${session.totalScore}/100</span>` 
+        : '';
+      html += `
+        <div style="background:var(--table-header); border:1px solid var(--border); border-radius:12px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+            <strong style="color:var(--text); font-size:0.95rem;">جلسة ${finalizedSessions.length - idx}: ${escapeHtml(session.date || '-')}</strong>
+            ${scoreBadge}
+          </div>
+          <div style="color:var(--text-light); font-size:0.88rem; margin-bottom:6px;">${escapeHtml(elementsText || 'تسميع آيات')}</div>
+          ${session.notes ? `<div style="font-size:0.85rem; background:var(--card-bg); padding:8px 12px; border-radius:8px; border:1px dashed var(--border); color:var(--text);">📝 ملاحظات المعلم: ${escapeHtml(session.notes)}</div>` : ''}
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // SECTION 2: Exams (نتائج الاختبارات)
+  html += `
+    <div class="report-section">
+      <div class="report-section-title">
+        <span>🧪 نتائج الاختبارات الدورية</span>
+        <span class="badge badge-outline" style="font-size:0.75rem;">${exams.length} اختبار</span>
+      </div>
+  `;
+  if (!exams.length) {
+    html += '<p style="color:var(--text-light); margin:0;">لم يتم تسجيل نتائج اختبارات مكتملة حتى الآن.</p>';
+  } else {
+    html += '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">';
+    exams.forEach(ex => {
+      const scoreVal = typeof ex.score === 'number' ? ex.score : 0;
+      const totalVal = ex.totalQuestions || 10;
+      const pct = Math.round((scoreVal / totalVal) * 100);
+      html += `
+        <div style="background:var(--table-header); border:1px solid var(--border); border-radius:12px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong style="color:var(--text);">${escapeHtml(ex.title || 'اختبار قرآني')}</strong>
+            <span class="badge ${pct >= 70 ? 'badge-success' : 'badge-danger'}">${pct}%</span>
+          </div>
+          <div style="font-size:0.85rem; color:var(--text-light); margin-bottom:4px;">الدرجة: ${scoreVal} من ${totalVal}</div>
+          <div style="font-size:0.8rem; color:var(--text-light);">التاريخ: ${escapeHtml(ex.date || ex.completedAt || '-')}</div>
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // SECTION 3: Tasks (نتائج وأرشيف المهام)
+  const allStudentTasks = tasks.concat(completedTasks).concat(taskArchive);
+  html += `
+    <div class="report-section">
+      <div class="report-section-title">
+        <span>📝 نتائج وسجلات المهام</span>
+        <span class="badge badge-outline" style="font-size:0.75rem;">${allStudentTasks.length} مهمة</span>
+      </div>
+  `;
+  if (!allStudentTasks.length) {
+    html += '<p style="color:var(--text-light); margin:0;">لا توجد مهام مسجلة حتى الآن.</p>';
+  } else {
+    html += '<div style="display:flex; flex-direction:column; gap:10px;">';
+    allStudentTasks.slice(0, 10).forEach(t => {
+      const isDone = t.approved || t.completed;
+      const isReview = t.submitted && !t.approved;
+      const statusLabel = isDone ? 'مكتملة ومقبولة ✅' : isReview ? 'قيد المراجعة 🔍' : t.rejected ? 'بحاجة لإعادة ⚠️' : 'جديدة ⏳';
+      const statusClass = isDone ? 'task-badge-completed' : isReview ? 'task-badge-inprogress' : t.rejected ? 'task-badge-rejected' : 'task-badge-new';
+      html += `
+        <div style="background:var(--table-header); border:1px solid var(--border); border-radius:12px; padding:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div>
+            <strong style="color:var(--text); display:block; font-size:0.92rem;">${escapeHtml(t.name || t.text || (t.surah ? 'سورة ' + t.surah : 'مهمة دراسية'))}</strong>
+            <small style="color:var(--text-light);">${t.surah ? 'سورة ' + escapeHtml(t.surah) + ' (من ' + (t.from||1) + ' إلى ' + (t.to||'الآخر') + ')' : escapeHtml(t.type || 'واجب')}</small>
+          </div>
+          <span class="badge ${statusClass}" style="font-size:0.78rem;">${statusLabel}</span>
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // SECTION 4: Audio Recordings (التسجيلات الصوتية ومحاولات الطالب)
+  html += `
+    <div class="report-section">
+      <div class="report-section-title">
+        <span>🎙️ التسجيلات الصوتية ومحاولات الطالب</span>
+        <span class="badge badge-outline" style="font-size:0.75rem;">${records.length} تسجيل</span>
+      </div>
+  `;
+  if (!records.length && !student.voiceFingerprint) {
+    html += '<p style="color:var(--text-light); margin:0;">لا توجد تسجيلات صوتية مرفوعة حتى الآن.</p>';
+  } else {
+    html += '<div style="display:flex; flex-direction:column; gap:12px;">';
+    if (student.voiceFingerprint) {
+      html += `
+        <div style="background:var(--table-header); border:1px solid var(--border); border-radius:12px; padding:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <strong style="font-size:0.9rem; color:var(--text);">البصمة الصوتية المعتمدة</strong>
+            <span class="badge badge-primary">بصمة هوية</span>
+          </div>
+          <audio controls src="${student.voiceFingerprint}" style="width:100%; max-width:360px; height:36px;"></audio>
+        </div>
+      `;
+    }
+    records.forEach(rec => {
+      html += `
+        <div style="background:var(--table-header); border:1px solid var(--border); border-radius:12px; padding:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <strong style="font-size:0.9rem; color:var(--text);">${escapeHtml(rec.name || 'تسجيل تلاوة')}</strong>
+            <span style="font-size:0.8rem; color:var(--text-light);">${escapeHtml(rec.date || '-')}</span>
+          </div>
+          ${rec.url ? `<audio controls src="${rec.url}" style="width:100%; max-width:360px; height:36px;"></audio>` : '<span style="color:var(--text-light); font-size:0.82rem;">الملف الصوتي متاح في السجل</span>'}
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // SECTION 5: Progress Level & Attendance (مستوى التقدم ونسبة الإنجاز)
+  html += `
+    <div class="report-section">
+      <div class="report-section-title">
+        <span>📊 مستوى التقدم ونسبة الإنجاز وسجل النشاط</span>
+      </div>
+      <div style="margin-bottom:15px;">
+        <div style="display:flex; justify-content:space-between; font-weight:700; font-size:0.9rem; margin-bottom:6px;">
+          <span>نسبة إنجاز المصحف الشريف</span>
+          <span>${evalData.progress.score}% (الجزء ${evalData.progress.juz} من 30)</span>
+        </div>
+        <div style="width:100%; height:12px; background:var(--table-header); border-radius:10px; overflow:hidden; border:1px solid var(--border);">
+          <div style="width:${evalData.progress.score}%; height:100%; background:linear-gradient(90deg, #10b981, #059669); border-radius:10px; transition:width 0.4s ease;"></div>
+        </div>
+      </div>
+      <p style="font-size:0.88rem; color:var(--text-light); margin:0;">${evalData.progress.desc}</p>
+    </div>
+  `;
+
+  // SECTION 6: Comprehensive Final Evaluation (التقييم الشامل للطالب)
+  html += `
+    <div class="eval-card">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; border-bottom:2px solid rgba(49,92,75,0.2); padding-bottom:12px; margin-bottom:15px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.6rem;">🌟</span>
+          <h3 style="margin:0; font-size:1.25rem; color:var(--primary); font-weight:800;">التقييم الشامل والنهائي للطالب</h3>
+        </div>
+        <span class="badge badge-success" style="font-size:0.88rem; padding:6px 14px;">مبني على البيانات الفعلية للنظام</span>
+      </div>
+
+      <div class="eval-grid">
+        <!-- 1. نشاط الطالب -->
+        <div class="eval-item">
+          <span class="eval-item-label">⚡ نشاط الطالب وتفاعله</span>
+          <div class="eval-item-val">
+            <span>${evalData.activity.score}%</span>
+            <span class="eval-stars">${'⭐'.repeat(Math.min(5, Math.ceil(evalData.activity.score / 20)))}</span>
+          </div>
+          <small style="color:var(--text-light); font-size:0.8rem;">${evalData.activity.desc}</small>
+        </div>
+
+        <!-- 2. اجتهاد الطالب -->
+        <div class="eval-item">
+          <span class="eval-item-label">💪 اجتهاد الطالب ومبادرته</span>
+          <div class="eval-item-val">
+            <span>${evalData.diligence.score}%</span>
+            <span class="eval-stars">${'⭐'.repeat(Math.min(5, Math.ceil(evalData.diligence.score / 20)))}</span>
+          </div>
+          <small style="color:var(--text-light); font-size:0.8rem;">${evalData.diligence.desc}</small>
+        </div>
+
+        <!-- 3. مذاكرته -->
+        <div class="eval-item">
+          <span class="eval-item-label">🧠 مذاكرته وإتقان الحفظ</span>
+          <div class="eval-item-val">
+            <span>${evalData.study.score}%</span>
+            <span class="eval-stars">${'⭐'.repeat(Math.min(5, Math.ceil(evalData.study.score / 20)))}</span>
+          </div>
+          <small style="color:var(--text-light); font-size:0.8rem;">${evalData.study.desc}</small>
+        </div>
+
+        <!-- 4. انتظامه -->
+        <div class="eval-item">
+          <span class="eval-item-label">⏱️ انتظامه وحضوره</span>
+          <div class="eval-item-val">
+            <span>${evalData.regularity.score}%</span>
+            <span class="eval-stars">${'⭐'.repeat(Math.min(5, Math.ceil(evalData.regularity.score / 20)))}</span>
+          </div>
+          <small style="color:var(--text-light); font-size:0.8rem;">${evalData.regularity.desc}</small>
+        </div>
+
+        <!-- 5. مستوى تقدمه -->
+        <div class="eval-item" style="grid-column: 1 / -1;">
+          <span class="eval-item-label">🚀 مسار التقدم والإنجاز العام</span>
+          <div class="eval-item-val">
+            <span>${evalData.progress.score}% إنجاز</span>
+            <span class="badge badge-primary">الجزء ${evalData.progress.juz}</span>
+          </div>
+          <small style="color:var(--text-light); font-size:0.85rem;">${evalData.progress.desc}</small>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return html;
+}
+
+/* ==========================================================
+   ADMIN REPORTS PAGE HANDLERS
+   ========================================================== */
+
+let adminReportsSearchQuery = '';
+
+function renderAdminReports() {
+  const listContainer = document.getElementById('adminReportsStudentsList');
+  if (!listContainer) return;
+
+  closeAdminStudentReport();
+  filterAdminReportsStudents(adminReportsSearchQuery);
+}
+
+function filterAdminReportsStudents(query) {
+  adminReportsSearchQuery = (query || '').trim().toLowerCase();
+  const listContainer = document.getElementById('adminReportsStudentsList');
+  if (!listContainer) return;
+
+  const students = getData('students', []);
+  const filtered = students.filter(s => {
+    if (!adminReportsSearchQuery) return true;
+    const name = (s.name || '').toLowerCase();
+    const username = (s.username || '').toLowerCase();
+    const national = (s.nationalId || '').toLowerCase();
+    const juz = String(s.juz || '');
+    return name.includes(adminReportsSearchQuery) || username.includes(adminReportsSearchQuery) || national.includes(adminReportsSearchQuery) || juz.includes(adminReportsSearchQuery);
+  });
+
+  if (!filtered.length) {
+    listContainer.innerHTML = '<div class="alert alert-info" style="grid-column: 1 / -1;">لا يوجد طلاب يطابقون معايير البحث.</div>';
+    return;
+  }
+
+  listContainer.innerHTML = filtered.map(s => {
+    const sessionsCount = (s.sessions || []).filter(ses => !ses.isDraft).length;
+    const examsCount = (s.examResults || []).length;
+    const evalData = calculateStudentEvaluation(s);
+
+    return `
+      <div class="student-report-card" onclick="viewAdminStudentReport('${s.id}')">
+        <div>
+          <h4 style="margin:0 0 5px; color:var(--text); font-size:1.05rem;">👤 ${escapeHtml(s.name || '-')}</h4>
+          <div style="font-size:0.82rem; color:var(--text-light); display:flex; gap:8px; flex-wrap:wrap;">
+            <span>الجزء: <strong>${escapeHtml(String(s.juz || '1'))}</strong></span>
+            <span>•</span>
+            <span>التسميعات: <strong>${sessionsCount}</strong></span>
+            <span>•</span>
+            <span>الاختبارات: <strong>${examsCount}</strong></span>
+          </div>
+          <div style="margin-top:6px;">
+            <span class="badge badge-success" style="font-size:0.75rem;">إتقان: ${evalData.study.score}%</span>
+          </div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" style="white-space:nowrap;">عرض التقرير ←</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function viewAdminStudentReport(studentId) {
+  const students = getData('students', []);
+  const student = students.find(s => s.id === studentId);
+  if (!student) return;
+
+  const listView = document.getElementById('adminReportsListView');
+  const detailView = document.getElementById('adminReportsDetailView');
+  const content = document.getElementById('adminReportsDetailContent');
+  const badge = document.getElementById('adminReportStudentBadge');
+
+  if (listView) listView.classList.add('hidden');
+  if (detailView) detailView.classList.remove('hidden');
+  if (badge) badge.innerHTML = `<span class="badge badge-primary">تقرير: ${escapeHtml(student.name)}</span>`;
+  if (content) content.innerHTML = generateComprehensiveReportHtml(student, true);
+  window.scrollTo(0, 0);
+}
+
+function closeAdminStudentReport() {
+  const listView = document.getElementById('adminReportsListView');
+  const detailView = document.getElementById('adminReportsDetailView');
+  if (listView) listView.classList.remove('hidden');
+  if (detailView) detailView.classList.add('hidden');
+}
+
+/* ==========================================================
+   STUDENT REPORTS PAGE (STUDENT'S OWN REPORT ONLY)
+   ========================================================== */
+
+function renderStudentSelfReport() {
+  const content = document.getElementById('studentReportsContent');
+  if (!content) return;
+
+  if (currentType !== 'student' || !currentUser) {
+    content.innerHTML = '<div class="alert alert-danger">يجب تسجيل الدخول كطالب لعرض هذا التقرير.</div>';
+    return;
+  }
+
+  // Find fresh record from database
+  const students = getData('students', []);
+  const student = students.find(s => s.id === currentUser.id) || currentUser;
+
+  let html = generateComprehensiveReportHtml(student, false);
+
+  // Append Performance & Evaluation Chart for Quran sessions directly in the Reports page
+  const finalizedSessions = (student.sessions || []).filter(s => !s.isDraft);
+  if (finalizedSessions.length > 0) {
+    const canvasId = 'student_report_chart_canvas';
+    html += `
+      <div class="report-section" style="margin-top:24px;">
+        <div class="report-section-title">
+          <span>📈 مخطط درجات وتقييم الحفظ التراكمي</span>
+          <span class="badge badge-primary">${finalizedSessions.length} جلسة</span>
+        </div>
+        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:18px; margin-top:12px;">
+          <canvas id="${canvasId}" width="1100" height="500" style="max-width:100%; height:auto; border-radius:10px;"></canvas>
+          <div class="chart-legend" style="margin-top:14px; display:flex; gap:16px; justify-content:center;">
+            <div class="legend-item" style="display:flex; align-items:center; gap:8px;">
+              <div class="legend-dot" style="width:12px; height:12px; border-radius:50%; background:#6f42c1;"></div>
+              <span style="font-size:0.85rem; font-weight:600;">المجموع الكلي للتقييم</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    content.innerHTML = html;
+    setTimeout(() => {
+      if (typeof drawTotalOnlyChart === 'function') {
+        drawTotalOnlyChart(canvasId, finalizedSessions);
+      }
+    }, 150);
+  } else {
+    content.innerHTML = html;
+  }
+}
+
+/* ==========================================================
+   PARENT REPORTS PAGE (LINKED CHILDREN ONLY)
+   ========================================================== */
+
+let parentSelectedChildIndex = 0;
+
+function renderParentReportsHub(selectedIdx = 0) {
+  const tabsContainer = document.getElementById('parentReportsChildTabs');
+  const content = document.getElementById('parentReportsDetailContent');
+  if (!content) return;
+
+  if (currentType !== 'parent' || !currentUser) {
+    content.innerHTML = '<div class="alert alert-danger">يجب تسجيل الدخول كولي أمر لعرض تقارير الأبناء.</div>';
+    return;
+  }
+
+  const allStudents = getData('students', []);
+  let children = [];
+
+  if (Array.isArray(currentUser)) {
+    const ids = currentUser.map(c => c.id);
+    children = allStudents.filter(s => ids.includes(s.id));
+  } else if (currentUser) {
+    const parentName = currentUser.parent || currentUser.name;
+    const parentPhone = currentUser.parentPhone || currentUser.phone;
+    children = allStudents.filter(s => (s.parent && s.parent === parentName) || (parentPhone && s.parentPhone === parentPhone));
+    if (!children.length) children = [currentUser];
+  }
+
+  if (!children.length) {
+    content.innerHTML = '<div class="alert alert-info">لا يوجد أبناء مرتبطين بهذا الحساب حالياً.</div>';
+    if (tabsContainer) tabsContainer.innerHTML = '';
+    return;
+  }
+
+  if (selectedIdx >= children.length) selectedIdx = 0;
+  parentSelectedChildIndex = selectedIdx;
+
+  if (tabsContainer) {
+    if (children.length > 1) {
+      tabsContainer.innerHTML = children.map((c, i) => `
+        <button type="button" class="btn ${i === parentSelectedChildIndex ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="renderParentReportsHub(${i})">
+          👤 ${escapeHtml(c.name)}
+        </button>
+      `).join('');
+    } else {
+      tabsContainer.innerHTML = `<span class="badge badge-primary" style="font-size:0.9rem; padding:6px 14px;">الابن: ${escapeHtml(children[0].name)}</span>`;
+    }
+  }
+
+  const selectedChild = children[parentSelectedChildIndex];
+  content.innerHTML = generateComprehensiveReportHtml(selectedChild, true);
+}
+
+/* ==========================================================
+   STUDENT TASKS HUB (CENTRAL HUB FOR ALL STUDENT TASKS)
+   ========================================================== */
+
+let studentTasksHubFilter = 'all';
+
+function renderStudentTasksHub() {
+  const container = document.getElementById('studentTasksHubContent');
+  if (!container) return;
+
+  if (currentType !== 'student' || !currentUser) {
+    container.innerHTML = '<div class="alert alert-danger">يجب تسجيل الدخول كطالب للوصول للمهمات.</div>';
+    return;
+  }
+
+  const s = currentUser;
+  const tasks = s.tasks || [];
+  const completedTasks = s.completedTasks || [];
+  const activeExam = s.activeExam;
+  const draftSession = s.sessions ? s.sessions.find(sess => sess.isDraft) : null;
+
+  // Build unified tasks array
+  let allItems = [];
+
+  if (activeExam && activeExam.status === 'pending') {
+    allItems.push({
+      id: 'active_exam_' + (activeExam.id || '1'),
+      isExam: true,
+      rawIdx: -1,
+      title: activeExam.title || 'اختبار قرآني معتمد',
+      type: 'اختبار دوري',
+      category: 'pending',
+      desc: 'اختبار نشط يتطلب الإجابة والحل لتأكيد إتقان المنهج.',
+      action: "showPage('studentExamPage')"
+    });
+  }
+
+  tasks.forEach((t, origIdx) => {
+    let cat = 'pending';
+    if (t.approved || t.completed) cat = 'completed';
+    else if (t.submitted) cat = 'submitted';
+    else if (t.rejected) cat = 'rejected';
+
+    allItems.push({
+      id: t.id || ('task_' + origIdx),
+      isExam: false,
+      rawIdx: origIdx,
+      title: t.name || t.text || (t.surah ? 'تسميع سورة ' + t.surah : 'مهمة دراسية'),
+      type: t.type === 'homework' ? 'واجب كتابي' : t.type === 'voice' ? 'تسميع صوتي' : 'مهمة قراءة',
+      category: cat,
+      desc: t.surah ? `سورة ${t.surah} (من آية ${t.from || 1} إلى ${t.to || 'الآخر'})` : (t.text || 'مهمة تعليمية مطلوبة'),
+      dueDate: t.dueDate,
+      raw: t
+    });
+  });
+
+  completedTasks.forEach((ct, cIdx) => {
+    allItems.push({
+      id: ct.id || ('completed_' + cIdx),
+      isExam: false,
+      rawIdx: -1,
+      title: ct.name || ct.text || (ct.surah ? 'سورة ' + ct.surah : 'مهمة مكتملة'),
+      type: ct.type || 'مهمة مكتملة',
+      category: 'completed',
+      desc: ct.surah ? `سورة ${ct.surah}` : (ct.text || 'مهمة تم إنجازها واعتمادها بنجاح'),
+      raw: ct
+    });
+  });
+
+  // Update counter badges in filter tabs
+  const countAll = allItems.length;
+  const countPending = allItems.filter(i => i.category === 'pending').length;
+  const countSubmitted = allItems.filter(i => i.category === 'submitted').length;
+  const countCompleted = allItems.filter(i => i.category === 'completed').length;
+  const countRejected = allItems.filter(i => i.category === 'rejected').length;
+
+  const elAll = document.getElementById('countStudentTasksAll');
+  const elPending = document.getElementById('countStudentTasksPending');
+  const elReview = document.getElementById('countStudentTasksReview');
+  const elCompleted = document.getElementById('countStudentTasksCompleted');
+  const elRejected = document.getElementById('countStudentTasksRejected');
+
+  if (elAll) elAll.textContent = String(countAll);
+  if (elPending) elPending.textContent = String(countPending);
+  if (elReview) elReview.textContent = String(countSubmitted);
+  if (elCompleted) elCompleted.textContent = String(countCompleted);
+  if (elRejected) elRejected.textContent = String(countRejected);
+
+  // Build Draft Recitation Section (if active)
+  let draftHtml = '';
+  if (draftSession) {
+    const timeLeft = Math.max(0, 24 - ((Date.now() - (draftSession.draftCreatedAt || Date.now())) / (60 * 60 * 1000)));
+    draftHtml = `
+      <div style="background:var(--card-bg); border:2px solid var(--warning); border-radius:16px; padding:18px; margin-bottom:20px; box-shadow:var(--shadow);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+          <h4 style="color:var(--warning); margin:0; font-size:1.15rem;">🎙️ تسميع اليوم (مسودة جارية - قيد التعديل)</h4>
+          <span class="badge badge-warning">مسودة تسميع معلقة</span>
+        </div>
+        <p style="margin:0 0 10px; font-size:0.9rem; color:var(--text);"><strong>تاريخ الجلسة:</strong> ${escapeHtml(draftSession.date || '-')}</p>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${(draftSession.elements || []).map(el => `
+            <div style="padding:10px; background:var(--input-bg); border-radius:8px; border-right:4px solid ${el.color || 'var(--primary)'};">
+              <strong>${escapeHtml(el.name)}</strong> - ${escapeHtml(el.surah || 'بدون سورة')} 
+              <span>(من آية ${el.from || '-'} إلى ${el.to || '-'})</span> | 
+              <span>التقييم: <span class="badge ${getRatingClass(el.rating)}">${getRatingLabel(el.rating)}</span></span>
+            </div>
+          `).join('')}
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap; gap:8px;">
+          <span class="score-badge">المجموع الحالي: ${draftSession.totalScore || 0} درجة</span>
+          <span style="color:var(--text-light); font-size:0.85rem;">⏰ متبقي ${timeLeft.toFixed(1)} ساعة حتى الإغلاق والاعتماد التلقائي</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // Apply active filter
+  let visibleItems = allItems;
+  if (studentTasksHubFilter !== 'all') {
+    visibleItems = allItems.filter(i => i.category === studentTasksHubFilter);
+  }
+
+  let listHtml = '';
+  if (!visibleItems.length) {
+    listHtml = '<div class="alert alert-info">لا توجد مهام مطابقة لهذا التصنيف حالياً.</div>';
+  } else {
+    listHtml = `
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        ${visibleItems.map(item => {
+          let statusBadge = '';
+          if (item.category === 'completed') statusBadge = '<span class="badge task-badge-completed">مكتملة ومقبولة ✅</span>';
+          else if (item.category === 'submitted') statusBadge = '<span class="badge task-badge-inprogress">قيد المراجعة 🔍</span>';
+          else if (item.category === 'rejected') statusBadge = '<span class="badge task-badge-rejected">بحاجة لإعادة ⚠️</span>';
+          else statusBadge = '<span class="badge task-badge-new">جديدة وبانتظار الإنجاز ⏳</span>';
+
+          let actionControls = '';
+          if (item.isExam) {
+            actionControls = `<button type="button" class="btn btn-primary btn-sm" onclick="${item.action}">📝 بدء وحل الاختبار الآن</button>`;
+          } else if (item.raw) {
+            const rawIdx = item.rawIdx;
+            const t = item.raw;
+            if (t.type === 'homework') {
+              if (item.category === 'pending' || item.category === 'rejected') {
+                actionControls = `
+                  <input type="file" id="stTaskFile_${rawIdx}" accept="image/*,.pdf,.doc,.docx" style="display:none;" onchange="uploadTaskFile(${rawIdx}, this, 'homework'); setTimeout(renderStudentTasksHub, 400);">
+                  <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('stTaskFile_${rawIdx}').click()">📤 رفع ملف أو صورة الواجب</button>
+                `;
+              } else if (item.category === 'submitted') {
+                actionControls = '<span class="badge task-badge-inprogress" style="padding:6px 12px;">📤 تم إرسال الواجب للمسؤول - بانتظار المراجعة</span>';
+              }
+            } else if (t.type === 'voice' || t.type === 'reading') {
+              let ayatBlock = studentAyatBlock(t, 'hub_' + rawIdx);
+              let teacherAudio = t.audio ? `<div style="margin:8px 0; font-size:0.85rem;">🎙️ تلاوة المعلم المرجعية:<br><audio controls preload="auto" src="${t.audio}" style="height:36px; margin-top:4px; max-width:320px;"></audio></div>` : '';
+              let recControls = '';
+              if (item.category === 'pending' || item.category === 'rejected') {
+                recControls = studentVoiceRecorderHTML(rawIdx);
+              } else if (item.category === 'submitted') {
+                recControls = '<span class="badge task-badge-inprogress" style="padding:6px 12px;">📤 تم إرسال التسجيل الصوتي للمسؤول - بانتظار المراجعة</span>';
+              }
+              actionControls = ayatBlock + teacherAudio + recControls;
+            }
+          }
+
+          return `
+            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:18px; box-shadow:var(--shadow);">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                <div>
+                  <span class="badge badge-primary" style="font-size:0.75rem; margin-bottom:4px;">${escapeHtml(item.type)}</span>
+                  <h4 style="margin:0; font-size:1.1rem; color:var(--text);">${escapeHtml(item.title)}</h4>
+                </div>
+                ${statusBadge}
+              </div>
+              <p style="color:var(--text-light); font-size:0.9rem; margin:0 0 12px;">${escapeHtml(item.desc)}</p>
+              ${item.dueDate ? `<div style="font-size:0.8rem; color:var(--text-light); margin-bottom:12px;">⏰ موعد التسليم: ${escapeHtml(item.dueDate)}</div>` : ''}
+              
+              <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+                ${actionControls}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  container.innerHTML = draftHtml + listHtml;
+}
+
+function filterStudentTasksHub(filter, btnEl) {
+  studentTasksHubFilter = filter;
+  document.querySelectorAll('.task-hub-btn').forEach(btn => btn.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  renderStudentTasksHub();
+}
+
+/* ==========================================================
+   PARENT TASKS HUB (GROUPED BY CHILD AS REQUESTED)
+   ========================================================== */
+
+function renderParentTasksHub() {
+  const container = document.getElementById('parentTasksHubContent');
+  if (!container) return;
+
+  if (currentType !== 'parent' || !currentUser) {
+    container.innerHTML = '<div class="alert alert-danger">يجب تسجيل الدخول كولي أمر للوصول للمهمات.</div>';
+    return;
+  }
+
+  const allStudents = getData('students', []);
+  let children = [];
+
+  if (Array.isArray(currentUser)) {
+    const ids = currentUser.map(c => c.id);
+    children = allStudents.filter(s => ids.includes(s.id));
+  } else if (currentUser) {
+    const parentName = currentUser.parent || currentUser.name;
+    const parentPhone = currentUser.parentPhone || currentUser.phone;
+    children = allStudents.filter(s => (s.parent && s.parent === parentName) || (parentPhone && s.parentPhone === parentPhone));
+    if (!children.length) children = [currentUser];
+  }
+
+  if (!children.length) {
+    container.innerHTML = '<div class="alert alert-info">لا يوجد أبناء مسجلين بحسابك حالياً.</div>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:24px;">
+      ${children.map(child => {
+        const tasks = child.tasks || [];
+        const completedTasks = child.completedTasks || [];
+        const activeExam = child.activeExam;
+
+        let childItems = [];
+        if (activeExam && activeExam.status === 'pending') {
+          childItems.push({
+            title: activeExam.title || 'اختبار تجويد وقرآن',
+            type: 'اختبار دوري',
+            status: 'قيد الانتظار لم يبدأ بعد ⏳',
+            badgeClass: 'task-badge-new'
+          });
+        }
+        tasks.forEach(t => {
+          const isDone = t.approved || t.completed;
+          const isReview = t.submitted && !t.approved;
+          childItems.push({
+            title: t.name || t.text || (t.surah ? 'تسميع سورة ' + t.surah : 'مهمة دراسية'),
+            type: t.type === 'homework' ? 'واجب كتابي' : t.type === 'voice' ? 'تسميع صوتي' : 'قراءة',
+            status: isDone ? 'مكتملة ومقبولة ✅' : isReview ? 'قيد المراجعة لدى المعلم 🔍' : t.rejected ? 'بحاجة لإعادة ⚠️' : 'جديدة بانتظار الإنجاز ⏳',
+            badgeClass: isDone ? 'task-badge-completed' : isReview ? 'task-badge-inprogress' : t.rejected ? 'task-badge-rejected' : 'task-badge-new'
+          });
+        });
+
+        return `
+          <div style="background:var(--card-bg); border:2px solid var(--border); border-radius:18px; padding:20px; box-shadow:var(--shadow);">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:15px;">
+              <h3 style="margin:0; color:var(--primary); font-size:1.2rem; font-weight:800;">👤 مهام الابن: ${escapeHtml(child.name)}</h3>
+              <span class="badge badge-primary">الجزء ${escapeHtml(String(child.juz || '1'))}</span>
+            </div>
+
+            ${!childItems.length ? '<p style="color:var(--text-light); margin:0;">لا توجد مهام معلقة أو جديدة لهذا الابن حالياً.</p>' : `
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                ${childItems.map(item => `
+                  <div style="background:var(--table-header); border:1px solid var(--border); border-radius:12px; padding:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <div>
+                      <strong style="color:var(--text); font-size:0.95rem; display:block;">${escapeHtml(item.title)}</strong>
+                      <small style="color:var(--text-light);">${escapeHtml(item.type)}</small>
+                    </div>
+                    <span class="badge ${item.badgeClass}" style="font-size:0.8rem;">${item.status}</span>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+// Hook bottom nav badge refresh
+const _origUpdateMsgBadge = window.updateMsgBadge;
+window.updateMsgBadge = function() {
+  if (typeof _origUpdateMsgBadge === 'function') _origUpdateMsgBadge.apply(this, arguments);
+  updateBottomNav(document.querySelector('.page:not(.hidden)')?.id);
+};
+
+const _origUpdateStudentMsgBadge = window.updateStudentMsgBadge;
+window.updateStudentMsgBadge = function() {
+  if (typeof _origUpdateStudentMsgBadge === 'function') _origUpdateStudentMsgBadge.apply(this, arguments);
+  updateBottomNav(document.querySelector('.page:not(.hidden)')?.id);
+};
+
+const _origUpdateParentMsgBadge = window.updateParentMsgBadge;
+window.updateParentMsgBadge = function() {
+  if (typeof _origUpdateParentMsgBadge === 'function') _origUpdateParentMsgBadge.apply(this, arguments);
+  updateBottomNav(document.querySelector('.page:not(.hidden)')?.id);
+};
+
+const _origUpdateNotificationBadges = window.updateNotificationBadges;
+window.updateNotificationBadges = function() {
+  if (typeof _origUpdateNotificationBadges === 'function') _origUpdateNotificationBadges.apply(this, arguments);
+  updateBottomNav(document.querySelector('.page:not(.hidden)')?.id);
+};
+
 async function goToHomeOrLogin() {
   try {
     localStorage.clear();
@@ -6647,4 +7817,26 @@ window.pollLogoutApproval = pollLogoutApproval;
 window.completeApprovedLogout = completeApprovedLogout;
 window.resolveLogoutRequest = resolveLogoutRequest;
 window.logout = logout;
+
+// Expose navigation and settings globally
+window.updateBottomNav = updateBottomNav;
+window.navToRoleTab = navToRoleTab;
+window.setAppTheme = setAppTheme;
+window.setAppLang = setAppLang;
+window.toggleAppSound = toggleAppSound;
+window.testNotificationSound = testNotificationSound;
+window.setAppMessageFilter = setAppMessageFilter;
+window.confirmAppLogout = confirmAppLogout;
+window.loadParentSettings = loadParentSettings;
+window.saveParentPass = saveParentPass;
+window.renderAdminReports = renderAdminReports;
+window.filterAdminReportsStudents = filterAdminReportsStudents;
+window.viewAdminStudentReport = viewAdminStudentReport;
+window.closeAdminStudentReport = closeAdminStudentReport;
+window.renderStudentSelfReport = renderStudentSelfReport;
+window.renderParentReportsHub = renderParentReportsHub;
+window.renderStudentTasksHub = renderStudentTasksHub;
+window.filterStudentTasksHub = filterStudentTasksHub;
+window.renderParentTasksHub = renderParentTasksHub;
+
 initLanguage();
