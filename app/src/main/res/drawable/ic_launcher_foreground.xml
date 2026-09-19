@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Centered within 66dp zone (from 21 to 87) -->
+    <!-- Open Book / Holy Quran Icon in Gold/Cream -->
+    <path
+        android:fillColor="#FDE68A"
+        android:pathData="M54,42 C50,37 42,35 32,35 C26,35 24,36 24,36 L24,70 C24,70 27,69 32,69 C41,69 49,72 54,76 C59,72 67,69 76,69 C81,69 84,70 84,70 L84,36 C84,36 82,35 76,35 C66,35 58,37 54,42 Z" />
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M54,44 L54,75"
+        android:strokeWidth="2"
+        android:strokeColor="#047857" />
+    <!-- Quran Bookmark / Star Ribbon -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M51,32 L57,32 L54,42 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,46 L48,46 M38,52 L46,52 M38,58 L44,58 M60,46 L70,46 M62,52 L70,52 M64,58 L70,58"
+        android:strokeWidth="1.5"
+        android:strokeColor="#D97706"
+        android:strokeLineCap="round" />
+</vector>
