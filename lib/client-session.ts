@@ -27,6 +27,20 @@ export function getClientSession(): ClientSession | null {
       name: 'المسؤول العام',
     }
   }
+  if (token === 'demo_student_token') {
+    return {
+      id: 'demo_student_1',
+      email: 'student@thimar.app',
+      name: 'ياسين عمر',
+    }
+  }
+  if (token === 'demo_parent_token') {
+    return {
+      id: 'demo_parent_1',
+      email: 'parent@thimar.app',
+      name: 'أبو ياسين (ولي الأمر)',
+    }
+  }
   if (token.split('.').length !== 3) return null
   const payload = decodePayload(token)
   if (!payload?.sub) return null

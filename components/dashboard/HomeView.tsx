@@ -31,13 +31,6 @@ export function AdminHome({ requests, notifications, loading, handleAction, setL
   const [showHomeTour, setShowHomeTour] = useState(false)
 
   useEffect(() => {
-    if (!isHomeTourDismissed()) {
-      const seen = localStorage.getItem('thimar_home_tour_seen')
-      if (!seen) {
-        setShowHomeTour(true)
-        localStorage.setItem('thimar_home_tour_seen', 'true')
-      }
-    }
     const handleStart = () => setShowHomeTour(true)
     window.addEventListener('thimar:start-home-tour', handleStart)
     return () => window.removeEventListener('thimar:start-home-tour', handleStart)
@@ -123,13 +116,6 @@ export function StudentHome() {
   const [showHomeTour, setShowHomeTour] = useState(false)
 
   useEffect(() => {
-    if (!isHomeTourDismissed()) {
-      const seen = localStorage.getItem('thimar_home_tour_seen')
-      if (!seen) {
-        setShowHomeTour(true)
-        localStorage.setItem('thimar_home_tour_seen', 'true')
-      }
-    }
     const handleStart = () => setShowHomeTour(true)
     window.addEventListener('thimar:start-home-tour', handleStart)
     return () => window.removeEventListener('thimar:start-home-tour', handleStart)
@@ -209,13 +195,6 @@ export function ParentHome({ childrenList, selectedChild, setSelectedChild }: an
   const [showHomeTour, setShowHomeTour] = useState(false)
 
   useEffect(() => {
-    if (!isHomeTourDismissed()) {
-      const seen = localStorage.getItem('thimar_home_tour_seen')
-      if (!seen) {
-        setShowHomeTour(true)
-        localStorage.setItem('thimar_home_tour_seen', 'true')
-      }
-    }
     const handleStart = () => setShowHomeTour(true)
     window.addEventListener('thimar:start-home-tour', handleStart)
     return () => window.removeEventListener('thimar:start-home-tour', handleStart)

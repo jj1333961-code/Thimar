@@ -16,6 +16,7 @@ import { WelcomeWalkthrough, isWalkthroughDismissedForever } from '@/components/
 import { Brain, X } from 'lucide-react'
 
 import { Suspense } from 'react'
+import { RoleNavHeader } from '@/components/dashboard/RoleNavHeader'
 import { BottomNav } from '@/components/dashboard/BottomNav'
 import { ParentHome } from '@/components/dashboard/HomeView'
 import { MessagesView } from '@/components/dashboard/MessagesView'
@@ -38,17 +39,6 @@ function ParentContent() {
   ]
 
   useEffect(() => {
-    if (isWalkthroughDismissedForever()) {
-      const handleRelaunchTour = () => setShowWalkthrough(true)
-      window.addEventListener('thimar:start-tour', handleRelaunchTour)
-      return () => window.removeEventListener('thimar:start-tour', handleRelaunchTour)
-    }
-
-    const hasSeen = localStorage.getItem('thimar_walkthrough_seen') || localStorage.getItem('thimar_new_user_welcomed')
-    if (!hasSeen) {
-      setShowWalkthrough(true)
-    }
-
     const handleRelaunchTour = () => setShowWalkthrough(true)
     window.addEventListener('thimar:start-tour', handleRelaunchTour)
     return () => window.removeEventListener('thimar:start-tour', handleRelaunchTour)
@@ -65,7 +55,7 @@ function ParentContent() {
       case 'home':
         return <ParentHome childrenList={childrenList} selectedChild={selectedChild} setSelectedChild={setSelectedChild} />
       case 'messages':
-        return <MessagesView currentUser={{ id: session?.id || 'parent', email: session?.email || '', name: session?.name || 'ولي الأمر', role: 'parent' }} />
+        return <MessagesView currentUser={{ id: session?.id || 'parent', email: session?.email || '', name: session?.name || 'أبو ياسين (ولي الأمر)', role: 'parent' }} />
       case 'tasks':
         return <TasksView role="parent" currentUserId={session?.id || ''} />
       case 'reports':
@@ -83,19 +73,12 @@ function ParentContent() {
         {showWalkthrough && <WelcomeWalkthrough onClose={closeWalkthrough} userRole="parent" />}
       </AnimatePresence>
 
-      {/* Top Navbar */}
-      <nav className="bg-white/80 backdrop-blur-lg border-b border-gray-100 px-6 py-4 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold">ث</div>
-            <h1 className="text-xl font-black text-gray-900 italic">ثمار ولي الأمر</h1>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-emerald-100 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-emerald-700 font-bold">أ</div>
-          </div>
-        </div>
-      </nav>
+      {/* Top Navbar with live role switcher */}
+      <RoleNavHeader 
+        currentRole="parent" 
+        userName={session?.name || 'أبو ياسين'} 
+        onStartTour={() => setShowWalkthrough(true)}
+      />
 
       <section className="max-w-7xl mx-auto p-6 md:p-12 pb-28 md:pb-32">
         <AnimatePresence mode="wait">
