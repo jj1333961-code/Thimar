@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises"
 import path from "node:path"
-import { get } from "@vercel/blob"
+// MOCKED @vercel/blob — in-memory fallback
+const get = async (_pathname: string, _options?: any): Promise<any> => null
 import { PDFParse } from "pdf-parse"
 
 const QURAN_PATH = "references/quran.pdf"
