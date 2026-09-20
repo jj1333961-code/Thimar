@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-cairo: 'Cairo', system-ui, -apple-system, sans-serif;
+    --font-amiri: 'Amiri', 'Traditional Arabic', serif;
+  }
+  
+  html {
+    direction: rtl;
+    text-align: right;
+    scroll-behavior: smooth;
+    font-family: var(--font-cairo);
+  }
+  
+  body {
+    @apply bg-stone-50 text-stone-900 antialiased selection:bg-emerald-200 selection:text-emerald-900 min-h-screen;
+  }
+}
+
+.font-quran {
+  font-family: var(--font-amiri);
+  line-height: 2.2;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
