@@ -1,55 +1,115 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
+import { NextRequest, NextResponse } from "next/server";
+import { getGeminiClient, getSystemInstructionForRole, GeminiRoleType } from "@/lib/gemini";
+
+export const runtime = "nodejs";
+export const maxDuration = 120;
+
+interface ChatMessage {
+  role: "user" | "model";
+  text: string;
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, history } = await req.json();
+    const body = await req.json();
+    const {
+      messages = [],
+      message = "",
+      role = "general",
+      model = "gemini-3.5-flash",
+      useGoogleSearch = false,
+      systemInstruction = "",
+    } = body;
 
-    if (!message || typeof message !== 'string') {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          error: "GEMINI_API_KEY is not configured on the server. Please add GEMINI_API_KEY in environment variables.",
+        },
+        { status: 500 }
+      );
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const ai = getGeminiClient();
 
-    if (!apiKey) {
-      // Graceful fallback response when API key is not yet configured
-      return NextResponse.json({
-        reply: `مرحباً بك في منصة ثمار! ✨
-أنا رفيقك الذكي لتعليم القرآن الكريم وأحكام التجويد ومتن تحفة الأطفال.
-بخصوص استفسارك: "${message}"، نسعد بخدمتك ومساعدتك في حفظ ومراجعة كتاب الله عز وجل. للإجابة الحية بالذكاء الاصطناعي الكامل، يرجى تفعيل مفتاح GEMINI_API_KEY في إعدادات البيئة.`
+    // Map model
+    let selectedModel = model || "gemini-3.5-flash";
+    if (selectedModel.includes("1.5") || selectedModel.includes("2.0")) {
+      selectedModel = "gemini-3.5-flash";
+    }
+
+    // Prepare contents history
+    const contents = [];
+    if (Array.isArray(messages) && messages.length > 0) {
+      for (const msg of messages) {
+        if (msg && msg.text) {
+          contents.push({
+            role: msg.role === "model" ? "model" : "user",
+            parts: [{ text: String(msg.text) }],
+          });
+        }
+      }
+    }
+
+    if (message && message.trim()) {
+      contents.push({
+        role: "user",
+        parts: [{ text: String(message.trim()) }],
       });
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    if (contents.length === 0) {
+      return NextResponse.json(
+        { error: "No messages provided for generation." },
+        { status: 400 }
+      );
+    }
 
-    const systemInstruction = `أنت المساعد الذكي القرآني لمنصة "ثمار | منصة القرآن والتعليم".
-أنت خبير في:
-1. أحكام التجويد ومتن تحفة الأطفال للشيخ سليمان الجمزوري.
-2. تفسير آيات القرآن الكريم وتدبرها وفق أصح التفاسير (تفسير ابن كثير، الميسر، السعدي).
-3. خطط تحفيظ ومراجعة وتثبيت القرآن الكريم للطلاب بمختلف أعمارهم.
-4. إجابة أسئلة الطلاب والمعلمين بأسلوب تربوي لطيف ومحفز وباللغة العربية الفصحى الجميلة الميسرة.
-كن دائماً دقيقاً في الاستدلال بالآيات والأحاديث والقواعد التجويدية، وقصيراً وواضحاً ومفيداً.`;
+    const finalSystemInstruction =
+      systemInstruction || getSystemInstructionForRole(role as GeminiRoleType);
 
-    const contents = [
-      { role: 'user', parts: [{ text: `${systemInstruction}\n\nالسؤال/الرسالة من المستخدم: ${message}` }] }
-    ];
+    // Build configuration
+    const config: Record<string, unknown> = {
+      systemInstruction: finalSystemInstruction,
+    };
+
+    // Add Google Search grounding tool if requested
+    if (useGoogleSearch) {
+      config.tools = [{ googleSearch: {} }];
+      // Google search works best on gemini-3.5-flash
+      if (!selectedModel.includes("pro")) {
+        selectedModel = "gemini-3.5-flash";
+      }
+    }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: contents,
+      model: selectedModel,
+      contents,
+      config,
     });
 
-    const reply = response.text || 'عذراً، لم أتمكن من الحصول على إجابة حالياً، أعد المحاولة بعد قليل.';
+    const responseText = response.text || "";
 
-    return NextResponse.json({ reply });
-  } catch (error: any) {
-    console.error('Gemini API Error:', error);
+    // Extract search grounding metadata if present
+    const groundingMetadata =
+      response.candidates?.[0]?.groundingMetadata || null;
+
+    return NextResponse.json({
+      success: true,
+      text: responseText,
+      model: selectedModel,
+      groundingMetadata,
+    });
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : String(err || "Unknown error");
+    console.error("[GEMINI_CHAT_ERROR]", errorMessage);
     return NextResponse.json(
-      { 
-        reply: 'مرحباً بك! يسعدني دائماً مساعدتك في أحكام التجويد ومراجعة الحفظ ومتن تحفة الأطفال وتفسير الآيات الكريمة.',
-        error: error?.message || 'Server error'
+      {
+        success: false,
+        error: errorMessage,
       },
-      { status: 200 }
+      { status: 500 }
     );
   }
 }

@@ -1,100 +1,164 @@
-'use client';
+'use client'
 
-import React from 'react';
-import { Home, BookOpen, Scroll, Mic, MessageSquare, ShieldCheck, Play, Pause, X } from 'lucide-react';
-import { Ayah } from '@/lib/quran-data';
+import React, { useState, useEffect } from 'react'
+import { motion } from 'motion/react'
+import { 
+  Home, 
+  MessageSquare, 
+  Bell, 
+  BarChart2, 
+  Settings, 
+  ClipboardList,
+  BookOpen,
+  Music
+} from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { t } from '@/lib/i18n'
 
-export type MainTabType = 'home' | 'quran' | 'tuhfa' | 'recitation' | 'messages' | 'admin' | 'prayer';
+export type UserRole = 'admin' | 'student' | 'parent'
+
+interface NavItem {
+  id: string
+  labelKey: string
+  icon: React.ElementType
+  roles: UserRole[]
+}
+
+const navItems: NavItem[] = [
+  { id: 'home', labelKey: 'الرئيسية', icon: Home, roles: ['admin', 'student', 'parent'] },
+  { id: 'quran', labelKey: 'المصحف', icon: BookOpen, roles: ['student', 'parent'] },
+  { id: 'tuhfa', labelKey: 'تحفة الأطفال', icon: Music, roles: ['student', 'parent'] },
+  { id: 'messages', labelKey: 'الرسائل', icon: MessageSquare, roles: ['admin', 'student', 'parent'] },
+  { id: 'notifications', labelKey: 'التنبيهات', icon: Bell, roles: ['admin'] },
+  { id: 'tasks', labelKey: 'المهمات', icon: ClipboardList, roles: ['student', 'parent'] },
+  { id: 'reports', labelKey: 'التقارير', icon: BarChart2, roles: ['admin', 'student', 'parent'] },
+  { id: 'settings', labelKey: 'الإعدادات', icon: Settings, roles: ['admin', 'student', 'parent'] },
+]
 
 interface BottomNavProps {
-  activeTab: MainTabType;
-  onChangeTab: (tab: MainTabType) => void;
-  activePlayingAyah?: { ayah: Ayah; surahName: string } | null;
-  onStopAudio?: () => void;
-  unreadMessagesCount?: number;
+  role: UserRole
+  unreadNotificationsCount?: number
+  unreadMessagesCount?: number
 }
 
-export function BottomNav({
-  activeTab,
-  onChangeTab,
-  activePlayingAyah,
-  onStopAudio,
-  unreadMessagesCount = 2
-}: BottomNavProps) {
-  const tabs: { id: MainTabType; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { id: 'home', label: 'الرئيسية', icon: <Home className="w-5 h-5" /> },
-    { id: 'quran', label: 'المصحف', icon: <BookOpen className="w-5 h-5" /> },
-    { id: 'tuhfa', label: 'تحفة الأطفال', icon: <Scroll className="w-5 h-5" /> },
-    { id: 'recitation', label: 'التسميع', icon: <Mic className="w-5 h-5" /> },
-    { id: 'messages', label: 'الرسائل', icon: <MessageSquare className="w-5 h-5" />, badge: unreadMessagesCount },
-    { id: 'admin', label: 'لوحة الإدارة', icon: <ShieldCheck className="w-5 h-5" /> },
-  ];
+export function BottomNav({ role, unreadNotificationsCount = 0, unreadMessagesCount = 0 }: BottomNavProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const requestedTab = searchParams.get('tab') || 'home'
+  const filteredItems = navItems.filter(item => item.roles.includes(role))
+  const activeTab = filteredItems.some(item => item.id === requestedTab) ? requestedTab : 'home'
+
+  const [unreadNotifs, setUnreadNotifs] = useState(unreadNotificationsCount)
+  const [unreadMsgs, setUnreadMsgs] = useState(unreadMessagesCount)
+
+  useEffect(() => {
+    // Quick poll for notification / message badges if admin or user
+    if (role === 'admin') {
+      // Fetch notifications
+      fetch('/api/supabase/notifications')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data?.notifications)) {
+            const unread = data.notifications.filter((n: any) => !n.isRead && !n.read).length
+            setUnreadNotifs(unread)
+          }
+        })
+        .catch(() => {})
+
+      // Fetch admin messages unread count
+      const token = localStorage.getItem('thimar_auth_token')
+      fetch('/api/admin/messages/unread-count', {
+        headers: { 
+          'Authorization': `Bearer ${token}` 
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (typeof data.count === 'number') {
+            setUnreadMsgs(data.count)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [role, activeTab])
+
+  const handleTabChange = (tabId: string) => {
+    if (tabId === activeTab) return
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tab', tabId)
+    router.push(`?${params.toString()}`, { scroll: false })
+  }
+
+  const getBadge = (itemId: string) => {
+    if (itemId === 'notifications' && unreadNotifs > 0) {
+      return unreadNotifs > 99 ? '99+' : unreadNotifs
+    }
+    if (itemId === 'messages' && unreadMsgs > 0) {
+      return unreadMsgs > 99 ? '99+' : unreadMsgs
+    }
+    return null
+  }
 
   return (
-    <div id="persistent-bottom-nav-card" className="fixed bottom-0 inset-x-0 z-40 p-3 pointer-events-none">
-      <div className="max-w-xl mx-auto space-y-2 pointer-events-auto">
-        {/* Active Quran Recitation Bottom Mini-Card */}
-        {activePlayingAyah && (
-          <div className="bg-emerald-950 text-white rounded-2xl p-3 shadow-2xl border border-emerald-700/60 flex items-center justify-between gap-3 animate-in slide-in-from-bottom-2 duration-150">
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-8 h-8 rounded-xl bg-emerald-800 text-amber-300 flex items-center justify-center flex-shrink-0 animate-pulse">
-                <Play className="w-4 h-4 fill-current" />
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-bold truncate text-white">
-                  جارٍ الاستماع: {activePlayingAyah.surahName} • الآية ﴿{activePlayingAyah.ayah.numberInSurah}﴾
-                </p>
-                <p className="text-[11px] text-emerald-300 font-quran truncate">
-                  {activePlayingAyah.ayah.text}
-                </p>
-              </div>
-            </div>
+    <nav 
+      id="bottomNavigation"
+      aria-label="التنقل الرئيسي"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 px-2 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_24px_rgba(0,0,0,0.06)] backdrop-blur-xl"
+    >
+      <div className="max-w-xl mx-auto flex items-center justify-around h-16 md:h-18">
+        {filteredItems.map((item) => {
+          const isActive = activeTab === item.id
+          const badge = getBadge(item.id)
 
-            {onStopAudio && (
-              <button
-                onClick={onStopAudio}
-                className="p-1 rounded-lg text-emerald-300 hover:text-white hover:bg-emerald-800 transition"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        )}
+          return (
+            <button
+              key={item.id}
+              id={`navTab-${item.id}`}
+              type="button"
+              onClick={() => handleTabChange(item.id)}
+              className="relative flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-all group focus:outline-none"
+              title={t(item.labelKey)}
+            >
+              <div className={`relative p-1.5 rounded-2xl transition-all ${
+                isActive 
+                  ? 'text-emerald-600 dark:text-emerald-400 scale-105' 
+                  : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+              }`}>
+                <item.icon className={`w-5 h-5 md:w-6 md:h-6 transition-transform ${isActive ? 'stroke-[2.5px]' : 'stroke-2'}`} />
 
-        {/* Primary Bottom Card Bar */}
-        <nav className="bg-white/95 backdrop-blur-md rounded-3xl border border-stone-200/90 shadow-xl p-2 flex items-center justify-around">
-          {tabs.map(t => {
-            const isActive = activeTab === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => onChangeTab(t.id)}
-                className={`relative flex flex-col items-center justify-center px-3 py-1.5 rounded-2xl transition ${
-                  isActive
-                    ? 'text-emerald-900 font-bold bg-emerald-50'
-                    : 'text-stone-500 hover:text-stone-800 hover:bg-stone-50'
-                }`}
-              >
-                <div className="relative">
-                  {t.icon}
-                  {t.badge && t.badge > 0 && !isActive && (
-                    <span className="absolute -top-1 -right-2 w-4 h-4 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center">
-                      {t.badge}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[11px] mt-0.5 tracking-tight font-cairo whitespace-nowrap">
-                  {t.label}
-                </span>
+                {/* Badge Indicator */}
+                {badge && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center ring-2 ring-white dark:ring-gray-900 animate-pulse">
+                    {badge}
+                  </span>
+                )}
 
                 {isActive && (
-                  <span className="w-1 h-1 rounded-full bg-emerald-700 mt-0.5" />
+                  <motion.div
+                    layoutId="activeBottomTab"
+                    className="absolute -inset-1 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl -z-10"
+                    transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
+                  />
                 )}
-              </button>
-            );
-          })}
-        </nav>
+              </div>
+
+              <span className={`text-[10px] md:text-xs font-bold transition-colors truncate max-w-[64px] ${
+                isActive 
+                  ? 'text-emerald-700 dark:text-emerald-300 font-black' 
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}>
+                {t(item.labelKey)}
+              </span>
+
+              {/* Active Dot indicator */}
+              {isActive && (
+                <div className="w-1 h-1 bg-emerald-600 dark:bg-emerald-400 rounded-full mt-0.5" />
+              )}
+            </button>
+          )
+        })}
       </div>
-    </div>
-  );
+    </nav>
+  )
 }
+

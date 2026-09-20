@@ -1,45 +1,66 @@
-import type { Metadata, Viewport } from 'next';
-import './globals.css';
+const Analytics = () => null
+import type { Metadata, Viewport } from 'next'
+import './globals.css'
+import { LanguageRuntime } from '@/components/language-runtime'
+import { LanguageToggle } from '@/components/language-toggle'
+import { ConnectivityBanner } from '@/components/connectivity-banner'
+import { QueryProvider } from '@/lib/query-provider'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://teacher-three-ashen.vercel.app'),
+  alternates: {
+    canonical: '/',
+  },
   title: 'ثمار | منصة القرآن والتعليم',
   description: 'منصة قرآنية هادئة للتسميع والاختبارات والمهام، تجمع الطالب والمعلم في مساحة للنمو والثبات.',
   openGraph: {
     title: 'ثمار | منصة القرآن والتعليم',
     description: 'منصة قرآنية هادئة للتسميع والاختبارات والمهام، تجمع الطالب والمعلم في مساحة للنمو والثبات.',
-    locale: 'ar_SA',
-    type: 'website',
   },
+  generator: 'v0.app',
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      {
+        url: '/icon-light-32x32.png',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/icon-dark-32x32.png',
+        media: '(prefers-color-scheme: dark)',
+      },
+      {
+        url: '/icon.svg',
+        type: 'image/svg+xml',
+      },
+    ],
+    apple: '/apple-icon.png',
   },
-};
+}
 
 export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  themeColor: '#064e3b',
-};
+  colorScheme: 'light dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: 'white' },
+    { media: '(prefers-color-scheme: dark)', color: 'black' },
+  ],
+}
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: Readonly<{
+  children: React.ReactNode
+}>) {
   return (
-    <html lang="ar" dir="rtl">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@300;400;500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className="bg-stone-50 text-stone-900 min-h-screen flex flex-col font-cairo">
-        {children}
+    <html lang="ar" dir="rtl" className="bg-background">
+      <body className="antialiased">
+        <QueryProvider>
+          <ConnectivityBanner />
+          {children}
+        </QueryProvider>
+        <div className="fixed left-4 top-4 z-50"><LanguageToggle /></div>
+        <LanguageRuntime />
+        {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
-  );
+  )
 }

@@ -1,17 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { adminDb } from '@/lib/firebase-admin';
+import { requireAdmin } from '@/lib/server-auth';
 
 export async function POST(req: NextRequest) {
+  const { response } = await requireAdmin(req);
+  if (response) return response;
+
   try {
-    const { userId, action, reason } = await req.json();
-    return NextResponse.json({
-      success: true,
-      message: action === 'block' ? 'تم حظر المستخدم بنجاح' : 'تم فك حظر المستخدم بنجاح',
-      userId,
-      status: action === 'block' ? 'blocked' : 'active',
-      reason: reason || 'مخالفة معايير المنصة',
-      updatedAt: new Date().toISOString()
-    });
+    const body = await req.json();
+    const { userId, block, reason } = body;
+
+    if (!userId) {
+      return NextResponse.json({ error: 'ID المستخدم مطلوب' }, { status: 400 });
+    }
+
+    if (block) {
+      await adminDb.collection('blockedSenders').doc(userId).set({
+        userId,
+        reason: reason || 'Blocked by admin',
+        blockedAt: new Date().toISOString(),
+      });
+    } else {
+      await adminDb.collection('blockedSenders').doc(userId).delete();
+    }
+
+    return NextResponse.json({ success: true, isBlocked: block });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Block User Error:', error);
+    return NextResponse.json({ error: 'فشل تنفيذ العملية' }, { status: 500 });
   }
 }
