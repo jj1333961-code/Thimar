@@ -25,6 +25,7 @@ import { useRouter } from 'next/navigation'
 import { t } from '@/lib/i18n'
 import { resetWalkthroughPreference } from '@/components/ui/welcome-walkthrough'
 import { resetHomeTourPreference } from '@/components/ui/home-tour'
+import { AdhanSoundSelector } from '@/components/ui/adhan-sound-selector'
 
 export function SettingsView() {
   const router = useRouter()
@@ -179,6 +180,9 @@ export function SettingsView() {
           </div>
         </div>
       </section>
+
+      {/* أصوات الأذان وتخصيص المؤذن */}
+      <AdhanSoundSelector />
 
       {/* دليل المنصة والجولة الإرشادية */}
       <section className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">

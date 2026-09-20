@@ -283,6 +283,32 @@ export const translations: Record<string, string> = {
   'بحث عن الدولة': 'Search countries',
   'متصل بـ Supabase': 'Connected to Supabase',
   'متصل بـ Neon': 'Connected to Neon',
+
+  // المصحف وتحفة الأطفال والأذان
+  'تحفة الأطفال': 'Tuhfat Al-Atfal',
+  'المصحف': 'The Quran',
+  'المصحف التفاعلي': 'Interactive Quran',
+  'نسخة المصحف المرفوعة (PDF)': 'Uploaded Quran (PDF)',
+  'تفسير الآيات': 'Ayah Tafsir',
+  'مشاركة الآية': 'Share Ayah',
+  'تشغيل التلاوة': 'Play Recitation',
+  'إيقاف التلاوة': 'Pause Recitation',
+  'القارئ': 'Reciter',
+  'أصوات الأذان': 'Adhan Voices',
+  'تخصيص صوت الأذان': 'Customize Adhan Voice',
+  'تكرار مرة واحدة': 'Repeat 1 time',
+  'تكرار ٣ مرات': 'Repeat 3 times',
+  'تكرار ٥ مرات': 'Repeat 5 times',
+  'تكرار دائم': 'Continuous Repeat',
+  'الآية الواحدة': 'Single Ayah',
+  'الفقرة دفعة واحدة': 'Full Paragraph',
+  'تحميل السورة لهذا الشيخ': 'Download Surah for Sheikh',
+  'صوت السورة محمل محلياً': 'Surah audio downloaded locally',
+  'عرض التفسير': 'View Tafsir',
+  'إلغاء التحديد': 'Clear Selection',
+  'اتجاه القبلة': 'Qibla Direction',
+  'تحديد موقعي': 'Locate My Position',
+  'تشغيل البوصلة': 'Start Compass',
 }
 
 export const arabicToEnglish: Record<string, string> = { ...translations }

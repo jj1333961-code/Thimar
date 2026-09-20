@@ -34,7 +34,42 @@ export function AIChatBubble({ initialRole = 'guest' }: AIChatBubbleProps) {
   const [adminSending, setAdminSending] = useState(false)
   const [adminSentSuccess, setAdminSentSuccess] = useState(false)
 
+  // Floating bubble draggable position (along side edges of screen)
+  const [bubblePos, setBubblePos] = useState<{ side: 'left' | 'right'; top: number }>({
+    side: 'left',
+    top: 540,
+  })
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const hasMovedSignificantly = useRef(false)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('thimar_chat_bubble_pos')
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (parsed && (parsed.side === 'left' || parsed.side === 'right') && typeof parsed.top === 'number') {
+            const clampedTop = Math.max(80, Math.min(window.innerHeight - 90, parsed.top))
+            setBubblePos({ side: parsed.side, top: clampedTop })
+          }
+        } else {
+          setBubblePos({ side: 'left', top: Math.max(80, window.innerHeight - 120) })
+        }
+      } catch {}
+
+      const handleResize = () => {
+        setBubblePos(prev => ({
+          ...prev,
+          top: Math.max(80, Math.min(window.innerHeight - 90, prev.top))
+        }))
+      }
+      window.addEventListener('resize', handleResize)
+      return () => window.removeEventListener('resize', handleResize)
+    }
+  }, [])
 
   useEffect(() => {
     if (isOpen && activeTab === 'ai') {
@@ -135,16 +170,127 @@ export function AIChatBubble({ initialRole = 'guest' }: AIChatBubbleProps) {
 
   const [error, setError] = useState('')
 
+  const handlePointerDown = (e: React.PointerEvent) => {
+    dragStartPos.current = { x: e.clientX, y: e.clientY }
+    hasMovedSignificantly.current = false
+    setIsDragging(true)
+    try {
+      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    } catch {}
+  }
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return
+    const dx = Math.abs(e.clientX - dragStartPos.current.x)
+    const dy = Math.abs(e.clientY - dragStartPos.current.y)
+    if (dx > 6 || dy > 6) {
+      hasMovedSignificantly.current = true
+    }
+    const newY = Math.max(70, Math.min(window.innerHeight - 80, e.clientY - 28))
+    const newSide: 'left' | 'right' = e.clientX > window.innerWidth / 2 ? 'right' : 'left'
+    setBubblePos({ side: newSide, top: newY })
+  }
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isDragging) return
+    setIsDragging(false)
+    try {
+      ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+    } catch {}
+
+    if (hasMovedSignificantly.current) {
+      const finalY = Math.max(70, Math.min(window.innerHeight - 80, e.clientY - 28))
+      const finalSide: 'left' | 'right' = e.clientX > window.innerWidth / 2 ? 'right' : 'left'
+      const finalState = { side: finalSide, top: finalY }
+      setBubblePos(finalState)
+      try {
+        localStorage.setItem('thimar_chat_bubble_pos', JSON.stringify(finalState))
+      } catch {}
+    } else {
+      setIsOpen(prev => !prev)
+    }
+  }
+
+  // Determine if popup should render above or below based on bubble position
+  const isLowerHalf = typeof window !== 'undefined' ? bubblePos.top > window.innerHeight / 2 : true
+
   return (
-    <div className="fixed bottom-6 left-6 z-[110] flex flex-col items-start gap-3" dir="rtl">
+    <div 
+      className={`fixed z-[110] flex ${isLowerHalf ? 'flex-col-reverse' : 'flex-col'} ${
+        bubblePos.side === 'left' ? 'items-start' : 'items-end'
+      } gap-3 select-none`}
+      style={{
+        top: `${bubblePos.top}px`,
+        [bubblePos.side]: '16px',
+        touchAction: 'none',
+      }}
+      dir="rtl"
+    >
+      {/* The Floating Circular Button (خانت الرسالة التي تشبه الدائرة في أسفل الشاشة - قابلة للتحريك على جانبي الشاشة) */}
+      <div className="relative group flex items-center gap-2">
+        <button
+          id="floatingChatButton"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={() => setIsDragging(false)}
+          className={`w-14 h-14 md:w-16 md:h-16 bg-gradient-to-tr from-emerald-800 via-emerald-700 to-teal-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-emerald-950/30 hover:scale-105 active:scale-95 transition-transform relative border-2 border-white/30 cursor-grab active:cursor-grabbing ${
+            isDragging ? 'ring-4 ring-emerald-400 scale-110' : ''
+          }`}
+          title="تحدث مع مساعد ثمار أو اسحب الدائرة لنقلها على جانب الشاشة"
+          aria-label="زر المحادثة والمساعد الذكي"
+        >
+          <AnimatePresence mode="wait">
+            {isOpen ? (
+              <motion.div 
+                key="close" 
+                initial={{ rotate: -90, opacity: 0 }} 
+                animate={{ rotate: 0, opacity: 1 }} 
+                exit={{ rotate: 90, opacity: 0 }}
+              >
+                <X className="w-7 h-7" />
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="open" 
+                initial={{ rotate: 90, opacity: 0 }} 
+                animate={{ rotate: 0, opacity: 1 }} 
+                exit={{ rotate: -90, opacity: 0 }}
+                className="relative"
+              >
+                <MessageCircle className="w-7 h-7" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-300 absolute -top-1 -left-1 animate-pulse" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Pulse Indicator */}
+          {!isOpen && (
+            <span className="absolute -top-1 -right-1 flex h-4 w-4">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500 text-[9px] text-white font-bold items-center justify-center">
+                ١
+              </span>
+            </span>
+          )}
+        </button>
+
+        {/* Drag Hint Tooltip (appears on hover on desktop) */}
+        {!isOpen && !isDragging && (
+          <span className="hidden md:group-hover:inline-block px-2.5 py-1 bg-gray-900/90 text-white text-[10px] font-medium rounded-lg shadow-lg whitespace-nowrap pointer-events-none transition-all">
+            اسحب لتغيير المكان
+          </span>
+        )}
+      </div>
+
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 24, scale: 0.92 }}
+            initial={{ opacity: 0, y: isLowerHalf ? 20 : -20, scale: 0.94 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.92 }}
+            exit={{ opacity: 0, y: isLowerHalf ? 20 : -20, scale: 0.94 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="w-[calc(100vw-3rem)] sm:w-96 bg-white rounded-[2rem] shadow-2xl border border-emerald-100 overflow-hidden flex flex-col h-[560px] max-h-[82vh]"
+            className="w-[calc(100vw-2.5rem)] sm:w-96 bg-white rounded-[2rem] shadow-2xl border border-emerald-100 overflow-hidden flex flex-col h-[560px] max-h-[75vh]"
           >
             {/* Header */}
             <div className="bg-gradient-to-l from-emerald-800 to-teal-700 p-4 text-white">
@@ -381,49 +527,6 @@ export function AIChatBubble({ initialRole = 'guest' }: AIChatBubbleProps) {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* The Floating Circular Button (خانت الرسالة التي تشبه الدائرة في أسفل الشاشة) */}
-      <button
-        id="floatingChatButton"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-tr from-emerald-800 via-emerald-700 to-teal-600 text-white rounded-full flex items-center justify-center shadow-xl shadow-emerald-900/25 hover:scale-105 active:scale-95 transition-all group relative border-2 border-white/20"
-        title="تحدث مع مساعد ثمار أو الإدارة"
-        aria-label="زر المحادثة والمساعد الذكي"
-      >
-        <AnimatePresence mode="wait">
-          {isOpen ? (
-            <motion.div 
-              key="close" 
-              initial={{ rotate: -90, opacity: 0 }} 
-              animate={{ rotate: 0, opacity: 1 }} 
-              exit={{ rotate: 90, opacity: 0 }}
-            >
-              <X className="w-7 h-7" />
-            </motion.div>
-          ) : (
-            <motion.div 
-              key="open" 
-              initial={{ rotate: 90, opacity: 0 }} 
-              animate={{ rotate: 0, opacity: 1 }} 
-              exit={{ rotate: -90, opacity: 0 }}
-              className="relative"
-            >
-              <MessageCircle className="w-7 h-7" />
-              <Sparkles className="w-3.5 h-3.5 text-amber-300 absolute -top-1 -left-1 animate-pulse" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Pulse Indicator */}
-        {!isOpen && (
-          <span className="absolute -top-1 -right-1 flex h-4 w-4">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500 text-[9px] text-white font-bold items-center justify-center">
-              ١
-            </span>
-          </span>
-        )}
-      </button>
     </div>
   )
 }

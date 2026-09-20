@@ -13,6 +13,8 @@ import { AIChatBubble } from '@/components/ui/ai-chat-bubble'
 import { WelcomeMessage } from '@/components/ui/welcome-message'
 import { PWAInstallButton } from '@/components/pwa-install-button'
 import { WelcomeWalkthrough, isWalkthroughDismissedForever } from '@/components/ui/welcome-walkthrough'
+import { QuranReader } from '@/components/ui/quran-reader'
+import { TuhfatAlAtfal } from '@/components/ui/tuhfat-al-atfal'
 import { Brain, X } from 'lucide-react'
 
 import { Suspense } from 'react'
@@ -64,6 +66,10 @@ function ParentContent() {
     switch (activeTab) {
       case 'home':
         return <ParentHome childrenList={childrenList} selectedChild={selectedChild} setSelectedChild={setSelectedChild} />
+      case 'quran':
+        return <QuranReader />
+      case 'tuhfa':
+        return <TuhfatAlAtfal />
       case 'messages':
         return <MessagesView currentUser={{ id: session?.id || 'parent', email: session?.email || '', name: session?.name || 'ولي الأمر', role: 'parent' }} />
       case 'tasks':

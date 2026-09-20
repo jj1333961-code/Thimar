@@ -62,6 +62,10 @@ function StudentContent() {
     switch (activeTab) {
       case 'home':
         return <StudentHome />
+      case 'quran':
+        return <QuranReader />
+      case 'tuhfa':
+        return <TuhfatAlAtfal />
       case 'messages':
         return <MessagesView currentUser={{ id: session?.id || 'student', email: session?.email || '', name: session?.name || 'الطالب', role: 'student' }} />
       case 'tasks':

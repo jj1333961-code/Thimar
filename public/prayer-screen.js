@@ -222,7 +222,8 @@
           }
         });
       }
-      adhanAudio.src = src || DEFAULT_ADHAN;
+      var chosenSrc = src || (typeof localStorage !== "undefined" && localStorage.getItem("thimar_selected_adhan_src")) || DEFAULT_ADHAN;
+      adhanAudio.src = chosenSrc;
       adhanAudio.currentTime = 0;
       var p = adhanAudio.play();
       if (p && p.catch) p.catch(function () {

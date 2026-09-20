@@ -3,7 +3,8 @@
   "description": "منصة قرآنية هادئة للتسميع والاختبارات والمهام، تجمع الطالب والمعلم في مساحة للنمو والثبات.",
   "requestFramePermissions": [
     "camera",
-    "microphone"
+    "microphone",
+    "geolocation"
   ],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

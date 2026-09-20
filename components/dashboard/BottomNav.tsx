@@ -8,7 +8,9 @@ import {
   Bell, 
   BarChart2, 
   Settings, 
-  ClipboardList 
+  ClipboardList,
+  BookOpen,
+  Music
 } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { t } from '@/lib/i18n'
@@ -24,6 +26,8 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: 'home', labelKey: 'الرئيسية', icon: Home, roles: ['admin', 'student', 'parent'] },
+  { id: 'quran', labelKey: 'المصحف', icon: BookOpen, roles: ['student', 'parent'] },
+  { id: 'tuhfa', labelKey: 'تحفة الأطفال', icon: Music, roles: ['student', 'parent'] },
   { id: 'messages', labelKey: 'الرسائل', icon: MessageSquare, roles: ['admin', 'student', 'parent'] },
   { id: 'notifications', labelKey: 'التنبيهات', icon: Bell, roles: ['admin'] },
   { id: 'tasks', labelKey: 'المهمات', icon: ClipboardList, roles: ['student', 'parent'] },
