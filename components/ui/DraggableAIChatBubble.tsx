@@ -52,7 +52,7 @@ export function DraggableAIChatBubble() {
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging) return;
-    const deltaX = e.clientX - dragStartRef.current.x;
+    const deltaX = dragStartRef.current.x - e.clientX; // RTL coordinate adjustments
     const deltaY = dragStartRef.current.y - e.clientY;
 
     if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {

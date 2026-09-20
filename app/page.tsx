@@ -1,395 +1,356 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
-import { User, Eye, EyeOff, Sun, Moon, Zap, CheckCircle2, X, Lock, Mail, ArrowRight } from 'lucide-react';
+import { DraggableAIChatBubble } from '@/components/ui/DraggableAIChatBubble';
+import { TuhfatAlAtfalView } from '@/components/ui/TuhfatAlAtfalView';
+import { QuranReaderView } from '@/components/ui/QuranReaderView';
+import { MessagesView } from '@/components/dashboard/MessagesView';
+import { AdminDashboardView } from '@/components/dashboard/AdminDashboardView';
+import { PrayerQiblaView } from '@/components/ui/PrayerQiblaView';
+import { LiveRecitationView } from '@/components/ui/LiveRecitationView';
+import { BottomNav, MainTabType } from '@/components/dashboard/BottomNav';
+import { SocialAuthModal, UserRole } from '@/components/auth/SocialAuthModal';
+import { Ayah } from '@/lib/quran-data';
+import { Sparkles, BookOpen, Scroll, Mic, Shield, Bell, User, Clock, Compass, ChevronLeft, CheckCircle2, Flame, Award } from 'lucide-react';
 
-export default function LoginPage() {
-  const [lang, setLang] = useState<'ar' | 'en'>('ar');
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+export default function HomePage() {
+  const [activeTab, setActiveTab] = useState<MainTabType>('home');
+  const [userRole, setUserRole] = useState<UserRole>('student');
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [activePlayingAyah, setActivePlayingAyah] = useState<{ ayah: Ayah; surahName: string } | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
 
-  // Modals
-  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
-  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotStatus, setForgotStatus] = useState<string | null>(null);
-
-  // Register Form States
-  const [regName, setRegName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-
-  const isDark = theme === 'dark';
-
-  const handleLogin = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setErrorMessage(null);
-
-    if (!username.trim()) {
-      setErrorMessage(lang === 'ar' ? 'يرجى إدخال اسم المستخدم' : 'Please enter your username');
-      return;
-    }
-
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSuccessMessage(
-        lang === 'ar'
-          ? `مرحباً بك مجدداً يا ${username}! تم تسجيل الدخول بنجاح.`
-          : `Welcome back, ${username}! Login successful.`
-      );
-      setTimeout(() => {
-        setSuccessMessage(null);
-      }, 4000);
-    }, 600);
-  };
-
-  const handleQuickDemoAccess = () => {
-    setUsername('طالب القرآن');
-    setPassword('••••••••');
-    setSuccessMessage(
-      lang === 'ar'
-        ? 'تم الدخول السريع عبر الوضع المباشر! مرحباً بك في رحاب القرآن.'
-        : 'Quick access enabled! Welcome to the Quran platform.'
-    );
-    setTimeout(() => {
-      setSuccessMessage(null);
-    }, 3500);
-  };
-
-  const handleForgotSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!forgotEmail) return;
-    setForgotStatus(
-      lang === 'ar'
-        ? 'تم إرسال تعليمات إعادة تعيين الرقم السري إلى بريدك الإلكتروني.'
-        : 'Password reset link sent to your email.'
-    );
-    setTimeout(() => {
-      setForgotStatus(null);
-      setIsForgotModalOpen(false);
-      setForgotEmail('');
-    }, 2500);
-  };
-
-  const handleRegisterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!regName || !regEmail) return;
-    setUsername(regName);
-    setIsRegisterModalOpen(false);
-    setSuccessMessage(
-      lang === 'ar'
-        ? `تم إنشاء الحساب بنجاح! مرحباً بك يا ${regName} في منصة ثمار.`
-        : `Account created successfully! Welcome, ${regName}.`
-    );
-    setTimeout(() => {
-      setSuccessMessage(null);
-    }, 3500);
+  const roleLabelMap: Record<UserRole, { title: string; badge: string; color: string }> = {
+    student: { title: 'طالب قرآن', badge: 'حلقة الإتقان', color: 'bg-emerald-100 text-emerald-800' },
+    teacher: { title: 'معلم مجاز', badge: 'إشراف وتسميع', color: 'bg-blue-100 text-blue-800' },
+    parent: { title: 'ولي أمر', badge: 'متابعة الأبناء', color: 'bg-teal-100 text-teal-800' },
+    admin: { title: 'مسؤول النظام', badge: 'تحكم ورقابة', color: 'bg-amber-100 text-amber-900' }
   };
 
   return (
-    <div
-      dir={lang === 'ar' ? 'rtl' : 'ltr'}
-      className={`min-h-screen flex flex-col justify-between transition-colors duration-300 ${
-        isDark
-          ? 'bg-[#063327] text-white'
-          : 'bg-[#0c4333] text-stone-100'
-      } relative overflow-hidden select-none`}
-      style={{
-        backgroundImage: `radial-gradient(circle at 50% 10%, rgba(18, 92, 70, 0.4) 0%, rgba(6, 51, 39, 0.95) 75%)`,
-      }}
-    >
-      {/* Decorative Side Borders / Watermarks */}
-      <div className="absolute inset-y-0 left-0 w-8 sm:w-16 pointer-events-none opacity-10 bg-[radial-gradient(#caa354_1px,transparent_1px)] [background-size:16px_16px]" />
-      <div className="absolute inset-y-0 right-0 w-8 sm:w-16 pointer-events-none opacity-10 bg-[radial-gradient(#caa354_1px,transparent_1px)] [background-size:16px_16px]" />
+    <div className="min-h-screen bg-[#f8f7f4] text-stone-900 pb-28">
+      {/* Top Main Navigation Header */}
+      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-stone-200 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          {/* Brand Logo & Name */}
+          <div
+            onClick={() => setActiveTab('home')}
+            className="flex items-center gap-3 cursor-pointer select-none"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-900 to-emerald-700 text-amber-300 flex items-center justify-center shadow-md border border-emerald-600/40">
+              <span className="font-amiri text-2xl font-bold">ث</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="font-bold text-lg font-cairo text-stone-900 tracking-tight">
+                  ثِمَار
+                </h1>
+                <span className="hidden sm:inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                  منصة القرآن والتعليم
+                </span>
+              </div>
+              <p className="text-[11px] text-stone-500 hidden md:block">
+                مساحة هادئة للحفظ والتسميع والتجويد
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Header Links on desktop */}
+          <div className="hidden lg:flex items-center gap-1 bg-stone-100/80 p-1 rounded-2xl">
+            <button
+              onClick={() => setActiveTab('home')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                activeTab === 'home' ? 'bg-white text-emerald-950 shadow-xs' : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              الرئيسية
+            </button>
+            <button
+              onClick={() => setActiveTab('quran')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                activeTab === 'quran' ? 'bg-white text-emerald-950 shadow-xs' : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              المصحف الشريف
+            </button>
+            <button
+              onClick={() => setActiveTab('tuhfa')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                activeTab === 'tuhfa' ? 'bg-white text-emerald-950 shadow-xs' : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              تحفة الأطفال
+            </button>
+            <button
+              onClick={() => setActiveTab('prayer')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                activeTab === 'prayer' ? 'bg-white text-emerald-950 shadow-xs' : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              المواقيت والقبلة
+            </button>
+            <button
+              onClick={() => setActiveTab('admin')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                activeTab === 'admin' ? 'bg-white text-emerald-950 shadow-xs' : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              لوحة الإدارة
+            </button>
+          </div>
+
+          {/* Right Action buttons: Role Badge + Social Login & Notifications */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Role Badge button */}
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-2xl border border-stone-200 hover:border-emerald-300 bg-white transition shadow-xs"
+              title="تغيير الدور أو تسجيل الدخول"
+            >
+              <div className="w-7 h-7 rounded-xl bg-emerald-800 text-white flex items-center justify-center text-xs font-bold">
+                <User className="w-4 h-4" />
+              </div>
+              <div className="text-right hidden sm:block">
+                <div className="text-xs font-bold text-stone-900">{roleLabelMap[userRole].title}</div>
+                <div className="text-[10px] text-stone-500">{roleLabelMap[userRole].badge}</div>
+              </div>
+            </button>
+
+            {/* Notification Bell */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="p-2 rounded-2xl border border-stone-200 hover:bg-stone-50 text-stone-600 transition relative"
+                title="التنبيهات والإعلانات"
+              >
+                <Bell className="w-4 h-4" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500" />
+              </button>
+
+              {/* Notification dropdown */}
+              {showNotifications && (
+                <div className="absolute left-0 mt-2 w-80 bg-white rounded-3xl p-4 shadow-2xl border border-stone-200 animate-in fade-in zoom-in-95 duration-100 z-50">
+                  <div className="flex items-center justify-between pb-2 border-b border-stone-100">
+                    <span className="font-bold text-xs text-stone-900">التنبيهات والإشعارات</span>
+                    <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold">2 جديدة</span>
+                  </div>
+                  <div className="space-y-2 mt-3">
+                    <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-100 text-xs">
+                      <p className="font-bold text-emerald-950">حلقة التسميع القادمة</p>
+                      <p className="text-emerald-800 text-[11px] mt-0.5">تبدأ حلقة إتقان سورة الملك اليوم الساعة 04:30 مساءً.</p>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-stone-50 border border-stone-100 text-xs">
+                      <p className="font-bold text-stone-900">تحديث منظومة تحفة الأطفال</p>
+                      <p className="text-stone-600 text-[11px] mt-0.5">تم تفعيل اختبار التجويد التفاعلي مع ميزة التدقيق الآلي.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
 
       {/* Main Container */}
-      <div className="w-full max-w-md mx-auto px-5 pt-4 pb-8 flex-1 flex flex-col justify-between relative z-10">
-        {/* Top Header Row */}
-        <div className="space-y-4">
-          {/* Controls Bar: Language + Theme Toggle + Ayah Header */}
-          <div className="flex items-start justify-between gap-2 pt-1">
-            {/* Left Controls */}
-            <div className="flex items-center gap-2 pt-1">
-              {/* Language Button */}
-              <button
-                type="button"
-                onClick={() => setLang(prev => (prev === 'ar' ? 'en' : 'ar'))}
-                className="w-10 h-10 rounded-full border border-[#2b6d58] bg-[#073629]/80 text-[#caa354] font-bold text-xs flex items-center justify-center hover:bg-[#073629] transition shadow-sm"
-                title="تغيير اللغة"
-              >
-                {lang === 'ar' ? 'EN' : 'عربي'}
-              </button>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        {activeTab === 'home' && (
+          <div className="space-y-6">
+            {/* Hero Welcome Banner */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-l from-emerald-950 via-emerald-900 to-teal-950 text-white p-6 sm:p-10 shadow-xl border border-emerald-800/60">
+              <div className="relative z-10 max-w-2xl space-y-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-800/70 border border-emerald-600/40 text-xs font-semibold text-amber-300">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>منصة ثمار • حلقة القرآن والتعليم</span>
+                </div>
 
-              {/* Theme/Light Toggle */}
-              <button
-                type="button"
-                onClick={() => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'))}
-                className="w-10 h-10 rounded-full border border-[#2b6d58] bg-[#073629]/80 text-[#f59e0b] flex items-center justify-center hover:bg-[#073629] transition shadow-sm"
-                title="تبديل وضع الإضاءة"
-              >
-                {isDark ? <Sun className="w-5 h-5 fill-current" /> : <Moon className="w-5 h-5" />}
-              </button>
+                <h2 className="text-2xl sm:text-4xl font-black font-cairo text-white tracking-tight leading-snug">
+                  مرحباً بك في رحاب القرآن الكريم
+                </h2>
+
+                <p className="text-sm sm:text-base text-emerald-100/90 font-cairo leading-relaxed">
+                  استمع للمصحف المرتل، أتقن أبيات متن تحفة الأطفال مع شروح التجويد، وسجل تلاوتك لمعلم الحلقة بإتقان وثبات.
+                </p>
+
+                {/* Hero CTAs */}
+                <div className="flex flex-wrap items-center gap-3 pt-3">
+                  <button
+                    onClick={() => setActiveTab('quran')}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-emerald-950 font-bold text-xs sm:text-sm shadow-md transition"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    <span>فتح المصحف الشريف</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('tuhfa')}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm border border-emerald-600/50 transition"
+                  >
+                    <Scroll className="w-4 h-4 text-amber-300" />
+                    <span>متن تحفة الأطفال</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('recitation')}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 transition"
+                  >
+                    <Mic className="w-4 h-4 text-emerald-300" />
+                    <span>التسميع الصوتي المباشر</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Islamic Pattern Accent Graphic */}
+              <div className="absolute -left-16 -top-16 w-80 h-80 rounded-full bg-emerald-700/20 blur-3xl pointer-events-none" />
             </div>
 
-            {/* Quranic Ayah Header Arched Badge */}
-            <div className="flex-1 max-w-[280px] sm:max-w-xs text-center border border-[#2b6d58] rounded-[24px] px-3 py-2 bg-[#073629]/70 backdrop-blur-xs shadow-inner">
-              <p className="text-xs sm:text-[13px] font-amiri font-bold text-white leading-relaxed tracking-wide">
-                كَلِمَةً طَيِّبَةً كَشَجَرَةٍ طَيِّبَةٍ أَصْلُهَا
-              </p>
-              <p className="text-xs sm:text-[13px] font-amiri font-bold text-white leading-relaxed tracking-wide">
-                ثَابِتٌ وَفَرْعُهَا فِي السَّمَاءِ
-              </p>
-              <p className="text-[11px] font-amiri text-[#caa354] mt-0.5">
-                (إبراهيم: 24)
-              </p>
+            {/* Quick Stats & Daily Ayah Row */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              {/* Daily Ayah & Contemplation */}
+              <div className="md:col-span-7 bg-[#fcfaf5] rounded-3xl p-6 border-2 border-[#e8dfcf] shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-900 bg-emerald-100/70 px-3 py-1 rounded-full">
+                    آية وتدبر اليوم
+                  </span>
+                  <span className="text-xs text-stone-500 font-medium">سورة الملك • الآية 1</span>
+                </div>
+
+                <p className="font-quran text-xl sm:text-2xl font-bold text-stone-900 text-center leading-loose py-2">
+                  ﴿ تَبَارَكَ الَّذِي بِيَدِهِ الْمُلْكُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ ﴾
+                </p>
+
+                <div className="p-3.5 bg-white rounded-2xl border border-stone-200 text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  <span className="font-bold text-emerald-900 block mb-1">فائدة وتدبر:</span>
+                  افتتاح السورة بالبركة الشاملة لبيان عظمة ملك الله وقدرته المطلقة على الإحياء والإماتة، مما يملأ قلب المؤمن طمأنينة ويقيناً.
+                </div>
+              </div>
+
+              {/* Progress & Quick Links Cards */}
+              <div className="md:col-span-5 space-y-4">
+                {/* Streak card */}
+                <div className="bg-white rounded-3xl p-5 border border-stone-200 shadow-xs flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                      <Flame className="w-6 h-6 fill-current" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-stone-400 uppercase">المواظبة على الورد</span>
+                      <h4 className="text-xl font-bold text-stone-900 font-mono">14 يوماً متواصلاً</h4>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                    ممتاز 🌟
+                  </span>
+                </div>
+
+                {/* Quick Halaqa Card */}
+                <div className="bg-white rounded-3xl p-5 border border-stone-200 shadow-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-stone-500">الحلقة القرآنية الحالية</span>
+                    <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">نشطة الآن</span>
+                  </div>
+                  <h4 className="font-bold text-base text-stone-900">حلقة الإتقان وتحفة الأطفال</h4>
+                  <p className="text-xs text-stone-500">بإشراف الشيخ أحمد الحافظ • موعد التسميع: 04:30 م</p>
+                  
+                  <button
+                    onClick={() => setActiveTab('messages')}
+                    className="w-full mt-2 py-2 bg-stone-100 hover:bg-emerald-50 hover:text-emerald-900 text-stone-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5"
+                  >
+                    <span>فتح محادثة الحلقة مع الشيخ</span>
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Quran Banner Card */}
-          <div className="relative w-full aspect-[16/9] rounded-[26px] overflow-hidden border border-[#24624f] shadow-2xl bg-black/30 mt-2">
-            <Image
-              src="/images/quran_stand_clouds.jpg"
-              alt="المصحف الشريف على الحامل الخشبي وسط السحاب"
-              fill
-              priority
-              className="object-cover object-center transform hover:scale-105 transition duration-700"
-            />
-            {/* Subtle inner shadow and mist blend */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#063327]/80 via-transparent to-black/20 pointer-events-none" />
-          </div>
-        </div>
+            {/* Quick Feature Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div
+                onClick={() => setActiveTab('quran')}
+                className="group p-5 bg-white hover:bg-emerald-50/50 rounded-3xl border border-stone-200 hover:border-emerald-300 transition cursor-pointer shadow-xs space-y-2"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center group-hover:scale-105 transition">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-base text-stone-900">المصحف المرتل</h4>
+                <p className="text-xs text-stone-500">تلاوة آية بآية بصوت الشيخ مشاري العفاسي مع التفسير الميسر.</p>
+              </div>
 
-        {/* Feedback Alert Messages */}
-        {successMessage && (
-          <div className="my-2 p-3 rounded-2xl bg-emerald-900/90 border border-emerald-400 text-white text-xs font-bold text-center flex items-center justify-center gap-2 animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-300 flex-shrink-0" />
-            <span>{successMessage}</span>
+              <div
+                onClick={() => setActiveTab('tuhfa')}
+                className="group p-5 bg-white hover:bg-emerald-50/50 rounded-3xl border border-stone-200 hover:border-emerald-300 transition cursor-pointer shadow-xs space-y-2"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center group-hover:scale-105 transition">
+                  <Scroll className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-base text-stone-900">تحفة الأطفال</h4>
+                <p className="text-xs text-stone-500">الأبيات التجويدية كاملة مع الشروح واختبار التجويد التفاعلي.</p>
+              </div>
+
+              <div
+                onClick={() => setActiveTab('recitation')}
+                className="group p-5 bg-white hover:bg-emerald-50/50 rounded-3xl border border-stone-200 hover:border-emerald-300 transition cursor-pointer shadow-xs space-y-2"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center group-hover:scale-105 transition">
+                  <Mic className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-base text-stone-900">التسميع الصوتي</h4>
+                <p className="text-xs text-stone-500">تسجيل التلاوة بالميكروفون وإرسالها لمعلم الحلقة لتقييم الحفظ.</p>
+              </div>
+
+              <div
+                onClick={() => setActiveTab('prayer')}
+                className="group p-5 bg-white hover:bg-emerald-50/50 rounded-3xl border border-stone-200 hover:border-emerald-300 transition cursor-pointer shadow-xs space-y-2"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-stone-100 text-stone-800 flex items-center justify-center group-hover:scale-105 transition">
+                  <Compass className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-base text-stone-900">المواقيت والقبلة</h4>
+                <p className="text-xs text-stone-500">مواقيت الصلوات الخمس بدقة وبوصلة اتجاه الكعبة المشرفة.</p>
+              </div>
+            </div>
           </div>
         )}
 
-        {errorMessage && (
-          <div className="my-2 p-3 rounded-2xl bg-rose-950/90 border border-rose-400 text-rose-200 text-xs font-bold text-center animate-in fade-in">
-            {errorMessage}
-          </div>
+        {activeTab === 'quran' && (
+          <QuranReaderView
+            onPlayAyahGlobal={(ayah, surahName) => {
+              setActivePlayingAyah({ ayah, surahName });
+            }}
+          />
         )}
 
-        {/* Login Form Section */}
-        <form onSubmit={handleLogin} className="space-y-3.5 my-auto py-2">
-          {/* Username Input */}
-          <div className="relative flex items-center rounded-full border border-[#2b6d58] bg-[#073629]/90 px-4 py-3.5 shadow-sm focus-within:border-[#caa354] transition">
-            {/* Left User Icon */}
-            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[#38bdf8] flex-shrink-0">
-              <User className="w-5 h-5 fill-current" />
-            </div>
+        {activeTab === 'tuhfa' && <TuhfatAlAtfalView />}
 
-            {/* Input field */}
-            <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              placeholder={lang === 'ar' ? 'اسم المستخدم' : 'Username'}
-              className="w-full bg-transparent px-3 text-sm text-white placeholder-[#7ca897] focus:outline-none font-cairo text-right"
-              dir={lang === 'ar' ? 'rtl' : 'ltr'}
-            />
-          </div>
+        {activeTab === 'recitation' && <LiveRecitationView />}
 
-          {/* Password Input */}
-          <div className="relative flex items-center rounded-full border border-[#2b6d58] bg-[#073629]/90 px-4 py-3.5 shadow-sm focus-within:border-[#caa354] transition">
-            {/* Left Eye / Toggle Icon */}
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="w-6 h-6 rounded-full flex items-center justify-center text-[#38bdf8] flex-shrink-0 hover:text-white transition"
-              title="إظهار/إخفاء الرقم السري"
-            >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
+        {activeTab === 'messages' && <MessagesView />}
 
-            {/* Input field */}
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder={lang === 'ar' ? 'الرقم السري' : 'Password'}
-              className="w-full bg-transparent px-3 text-sm text-white placeholder-[#7ca897] focus:outline-none font-cairo text-right"
-              dir={lang === 'ar' ? 'rtl' : 'ltr'}
-            />
-          </div>
+        {activeTab === 'admin' && <AdminDashboardView />}
 
-          {/* Forgot Password Link */}
-          <div className="text-center py-1">
-            <button
-              type="button"
-              onClick={() => setIsForgotModalOpen(true)}
-              className="text-xs font-semibold text-[#caa354] hover:text-[#e4be6b] transition tracking-tight"
-            >
-              {lang === 'ar' ? 'هل نسيت الرقم السري؟' : 'Forgot password?'}
-            </button>
-          </div>
+        {activeTab === 'prayer' && <PrayerQiblaView />}
+      </main>
 
-          {/* Primary Login Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3.5 sm:py-4 rounded-2xl bg-[#d5aa54] hover:bg-[#e2b761] active:scale-[0.99] text-[#083226] font-extrabold text-base sm:text-lg shadow-md transition flex items-center justify-center"
-          >
-            {loading ? (
-              <span>{lang === 'ar' ? 'جاري التحقق...' : 'Signing in...'}</span>
-            ) : (
-              <span>{lang === 'ar' ? 'تسجيل الدخول' : 'Sign In'}</span>
-            )}
-          </button>
-        </form>
+      {/* Movable Floating Smart AI Chat Bubble (دائرة المحادثة الذكية القابلة للتحريك) */}
+      <DraggableAIChatBubble />
 
-        {/* Secondary Action Row: Green Flash Button + Create Account Button */}
-        <div className="flex items-center justify-between gap-3 pt-2">
-          {/* Glowing Green Floating Flash Button on Left */}
-          <button
-            type="button"
-            onClick={handleQuickDemoAccess}
-            className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#00b074] hover:bg-[#00c582] active:scale-95 text-white flex items-center justify-center shadow-[0_0_22px_rgba(0,176,116,0.6)] transition duration-200 flex-shrink-0"
-            title="الدخول السريع المباشر"
-          >
-            <Zap className="w-6 h-6 fill-white text-white" />
-          </button>
+      {/* Persistent Bottom Navigation Card (المصحف الشريف والبطاقة السفلية) */}
+      <BottomNav
+        activeTab={activeTab}
+        onChangeTab={tab => setActiveTab(tab)}
+        activePlayingAyah={activePlayingAyah}
+        onStopAudio={() => setActivePlayingAyah(null)}
+      />
 
-          {/* Create Account Outlined Button */}
-          <button
-            type="button"
-            onClick={() => setIsRegisterModalOpen(true)}
-            className="flex-1 py-3 px-6 rounded-full border border-[#caa354] bg-[#073629]/50 text-[#caa354] hover:bg-[#caa354]/15 active:scale-[0.99] text-sm font-bold transition text-center shadow-sm"
-          >
-            {lang === 'ar' ? 'إنشاء حساب جديد' : 'Create New Account'}
-          </button>
-        </div>
-
-        {/* Bottom Holy Ayah Quote */}
-        <div className="text-center pt-6 pb-2 space-y-1">
-          <p className="text-[12px] text-[#caa354]/90 font-cairo">
-            {lang === 'ar' ? 'قال تعالى:' : 'Allah the Almighty says:'}
-          </p>
-          <p className="font-amiri text-lg sm:text-xl font-bold text-white/95 tracking-wide">
-            ﴿ وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا ﴾
-          </p>
-          <p className="text-[11px] text-[#caa354]/70 font-amiri">
-            (المزمل: 4)
-          </p>
-        </div>
-      </div>
-
-      {/* Forgot Password Modal */}
-      {isForgotModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-sm bg-[#08382b] border border-[#2b6d58] rounded-3xl p-6 text-white shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-[#1b5141] pb-3">
-              <h3 className="font-bold text-sm text-[#caa354]">استعادة الرقم السري</h3>
-              <button
-                onClick={() => setIsForgotModalOpen(false)}
-                className="text-stone-400 hover:text-white p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-xs text-stone-300 leading-relaxed">
-              أدخل بريدك الإلكتروني المسجل لإرسال رابط إعادة تعيين الرقم السري لحسابك.
-            </p>
-
-            {forgotStatus && (
-              <div className="p-2.5 rounded-xl bg-emerald-900/80 border border-emerald-400 text-xs font-bold text-emerald-200">
-                {forgotStatus}
-              </div>
-            )}
-
-            <form onSubmit={handleForgotSubmit} className="space-y-3">
-              <div className="relative">
-                <input
-                  type="email"
-                  required
-                  value={forgotEmail}
-                  onChange={e => setForgotEmail(e.target.value)}
-                  placeholder="البريد الإلكتروني..."
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#062b21] border border-[#24624f] text-xs text-white placeholder-[#78a896] focus:outline-none focus:border-[#caa354]"
-                />
-                <Mail className="w-4 h-4 text-[#78a896] absolute left-3 top-3" />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-[#d5aa54] hover:bg-[#e2b761] text-[#083226] font-bold text-xs transition"
-              >
-                إرسال رابط الاستعادة
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Create New Account Modal */}
-      {isRegisterModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-sm bg-[#08382b] border border-[#2b6d58] rounded-3xl p-6 text-white shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-[#1b5141] pb-3">
-              <h3 className="font-bold text-sm text-[#caa354]">إنشاء حساب جديد في ثمار</h3>
-              <button
-                onClick={() => setIsRegisterModalOpen(false)}
-                className="text-stone-400 hover:text-white p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleRegisterSubmit} className="space-y-3">
-              <div>
-                <input
-                  type="text"
-                  required
-                  value={regName}
-                  onChange={e => setRegName(e.target.value)}
-                  placeholder="اسم المستخدم أو الاسم الكامل..."
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#062b21] border border-[#24624f] text-xs text-white placeholder-[#78a896] focus:outline-none focus:border-[#caa354]"
-                />
-              </div>
-
-              <div>
-                <input
-                  type="email"
-                  required
-                  value={regEmail}
-                  onChange={e => setRegEmail(e.target.value)}
-                  placeholder="البريد الإلكتروني..."
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#062b21] border border-[#24624f] text-xs text-white placeholder-[#78a896] focus:outline-none focus:border-[#caa354]"
-                />
-              </div>
-
-              <div>
-                <input
-                  type="password"
-                  required
-                  value={regPassword}
-                  onChange={e => setRegPassword(e.target.value)}
-                  placeholder="الرقم السري الجديد..."
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#062b21] border border-[#24624f] text-xs text-white placeholder-[#78a896] focus:outline-none focus:border-[#caa354]"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-[#d5aa54] hover:bg-[#e2b761] text-[#083226] font-bold text-xs transition mt-2"
-              >
-                تأكيد وتسجيل الحساب
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Social Login and Role Badges Modal (أزرار وشارات التسجيل الاجتماعي) */}
+      <SocialAuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        currentRole={userRole}
+        onSelectRole={role => {
+          setUserRole(role);
+          if (role === 'admin') setActiveTab('admin');
+        }}
+      />
     </div>
   );
 }

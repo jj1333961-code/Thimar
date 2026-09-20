@@ -16,7 +16,7 @@
   }
   
   body {
-    @apply bg-[#063327] text-white antialiased selection:bg-emerald-800 selection:text-amber-200 min-h-screen;
+    @apply bg-stone-50 text-stone-900 antialiased selection:bg-emerald-200 selection:text-emerald-900 min-h-screen;
   }
 }
 
