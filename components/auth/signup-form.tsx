@@ -37,7 +37,7 @@ export function SignupForm() {
     else setCountry(COUNTRY_RULES[0])
   }, [])
 
-  // Poll status when in success/review screen
+  // Poll status and admin messages when in success/review screen
   useEffect(() => {
     if (!success) return
     const interval = setInterval(async () => {
@@ -45,7 +45,7 @@ export function SignupForm() {
         const idToCheck = activeUserIdentity?.email || formData.email
         // Local banned check
         const banned = JSON.parse(localStorage.getItem('thimar_banned_users') || '[]')
-        if (banned.includes(idToCheck?.toLowerCase())) {
+        if (idToCheck && banned.includes(idToCheck?.toLowerCase())) {
           setAccountStatus('banned')
           return
         }
@@ -62,8 +62,29 @@ export function SignupForm() {
             setAccountStatus(matched.status)
           }
         }
+
+        // Also fetch live chat messages with admin
+        const msgRes = await fetch('/api/messages')
+        if (msgRes.ok) {
+          const msgData = await msgRes.json()
+          const myEmail = String(idToCheck || '').toLowerCase()
+          const chatMsgs = (msgData.messages || []).filter((m: any) => {
+            const sid = String(m.sender_id || m.sender_email || '').toLowerCase()
+            const rid = String(m.receiver_id || m.receiver_email || '').toLowerCase()
+            return (sid === 'admin@thimar.org' && rid === myEmail) || (sid === myEmail && rid === 'admin@thimar.org')
+          })
+
+          if (chatMsgs.length > 0) {
+            setAdminMessages(chatMsgs.map((m: any) => ({
+              id: m.id || `msg_${Math.random()}`,
+              sender: (m.sender_id === 'admin@thimar.org' || m.sender_role === 'admin') ? 'admin' : 'user',
+              text: m.body,
+              time: new Date(m.created_at || Date.now()).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
+            })))
+          }
+        }
       } catch {}
-    }, 4000)
+    }, 3000)
 
     return () => clearInterval(interval)
   }, [success, activeUserIdentity, formData.email, formData.identityCode])
@@ -71,7 +92,8 @@ export function SignupForm() {
   const setupStarterAdminChat = (user: any) => {
     const roleMap: Record<string, string> = { teacher: 'معلم', student: 'طالب', parent: 'ولي أمر' }
     const roleName = roleMap[user.role] || user.role
-    const starter = `السلام عليكم ورحمة الله، أنا ${user.name} قمت بالتسجيل كـ (${roleName}) بكود هوية [${user.identityCode || user.identity_code}]. أرجو مراجعة الحساب واعتماده.`
+    const providerLabel = user.provider === 'google' ? 'Google' : user.provider === 'facebook' ? 'Facebook' : user.provider === 'whatsapp' ? 'WhatsApp' : 'التسجيل المباشر'
+    const starter = `السلام عليكم ورحمة الله وبركاته، أنا ${user.name} قمت بإنشاء حساب جديد عبر (${providerLabel}) بصفتي (${roleName}) وبرمز هوية [${user.identityCode || user.identity_code}]. أرجو مراجعة الحساب واعتماده وتفعيله.`
     setAdminMessages([
       {
         id: 'user_init',
@@ -82,7 +104,7 @@ export function SignupForm() {
       {
         id: 'admin_init',
         sender: 'admin',
-        text: `وعليكم السلام ورحمة الله وبركاته يا ${user.name}. تم استلام طلبك ومسؤولو المنصة يراجعون الحساب حالياً. يمكنك التحدث وإرسال أي استفسار هنا في أي وقت.`,
+        text: `وعليكم السلام ورحمة الله وبركاته يا ${user.name}. مرحباً بك في منصة ثِمار القرآنية! تم استلام طلب تسجيلك عبر (${providerLabel})، ومسؤولو المنصة يراجعون الحساب حالياً. يمكنك التحدث وإرسال أي استفسار هنا مباشرة وسنرد عليك فوراً.`,
         time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
       }
     ])

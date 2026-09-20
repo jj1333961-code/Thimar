@@ -50,6 +50,7 @@ export interface JoinRequestItem {
   country: string
   identity_code: string
   age?: number
+  provider?: string
   status: 'pending' | 'approved' | 'rejected' | 'banned'
   created_at: string
 }
@@ -328,6 +329,19 @@ export function NotificationsView() {
                         <span className="text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold">
                           {roleLabel}
                         </span>
+                        {/* Registration Method Badge */}
+                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black border flex items-center gap-1 ${
+                          req.provider === 'google'
+                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                            : req.provider === 'facebook'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : req.provider === 'whatsapp'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-gray-100 text-gray-600 border-gray-200'
+                        }`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                          {req.provider === 'google' ? 'حساب Google' : req.provider === 'facebook' ? 'حساب Facebook' : req.provider === 'whatsapp' ? 'واتساب' : 'تسجيل مباشر'}
+                        </span>
                         <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold border ${
                           req.status === 'approved'
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -337,7 +351,7 @@ export function NotificationsView() {
                             ? 'bg-amber-50 text-amber-700 border-amber-200'
                             : 'bg-blue-50 text-blue-700 border-blue-200 animate-pulse'
                         }`}>
-                          {req.status === 'approved' ? 'معتمد ومقبول' : req.status === 'banned' ? 'محظور' : req.status === 'rejected' ? 'مرفوض' : 'قيد المراجعة'}
+                          {req.status === 'approved' ? 'معتمد ومقبول' : req.status === 'banned' ? 'محظور ⛔' : req.status === 'rejected' ? 'مرفوض' : 'قيد المراجعة'}
                         </span>
                       </div>
                       <div className="text-xs text-gray-500 flex flex-wrap items-center gap-x-4 gap-y-1">

@@ -18,6 +18,11 @@ googleProvider.addScope('https://www.googleapis.com/auth/chat.memberships');
 googleProvider.addScope('https://www.googleapis.com/auth/chat.users.readstate.readonly');
 
 export const facebookProvider = new FacebookAuthProvider();
+facebookProvider.addScope('email');
+facebookProvider.addScope('public_profile');
+facebookProvider.setCustomParameters({
+  display: 'popup'
+});
 export const appleProvider = new OAuthProvider('apple.com');
 
 // In-memory cache for Google OAuth access token

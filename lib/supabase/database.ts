@@ -272,6 +272,7 @@ export interface JoinRequest {
   country: string
   identity_code: string
   age?: number
+  provider?: 'google' | 'facebook' | 'whatsapp' | 'direct' | string
   status: 'pending' | 'approved' | 'rejected' | 'banned'
   reviewed_by?: string
   reviewed_at?: string

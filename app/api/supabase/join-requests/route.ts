@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { name, email, phone, role, country, identity_code, age } = body
+    const { name, email, phone, role, country, identity_code, age, provider = 'direct' } = body
 
     if (!name || !email || !phone || !role || !country || !identity_code) {
       return json({ error: 'جميع الحقول مطلوبة' }, 400)
@@ -54,17 +54,19 @@ export async function POST(request: NextRequest) {
       country,
       identity_code,
       age,
+      provider,
     })
 
     // Also automatically create a notification for admin
     try {
       const { notificationsDb, messagesDb } = await import('@/lib/supabase/database')
       const roleLabel = role === 'teacher' ? 'معلم' : role === 'student' ? 'طالب' : 'ولي أمر'
+      const providerLabel = provider === 'google' ? 'Google' : provider === 'facebook' ? 'Facebook' : provider === 'whatsapp' ? 'WhatsApp' : 'التسجيل المباشر'
       
       await notificationsDb.create({
         user_id: 'admin',
-        title: `طلب انضمام جديد: ${name}`,
-        message: `سجل ${name} كـ (${roleLabel}) بكود هوية: ${identity_code}. الحساب بانتظار الاعتماد.`,
+        title: `طلب انضمام جديد (${providerLabel}): ${name}`,
+        message: `سجل ${name} عبر (${providerLabel}) كـ (${roleLabel}) بكود هوية: ${identity_code}. الحساب بانتظار الاعتماد.`,
         type: 'signup',
         category: 'students'
       }).catch(() => {})
@@ -76,7 +78,7 @@ export async function POST(request: NextRequest) {
         sender_role: role,
         receiver_id: 'admin@thimar.org',
         receiver_name: 'إدارة منصة ثمار',
-        body: `السلام عليكم ورحمة الله، أنا ${name} قمت بالتسجيل كـ (${roleLabel}) بكود الهوية [${identity_code}]. أرجو مراجعة حسابي واعتماده.`,
+        body: `السلام عليكم ورحمة الله، أنا ${name} قمت بالتسجيل عبر (${providerLabel}) كـ (${roleLabel}) بكود الهوية [${identity_code}]. أرجو مراجعة حسابي واعتماده.`,
       }).catch(() => {})
     } catch (e) {
       console.warn('Could not dispatch join notification/message:', e)
@@ -115,6 +117,59 @@ export async function PATCH(request: NextRequest) {
       auth.user?.id,
       rejection_reason
     )
+
+    // Notify and dispatch automated chat message
+    try {
+      const { notificationsDb, messagesDb } = await import('@/lib/supabase/database')
+      if (status === 'banned') {
+        await notificationsDb.create({
+          user_id: 'admin',
+          title: `⛔ تنبيه أمني: تم حظر حساب ${updated?.name || ''}`,
+          message: `قام المسؤول بحظر المستخدم ${updated?.name || ''} (${updated?.email || ''}) ومنعه من دخول المنصة.`,
+          type: 'security',
+          category: 'security'
+        }).catch(() => {})
+
+        if (updated?.email) {
+          await messagesDb.create({
+            sender_id: 'admin@thimar.org',
+            sender_name: 'إدارة منصة ثمار',
+            sender_role: 'admin',
+            receiver_id: updated.email,
+            receiver_name: updated.name,
+            body: 'تم حظر هذا الحساب من قبل إدارة المنصة لمخالفة السياسات والشروط.'
+          }).catch(() => {})
+        }
+      } else if (status === 'approved' && updated?.email) {
+        await notificationsDb.create({
+          user_id: 'admin',
+          title: `✅ تم اعتماد وتفعيل حساب ${updated.name}`,
+          message: `تم اعتماد وتفعيل حساب ${updated.name} كـ (${updated.role}) بنجاح.`,
+          type: 'success',
+          category: 'students'
+        }).catch(() => {})
+
+        await messagesDb.create({
+          sender_id: 'admin@thimar.org',
+          sender_name: 'إدارة منصة ثمار',
+          sender_role: 'admin',
+          receiver_id: updated.email,
+          receiver_name: updated.name,
+          body: 'تهانينا! تمت مراجعة حسابك والموافقة عليه وتفعيله بنجاح. يمكنك الآن الدخول إلى المنصة وبدء مسيرتك القرآنية المباركة.'
+        }).catch(() => {})
+      } else if (status === 'rejected' && updated?.email) {
+        await messagesDb.create({
+          sender_id: 'admin@thimar.org',
+          sender_name: 'إدارة منصة ثمار',
+          sender_role: 'admin',
+          receiver_id: updated.email,
+          receiver_name: updated.name,
+          body: `نعتذر منك، تم رفض طلب التسجيل الحالي.${rejection_reason ? ' السبب: ' + rejection_reason : ''}`
+        }).catch(() => {})
+      }
+    } catch (e) {
+      console.warn('Could not dispatch status change messages:', e)
+    }
 
     return json({ request: updated })
   } catch (error) {

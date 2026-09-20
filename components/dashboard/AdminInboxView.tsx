@@ -6,7 +6,7 @@ import {
   MessageSquare, UserX, ShieldAlert,
   Loader2, Filter, MoreVertical, 
   ChevronLeft, ChevronRight, User, Clock,
-  CheckCheck
+  CheckCheck, XCircle, Ban, Send, Check
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { format } from 'date-fns'
@@ -29,6 +29,8 @@ export function AdminInboxView() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [replyText, setReplyText] = useState('')
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null)
 
   useEffect(() => {
     fetchMessages()
@@ -118,6 +120,217 @@ export function AdminInboxView() {
       alert(`تم حظر ${name} بنجاح.`)
     } catch (error) {
       console.error(error)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  // Handle Account Approval
+  const handleApproveAccount = async () => {
+    if (!selectedMessage) return
+    const targetEmail = selectedMessage.senderEmail || selectedMessage.senderId
+    setActionLoading('approve')
+    try {
+      // Find join request
+      const reqRes = await fetch('/api/supabase/join-requests')
+      if (reqRes.ok) {
+        const reqData = await reqRes.json()
+        const match = (reqData.requests || []).find((r: any) => 
+          r.email?.toLowerCase() === targetEmail?.toLowerCase() ||
+          r.name === selectedMessage.senderName
+        )
+        if (match) {
+          await fetch('/api/supabase/join-requests', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: match.id, status: 'approved' })
+          })
+        }
+      }
+
+      // Remove from banned list if was banned
+      try {
+        const banned: string[] = JSON.parse(localStorage.getItem('thimar_banned_users') || '[]')
+        const filtered = banned.filter(b => b !== targetEmail?.toLowerCase() && b !== selectedMessage.senderId)
+        localStorage.setItem('thimar_banned_users', JSON.stringify(filtered))
+      } catch {}
+
+      // Send approval reply
+      if (targetEmail) {
+        await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipientId: targetEmail,
+            recipientName: selectedMessage.senderName,
+            recipientRole: 'student',
+            body: 'تهانينا! تمت مراجعة حسابك والموافقة عليه وتفعيله بنجاح من قِبل إدارة المنصة. يمكنك الآن الدخول والبدء مباشرة.',
+            senderRole: 'admin',
+            senderEmail: 'admin@thimar.org',
+            senderName: 'إدارة منصة ثمار'
+          })
+        })
+      }
+
+      setActionFeedback('تم اعتماد وتفعيل الحساب بنجاح!')
+      setTimeout(() => setActionFeedback(null), 4000)
+    } catch (err) {
+      console.error('Approve account error:', err)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  // Handle Account Rejection
+  const handleRejectAccount = async () => {
+    if (!selectedMessage) return
+    const targetEmail = selectedMessage.senderEmail || selectedMessage.senderId
+    if (!confirm(`هل أنت متأكد من رفض طلب حساب ${selectedMessage.senderName}؟`)) return
+    setActionLoading('reject')
+    try {
+      const reqRes = await fetch('/api/supabase/join-requests')
+      if (reqRes.ok) {
+        const reqData = await reqRes.json()
+        const match = (reqData.requests || []).find((r: any) => 
+          r.email?.toLowerCase() === targetEmail?.toLowerCase() ||
+          r.name === selectedMessage.senderName
+        )
+        if (match) {
+          await fetch('/api/supabase/join-requests', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: match.id, status: 'rejected' })
+          })
+        }
+      }
+
+      if (targetEmail) {
+        await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipientId: targetEmail,
+            recipientName: selectedMessage.senderName,
+            recipientRole: 'student',
+            body: 'نعتذر منك، تم رفض طلب تسجيل الحساب الحالي. يرجى التواصل مع الإدارة للاستفسار.',
+            senderRole: 'admin',
+            senderEmail: 'admin@thimar.org',
+            senderName: 'إدارة منصة ثمار'
+          })
+        })
+      }
+
+      setActionFeedback('تم رفض طلب الحساب.')
+      setTimeout(() => setActionFeedback(null), 4000)
+    } catch (err) {
+      console.error('Reject account error:', err)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  // Handle Account Banning
+  const handleBanAccount = async () => {
+    if (!selectedMessage) return
+    const targetEmail = selectedMessage.senderEmail || selectedMessage.senderId
+    if (!confirm(`تحذير: هل أنت متأكد من حظر حساب ${selectedMessage.senderName} بالكامل ومنعه من الدخول للمنصة؟`)) return
+    setActionLoading('ban')
+    try {
+      // 1. Add to banned list
+      if (targetEmail) {
+        const banned: string[] = JSON.parse(localStorage.getItem('thimar_banned_users') || '[]')
+        if (!banned.includes(targetEmail.toLowerCase())) {
+          banned.push(targetEmail.toLowerCase())
+        }
+        if (selectedMessage.senderId && !banned.includes(selectedMessage.senderId)) {
+          banned.push(selectedMessage.senderId)
+        }
+        localStorage.setItem('thimar_banned_users', JSON.stringify(banned))
+      }
+
+      // 2. Update join request
+      const reqRes = await fetch('/api/supabase/join-requests')
+      if (reqRes.ok) {
+        const reqData = await reqRes.json()
+        const match = (reqData.requests || []).find((r: any) => 
+          r.email?.toLowerCase() === targetEmail?.toLowerCase() ||
+          r.name === selectedMessage.senderName
+        )
+        if (match) {
+          await fetch('/api/supabase/join-requests', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: match.id, status: 'banned' })
+          })
+        }
+      }
+
+      // 3. Post security notification
+      await fetch('/api/supabase/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `⛔ تنبيه أمني: تم حظر حساب ${selectedMessage.senderName}`,
+          message: `تم حظر المستخدم ${selectedMessage.senderName} (${targetEmail || ''}) ومنعه من دخول المنصة أو المراسلة.`,
+          type: 'security',
+          category: 'security'
+        })
+      }).catch(() => {})
+
+      // 4. Send ban message
+      if (targetEmail) {
+        await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipientId: targetEmail,
+            recipientName: selectedMessage.senderName,
+            recipientRole: 'student',
+            body: '⛔ تم حظر هذا الحساب من قبل إدارة المنصة لمخالفة السياسات والشروط.',
+            senderRole: 'admin',
+            senderEmail: 'admin@thimar.org',
+            senderName: 'إدارة منصة ثمار'
+          })
+        }).catch(() => {})
+      }
+
+      setActionFeedback('⛔ تم حظر الحساب بنجاح وتسجيل التنبيه الأمني في صفحة التنبيهات.')
+      setTimeout(() => setActionFeedback(null), 5000)
+    } catch (err) {
+      console.error('Ban account error:', err)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  // Handle Send Direct Reply
+  const handleSendReply = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!replyText.trim() || !selectedMessage) return
+    const text = replyText.trim()
+    setReplyText('')
+    setActionLoading('reply')
+
+    try {
+      const targetEmail = selectedMessage.senderEmail || selectedMessage.senderId || 'user'
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientId: targetEmail,
+          recipientName: selectedMessage.senderName,
+          recipientRole: 'student',
+          body: text,
+          senderRole: 'admin',
+          senderEmail: 'admin@thimar.org',
+          senderName: 'إدارة منصة ثمار'
+        })
+      })
+
+      setActionFeedback('تم إرسال ردك إلى المستخدم مباشرة!')
+      setTimeout(() => setActionFeedback(null), 3000)
+    } catch (e) {
+      console.error(e)
     } finally {
       setActionLoading(null)
     }
@@ -280,12 +493,88 @@ export function AdminInboxView() {
 
                 <div className="space-y-4">
                   <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-600 block">نص الرسالة</span>
-                  <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 min-h-[150px]">
+                  <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 min-h-[120px]">
                     <p className="text-gray-800 leading-relaxed whitespace-pre-wrap text-sm md:text-base">
                       {selectedMessage.body}
                     </p>
                   </div>
                 </div>
+
+                {/* Feedback Banner */}
+                {actionFeedback && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold text-center"
+                  >
+                    {actionFeedback}
+                  </motion.div>
+                )}
+
+                {/* Admin Quick Action Panel: Approve / Reject / Ban */}
+                <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-50/60 to-teal-50/60 border border-emerald-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-emerald-950">إدارة اعتماد وحظر الحساب:</span>
+                    <span className="text-[11px] text-gray-500">تحكم فوري بحساب صاحب الرسالة</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                    {/* 1. Approve Button */}
+                    <button
+                      type="button"
+                      onClick={handleApproveAccount}
+                      disabled={!!actionLoading}
+                      className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {actionLoading === 'approve' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                      <span>اعتماد وتفعيل الحساب</span>
+                    </button>
+
+                    {/* 2. Reject Button */}
+                    <button
+                      type="button"
+                      onClick={handleRejectAccount}
+                      disabled={!!actionLoading}
+                      className="py-2.5 px-4 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {actionLoading === 'reject' ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                      <span>رفض الطلب</span>
+                    </button>
+
+                    {/* 3. Ban Button */}
+                    <button
+                      type="button"
+                      onClick={handleBanAccount}
+                      disabled={!!actionLoading}
+                      className="py-2.5 px-4 bg-red-50 hover:bg-red-600 hover:text-white text-red-700 border border-red-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 group"
+                    >
+                      {actionLoading === 'ban' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4 text-red-600 group-hover:text-white" />}
+                      <span>حظر الحساب نهائياً</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Direct Reply Form */}
+                <form onSubmit={handleSendReply} className="pt-2 space-y-3">
+                  <label className="text-xs font-bold text-gray-700 block">الرد السريع المباشر على المستخدم:</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={replyText}
+                      onChange={e => setReplyText(e.target.value)}
+                      placeholder="اكتب ردك للمستخدم وسيظهر في نافذة المحادثة لديه فوراً..."
+                      className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!replyText.trim() || !!actionLoading}
+                      className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                    >
+                      {actionLoading === 'reply' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      <span>إرسال</span>
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           </>
