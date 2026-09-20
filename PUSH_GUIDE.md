@@ -1,27 +1,28 @@
-# تعليمات دفع التعديلات إلى GitHub
+# تعليمات دفع التعديلات إلى المستودع (GitHub)
 
-لقد قمت بتجهيز جميع التعديلات وإجراء عملية `commit` محلياً. نظراً لمتطلبات الأمان في GitHub، يجب إجراء عملية الدفع (Push) باستخدام صلاحياتك.
+تم تجهيز جميع الملفات وإجراء عملية **Commit** بنجاح في المستودع المحلي على فرع `main`:
 
-## الخيار الأول: استخدام الـ Terminal في AI Studio
-إذا كنت ترغب في أن أقوم أنا بالدفع، يرجى تزويدي بـ **Personal Access Token** من إعدادات GitHub الخاصة بك، وسأستخدمه لإتمام العملية.
+```bash
+commit: "feat: complete Thimar updates - draggable AI bubble, Adhan sounds, Tuhfat Al-Atfal, Quran reader redesign, messaging overhaul, and Prayer/Qibla location services"
+```
 
-## الخيار الثاني: الدفع يدوياً من جهازك
-إذا قمت بتحميل المشروع (Download ZIP) أو استخدامه محلياً، اتبع الآتي:
+---
 
-1. افتح المجلد في الجهاز.
-2. تأكد من تهيئة git:
+## الخيار الأول: الدفع المباشر من خلال بيئة AI Studio
+إذا كنت ترغب في أن أقوم أنا بدفع الكود مباشرة إلى مستودع GitHub الخاص بك:
+1. قم بإنشاء **Personal Access Token (Classic)** بصلاحية `repo` من إعدادات حسابك في GitHub:
+   `GitHub -> Settings -> Developer Settings -> Personal access tokens`
+2. زوّدني بالرمز (Token) في المحادثة، وسأقوم بتنفيذ الأمر:
    ```bash
-   git init
-   git remote add origin https://github.com/jj1333961-code/Thimar.git
-   ```
-3. أضف الملفات واعمل commit:
-   ```bash
-   git add .
-   git commit -m "Fix: Firebase auth integration, full localization (AR/EN), and API client stability"
-   ```
-4. ادفع الكود:
-   ```bash
-   git push -u origin main
+   git push https://<TOKEN>@github.com/jj1333961-code/Thimar.git main
    ```
 
-**ملاحظة:** تم حفظ جميع التعديلات (المصادقة، الترجمة، استقرار النظام) في المستودع المحلي داخل هذه البيئة.
+---
+
+## الخيار الثاني: الدفع يدوياً عبر جهازك
+إذا قمت بتنزيل المشروع أو ربطه على جهازك:
+```bash
+git remote set-url origin https://github.com/jj1333961-code/Thimar.git
+git push -u origin main
+```
+(أو إذا كان هناك تعارض في السجل البعيد: `git push -u origin main --force`)

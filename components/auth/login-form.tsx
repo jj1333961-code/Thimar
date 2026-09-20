@@ -177,7 +177,44 @@ export function LoginForm() {
 
           <SocialAuthButtons />
 
-          <p className="mt-8 text-center text-gray-500">
+          {/* تجربة سريعة للمعاينة */}
+          <div className="mt-6 pt-4 border-t border-gray-100 space-y-2 text-center">
+            <p className="text-xs font-bold text-gray-500">معاينة وتجربة سريعة للمنصة:</p>
+            <div className="grid grid-cols-3 gap-2 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem('thimar_auth_token', 'demo_student_token')
+                  router.push('/student')
+                }}
+                className="p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl border border-emerald-200 transition-colors"
+              >
+                دخول كطالب
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem('thimar_auth_token', 'demo_parent_token')
+                  router.push('/parent')
+                }}
+                className="p-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl border border-amber-200 transition-colors"
+              >
+                دخول كولي أمر
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem('thimar_auth_token', 'admin_local_bypass_token')
+                  router.push('/admin')
+                }}
+                className="p-2.5 bg-sky-50 hover:bg-sky-100 text-sky-800 rounded-xl border border-sky-200 transition-colors"
+              >
+                دخول كمسؤول
+              </button>
+            </div>
+          </div>
+
+          <p className="mt-6 text-center text-gray-500 text-xs">
             ليس لديك حساب؟{' '}
             <button onClick={() => router.push('/signup')} className="text-emerald-600 font-bold hover:underline">
               إنشاء حساب جديد
