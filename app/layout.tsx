@@ -37,7 +37,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-stone-50 text-stone-900 min-h-screen flex flex-col font-cairo">
+      <body className="bg-[#063327] text-white min-h-screen flex flex-col font-cairo">
         {children}
       </body>
     </html>

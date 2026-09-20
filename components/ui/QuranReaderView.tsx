@@ -19,25 +19,49 @@ export function QuranReaderView({ onPlayAyahGlobal }: QuranReaderViewProps) {
 
   // Audio playing state
   const [playingAyahNumber, setPlayingAyahNumber] = useState<number | null>(null);
+  const [fetchedAyahs, setFetchedAyahs] = useState<Record<number, Ayah[]>>({});
+  const [loadingSurah, setLoadingSurah] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  useEffect(() => {
+    if (!selectedSurah) return;
+    const surahNum = selectedSurah.number;
+
+    if (SAMPLE_AYAHS[surahNum] || fetchedAyahs[surahNum]) return;
+
+    setLoadingSurah(true);
+    fetch(`https://api.alquran.cloud/v1/surah/${surahNum}/ar.alafasy`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'OK' && data.data && data.data.ayahs) {
+          const list: Ayah[] = data.data.ayahs.map((a: any) => ({
+            number: a.number,
+            numberInSurah: a.numberInSurah,
+            text: a.text,
+            audio: a.audio || `https://cdn.islamic.network/quran/audio/128/ar.alafasy/${a.number}.mp3`,
+            tafsir: `تفسير الآية الكريمة رقم ${a.numberInSurah} من سورة ${selectedSurah.name}.`
+          }));
+          setFetchedAyahs(prev => ({ ...prev, [surahNum]: list }));
+        }
+      })
+      .catch(err => {
+        console.warn('Could not fetch surah ayahs:', err);
+      })
+      .finally(() => {
+        setLoadingSurah(false);
+      });
+  }, [selectedSurah, fetchedAyahs]);
+
   const currentAyahs: Ayah[] = selectedSurah
-    ? SAMPLE_AYAHS[selectedSurah.number] || [
+    ? (SAMPLE_AYAHS[selectedSurah.number] || fetchedAyahs[selectedSurah.number] || [
         {
           number: 1,
           numberInSurah: 1,
           text: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
           audio: 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/1.mp3',
           tafsir: 'أبدأ قراءتي مستعينا باسم الله تعالى.'
-        },
-        {
-          number: 2,
-          numberInSurah: 2,
-          text: 'الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ',
-          audio: 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/2.mp3',
-          tafsir: 'الثناء الكامل المطلق لله وحده، خالق الخلائق ومالكهم.'
         }
-      ]
+      ])
     : [];
 
   const handleTogglePlay = (ayah: Ayah) => {
@@ -139,6 +163,13 @@ export function QuranReaderView({ onPlayAyahGlobal }: QuranReaderViewProps) {
                 <p className="font-quran text-2xl sm:text-3xl text-emerald-950 font-bold tracking-wide">
                   بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
                 </p>
+              </div>
+            )}
+
+            {loadingSurah && (
+              <div className="p-8 text-center text-stone-500 font-cairo space-y-2">
+                <Sparkles className="w-6 h-6 animate-spin mx-auto text-emerald-700" />
+                <p className="text-sm font-bold">جاري تحميل آيات سورة {selectedSurah.name} وتلاواتها بصوت العفاسي...</p>
               </div>
             )}
 
