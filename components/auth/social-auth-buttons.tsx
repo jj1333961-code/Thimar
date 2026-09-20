@@ -289,7 +289,8 @@ export function SocialAuthButtons({ onNewUserCreated }: SocialAuthButtonsProps) 
           phone: newProfile.phone || '0000000000',
           role: selectedRole,
           country: 'السعودية',
-          identity_code: newProfile.identityCode
+          identity_code: newProfile.identityCode,
+          provider: provider,
         })
       }).catch(() => {})
 

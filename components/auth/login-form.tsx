@@ -177,9 +177,19 @@ export function LoginForm() {
 
           <SocialAuthButtons />
 
-          {/* تجربة سريعة للمعاينة */}
-          <div className="mt-6 pt-4 border-t border-gray-100 space-y-2 text-center">
-            <p className="text-xs font-bold text-gray-500">معاينة وتجربة سريعة للمنصة:</p>
+          {/* تجربة سريعة للمعاينة المباشرة */}
+          <div className="mt-6 pt-4 border-t border-gray-100 space-y-3 text-center">
+            <div className="flex items-center justify-between text-xs font-bold px-1">
+              <span className="text-gray-700">معاينة صفحات المنصة المطلوبة:</span>
+              <button 
+                type="button" 
+                onClick={() => router.push('/signup')}
+                className="text-emerald-600 hover:underline flex items-center gap-1 text-[11px] font-black"
+              >
+                <span>شاشة التسجيل ومحادثة المسؤول ←</span>
+              </button>
+            </div>
+            
             <div className="grid grid-cols-3 gap-2 text-xs font-bold">
               <button
                 type="button"
@@ -212,6 +222,19 @@ export function LoginForm() {
                 دخول كمسؤول
               </button>
             </div>
+
+            {/* Direct Admin Inbox shortcut */}
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem('thimar_auth_token', 'admin_local_bypass_token')
+                router.push('/admin?tab=messages')
+              }}
+              className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white rounded-xl text-xs font-black shadow-sm transition-all flex items-center justify-center gap-2"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>معاينة بريد المسؤول ومحادثات وقرارات الحسابات مباشرة</span>
+            </button>
           </div>
 
           <p className="mt-6 text-center text-gray-500 text-xs">

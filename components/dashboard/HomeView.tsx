@@ -8,6 +8,7 @@ import {
   UserCheck, 
   Bell, 
   MessageSquare, 
+  Mail,
   Video, 
   Play, 
   Clock, 
@@ -71,7 +72,17 @@ export function AdminHome({ requests, notifications, loading, handleAction, setL
             <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-emerald-500" /> {t('طلبات الانضمام المعلقة')}
             </h3>
-            {requests.length > 0 && <span className="bg-emerald-500 text-white text-[10px] font-black px-3 py-1 rounded-full">{requests.length}</span>}
+            <div className="flex items-center gap-2">
+              {requests.length > 0 && <span className="bg-emerald-500 text-white text-[10px] font-black px-3 py-1 rounded-full">{requests.length}</span>}
+              <a
+                href="/admin?tab=messages"
+                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 transition-colors flex items-center gap-1"
+                title="فتح بريد ومحادثات المسؤول"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>بريد الإدارة</span>
+              </a>
+            </div>
           </div>
           <div className="space-y-4">
             {requests.length === 0 ? (
@@ -82,8 +93,15 @@ export function AdminHome({ requests, notifications, loading, handleAction, setL
                   <div className="flex items-center gap-3 text-right">
                     <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold">{req.name[0]}</div>
                     <div>
-                      <div className="font-bold text-gray-900 text-sm">{req.name}</div>
-                      <div className="text-[10px] text-gray-400">{req.role === 'student' ? t('طالب') : t('معلم')}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-gray-900 text-sm">{req.name}</span>
+                        {req.provider && (
+                          <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-white text-gray-600 border border-gray-200">
+                            {req.provider === 'google' ? 'Google' : req.provider === 'facebook' ? 'Facebook' : req.provider === 'whatsapp' ? 'واتساب' : 'مباشر'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-gray-400">{req.role === 'student' ? t('طالب') : req.role === 'teacher' ? t('معلم') : t('ولي أمر')}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
