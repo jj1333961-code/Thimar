@@ -272,7 +272,7 @@ export interface JoinRequest {
   country: string
   identity_code: string
   age?: number
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'pending' | 'approved' | 'rejected' | 'banned'
   reviewed_by?: string
   reviewed_at?: string
   rejection_reason?: string
@@ -1690,7 +1690,7 @@ export const joinRequestsDb = {
     }
   },
 
-  async updateStatus(id: string, status: 'approved' | 'rejected', reviewedBy?: string, rejectionReason?: string): Promise<JoinRequest> {
+  async updateStatus(id: string, status: 'approved' | 'rejected' | 'banned', reviewedBy?: string, rejectionReason?: string): Promise<JoinRequest> {
     if (adminDb) {
       try {
         const updates: any = {

@@ -56,6 +56,32 @@ export async function POST(request: NextRequest) {
       age,
     })
 
+    // Also automatically create a notification for admin
+    try {
+      const { notificationsDb, messagesDb } = await import('@/lib/supabase/database')
+      const roleLabel = role === 'teacher' ? 'معلم' : role === 'student' ? 'طالب' : 'ولي أمر'
+      
+      await notificationsDb.create({
+        user_id: 'admin',
+        title: `طلب انضمام جديد: ${name}`,
+        message: `سجل ${name} كـ (${roleLabel}) بكود هوية: ${identity_code}. الحساب بانتظار الاعتماد.`,
+        type: 'signup',
+        category: 'students'
+      }).catch(() => {})
+
+      // Automated pre-sent message to Admin
+      await messagesDb.create({
+        sender_id: email,
+        sender_name: name,
+        sender_role: role,
+        receiver_id: 'admin@thimar.org',
+        receiver_name: 'إدارة منصة ثمار',
+        body: `السلام عليكم ورحمة الله، أنا ${name} قمت بالتسجيل كـ (${roleLabel}) بكود الهوية [${identity_code}]. أرجو مراجعة حسابي واعتماده.`,
+      }).catch(() => {})
+    } catch (e) {
+      console.warn('Could not dispatch join notification/message:', e)
+    }
+
     return json({ request: request_entry }, 201)
   } catch (error) {
     console.error('[API/supabase/join-requests] POST error:', error)
@@ -63,7 +89,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH /api/supabase/join-requests - تحديث حالة طلب الانضمام
+// PATCH /api/supabase/join-requests - تحديث حالة طلب الانضمام (موافقة / رفض / حظر)
 export async function PATCH(request: NextRequest) {
   const originError = rejectCrossOrigin(request)
   if (originError) return originError
@@ -79,13 +105,13 @@ export async function PATCH(request: NextRequest) {
       return json({ error: 'معرف الطلب والحالة مطلوبان' }, 400)
     }
 
-    if (!['approved', 'rejected'].includes(status)) {
-      return json({ error: 'الحالة يجب أن تكون approved أو rejected' }, 400)
+    if (!['approved', 'rejected', 'banned'].includes(status)) {
+      return json({ error: 'الحالة يجب أن تكون approved أو rejected أو banned' }, 400)
     }
 
     const updated = await joinRequestsDb.updateStatus(
       id,
-      status as 'approved' | 'rejected',
+      status as 'approved' | 'rejected' | 'banned',
       auth.user?.id,
       rejection_reason
     )

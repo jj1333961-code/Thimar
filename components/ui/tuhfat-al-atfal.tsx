@@ -21,8 +21,9 @@ import {
   Layers,
   ChevronDown
 } from 'lucide-react'
-import { downloadAndCacheAsset, isAssetCached, getAssetPlayableUrl } from '@/lib/offline-storage'
+import { downloadAndCacheAsset, isAssetCached, getAssetPlayableUrl, removeCachedAsset } from '@/lib/offline-storage'
 import { t } from '@/lib/i18n'
+import { Trash2 } from 'lucide-react'
 
 export interface TuhfaSection {
   id: number
@@ -240,6 +241,17 @@ export function TuhfatAlAtfal() {
     setDownloading(false)
   }
 
+  const handleDeleteAudio = async () => {
+    if (isPlaying) {
+      if (audioRef.current) audioRef.current.pause()
+      setIsPlaying(false)
+    }
+    const ok = await removeCachedAsset(`tuhfa_${selectedReciterId}`)
+    if (ok) {
+      setIsCached(false)
+    }
+  }
+
   const togglePlay = async () => {
     if (isPlaying) {
       if (audioRef.current) audioRef.current.pause()
@@ -353,10 +365,20 @@ export function TuhfatAlAtfal() {
         {/* Offline Badge & Download Button */}
         <div className="flex items-center gap-3 w-full md:w-auto justify-end">
           {isCached ? (
-            <span className="bg-emerald-500/30 border border-emerald-300/40 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm">
-              <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-              <span>محمل ويعمل بلا إنترنت</span>
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="bg-emerald-500/30 border border-emerald-300/40 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                <span>محمل ويعمل بلا إنترنت</span>
+              </span>
+              <button
+                onClick={handleDeleteAudio}
+                className="p-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-300/30 rounded-xl text-xs font-bold flex items-center gap-1 transition-all"
+                title="حذف الصوت المحمل لهذا القارئ وتوفير المساحة"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-red-300" />
+                <span>حذف الصوت</span>
+              </button>
+            </div>
           ) : (
             <button
               onClick={handleDownload}

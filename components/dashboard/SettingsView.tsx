@@ -26,6 +26,7 @@ import { t } from '@/lib/i18n'
 import { resetWalkthroughPreference } from '@/components/ui/welcome-walkthrough'
 import { resetHomeTourPreference } from '@/components/ui/home-tour'
 import { AdhanSoundSelector } from '@/components/ui/adhan-sound-selector'
+import { PrayerQiblaWidget } from '@/components/ui/prayer-qibla-widget'
 
 export function SettingsView() {
   const router = useRouter()
@@ -180,6 +181,9 @@ export function SettingsView() {
           </div>
         </div>
       </section>
+
+      {/* مواقيت الصلاة واتجاه القبلة وحفظ الموقع */}
+      <PrayerQiblaWidget />
 
       {/* أصوات الأذان وتخصيص المؤذن */}
       <AdhanSoundSelector />
