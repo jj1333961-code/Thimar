@@ -1744,7 +1744,9 @@ window.goBack = function() {
         <button type="button" class="side-sidebar-close" onclick="closeRoleSidebar('student')" aria-label="إغلاق القئمة">×</button>
       </div>
       <div class="side-sidebar-body">
-        <button type="button" class="role-nav-item" onclick="showPage('studentInbox')"><span class="role-nav-icon" aria-hidden="true">💬</span><span>الرسائل</span></button><button type="button" class="role-nav-item" onclick="openQuranReader()"><span class="role-nav-icon" aria-hidden="true">📖</span><span>المحف الشريف</span></button>
+        <button type="button" class="role-nav-item" onclick="showPage('studentTasksPage')"><span class="role-nav-icon" aria-hidden="true">📝</span><span>المهمات والتكليفات</span></button>
+        <button type="button" class="role-nav-item" onclick="showPage('studentReportsPage')"><span class="role-nav-icon" aria-hidden="true">📊</span><span>تقرير الأداء</span></button>
+        <button type="button" class="role-nav-item" onclick="showPage('studentInbox')"><span class="role-nav-icon" aria-hidden="true">💬</span><span>الرسائل</span></button><button type="button" class="role-nav-item" onclick="openQuranReader()"><span class="role-nav-icon" aria-hidden="true">📖</span><span>المصحف الشريف</span></button>
         <button type="button" class="role-nav-item" onclick="showPage('studentFilesPage')"><span class="role-nav-icon" aria-hidden="true">📁</span><span>الملفات</span></button>
         <button type="button" class="role-nav-item" onclick="showPage('studentAIChat')"><span class="role-nav-icon" aria-hidden="true">✦</span><span>مساعد الذكاء الاصطناعي</span></button>
         <button type="button" class="role-nav-item" onclick="showStudentFullChart()"><span class="role-nav-icon" aria-hidden="true">📈</span><span>مخطط التقييم</span></button>
@@ -1793,6 +1795,35 @@ window.goBack = function() {
       <button class="btn btn-primary" onclick="sendStudentChat()">إرسال</button>
     </div>
   </div>
+</div>
+
+<!-- صفحة مهمات الطالب (المهمات المركزية) -->
+<div id="studentTasksPage" class="page hidden">
+  <div class="page-header">
+    <h2>📝 مهماتي التعليمية</h2>
+    <button type="button" class="btn btn-outline btn-sm" onclick="renderStudentTasksHub()">🔄 تحديث</button>
+  </div>
+  <p style="color:var(--text-light);margin-bottom:15px;">مركز المهام اليومية: تسميع الآيات، حل الواجبات، القراءة والمحاكاة، والاختبارات الدورية.</p>
+  
+  <div class="task-hub-filter" role="tablist">
+    <button type="button" class="task-hub-btn active" onclick="filterStudentTasksHub('all', this)">الكل (<span id="countStudentTasksAll">0</span>)</button>
+    <button type="button" class="task-hub-btn" onclick="filterStudentTasksHub('pending', this)">⏳ جديدة / بانتظار الإنجاز (<span id="countStudentTasksPending">0</span>)</button>
+    <button type="button" class="task-hub-btn" onclick="filterStudentTasksHub('submitted', this)">🔍 قيد المراجعة (<span id="countStudentTasksReview">0</span>)</button>
+    <button type="button" class="task-hub-btn" onclick="filterStudentTasksHub('completed', this)">✅ مكتملة ومقبولة (<span id="countStudentTasksCompleted">0</span>)</button>
+    <button type="button" class="task-hub-btn" onclick="filterStudentTasksHub('rejected', this)">⚠️ بحاجة لإعادة (<span id="countStudentTasksRejected">0</span>)</button>
+  </div>
+
+  <div id="studentTasksHubContent"></div>
+</div>
+
+<!-- صفحة تقرير الطالب الخاص (أدائي التعليمي) -->
+<div id="studentReportsPage" class="page hidden">
+  <div class="page-header">
+    <h2>📊 تقريري التعليمي وسجل أدائي</h2>
+    <button type="button" class="btn btn-outline btn-sm" onclick="renderStudentSelfReport()">🔄 تحديث</button>
+  </div>
+  <p style="color:var(--text-light);margin-bottom:18px;">سجل تفصيلي لنتائج التسميع، نتائج الاختبارات، أرشيف المهام المنجزة، والتسجيلات الصوتية مع التقييم العام لأدائك واجتهادك.</p>
+  <div id="studentReportsContent"></div>
 </div>
 
 <!-- إعدادات الطالب -->

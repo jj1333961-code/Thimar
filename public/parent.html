@@ -1645,6 +1645,8 @@ window.goBack = function() {
         <button type="button" class="side-sidebar-close" onclick="closeRoleSidebar('parent')" aria-label="إغلاق القائمة">×</button>
       </div>
       <div class="side-sidebar-body">
+        <button type="button" class="role-nav-item" onclick="showPage('parentTasksPage')"><span class="role-nav-icon" aria-hidden="true">📝</span><span>متابعة المهام</span></button>
+        <button type="button" class="role-nav-item" onclick="showPage('parentReportsPage')"><span class="role-nav-icon" aria-hidden="true">📊</span><span>تقارير الأداء</span></button>
         <button type="button" class="role-nav-item" onclick="showPage('parentInbox')"><span class="role-nav-icon" aria-hidden="true">💬</span><span>الرسائل</span></button><button type="button" class="role-nav-item" onclick="openQuranReader()"><span class="role-nav-icon" aria-hidden="true">📖</span><span>المصحف الشريف</span></button>
         <button type="button" class="role-nav-item" onclick="showPage('parentFilesPage')"><span class="role-nav-icon" aria-hidden="true">📁</span><span>الملفات</span></button>
         <button type="button" class="role-nav-item" onclick="showPage('parentAIChat')"><span class="role-nav-icon" aria-hidden="true">✦</span><span>مساعد الذكا الاصطناعي</span></button>
@@ -1696,9 +1698,30 @@ window.goBack = function() {
 <div id="parentPendingTasksPage" class="page hidden">
   <div class="page-header">
     <h2>⏳ المهام اليومية</h2>
-    
   </div>
   <div id="parentPendingTasksContent"></div>
+</div>
+
+<!-- صفحة المهام المركزية لولي الأمر -->
+<div id="parentTasksPage" class="page hidden">
+  <div class="page-header">
+    <h2>📝 متابعة مهام الأبناء</h2>
+    <button type="button" class="btn btn-outline btn-sm" onclick="renderParentTasksHub()">🔄 تحديث</button>
+  </div>
+  <p style="color:var(--text-light);margin-bottom:15px;">عرض المهام والتسميعات والاختبارات المطلوبة من كل ابن ومتابعة إنجازها خطوة بخطوة.</p>
+  <div id="parentTasksHubContent"></div>
+</div>
+
+<!-- صفحة تقارير الأبناء لولي الأمر -->
+<div id="parentReportsPage" class="page hidden">
+  <div class="page-header">
+    <h2>📊 تقارير الأبناء ومستويات الأداء</h2>
+    <button type="button" class="btn btn-outline btn-sm" onclick="renderParentReportsHub()">🔄 تحديث</button>
+  </div>
+  <p style="color:var(--text-light);margin-bottom:15px;">تقارير تفصيلية شاملة للأبناء المرتبطين بحسابك فقط: التسميع، الاختبارات، الواجبات، والتسجيلات والتقييم.</p>
+  
+  <div id="parentReportsChildTabs" style="display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap;"></div>
+  <div id="parentReportsDetailContent"></div>
 </div>
 
 <!-- صفحة الملفات المرفوعة -->

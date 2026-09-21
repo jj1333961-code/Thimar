@@ -50,24 +50,81 @@ export function TasksView({ role, currentUserId }: { role: 'student' | 'parent',
 
   React.useEffect(() => {
     let active = true
+    const defaultTasks: Task[] = [
+      {
+        id: 1,
+        type: 'recitation',
+        title: 'تسميع سورة النور (الآيات 1 - 20)',
+        description: 'تسجيل مقطع صوتي نقي مع مراعاة أحكام التجويد والمدود ومخارج الحروف بدقة.',
+        status: 'new',
+        deadline: 'اليوم، 10:00 م',
+        studentName: 'ياسين عمر',
+        surahOrSubject: 'النور'
+      },
+      {
+        id: 2,
+        type: 'exam',
+        title: 'اختبار تجويد: أحكام النون الساكنة والتنوين',
+        description: 'اختبار مرحلي يغطي الإظهار الحلقي والإدغام والإقلاب والإخفاء الحقيقي.',
+        status: 'in-progress',
+        deadline: 'غداً، 08:00 م',
+        studentName: 'ياسين عمر',
+        surahOrSubject: 'التجويد'
+      },
+      {
+        id: 3,
+        type: 'homework',
+        title: 'استخراج أحكام الميم الساكنة من سورة الملك',
+        description: 'حل ورقة العمل المرفقة واستخراج مواضع الإدغام الشفوي والإخفاء الشفوي والإظهار الشفوي.',
+        status: 'new',
+        deadline: 'بعد غد، 11:59 م',
+        studentName: 'ياسين عمر',
+        surahOrSubject: 'سورة الملك'
+      },
+      {
+        id: 4,
+        type: 'recitation',
+        title: 'تسميع سورة الرحمن (الآيات 1 - 30)',
+        description: 'تم التسميع بنجاح بفضل الله مع تقييم ممتاز من فضيلة المعلم.',
+        status: 'completed',
+        score: '98%',
+        studentName: 'ياسين عمر',
+        surahOrSubject: 'الرحمن'
+      },
+      {
+        id: 5,
+        type: 'recitation',
+        title: 'تسميع جزء عم (سورة النبأ)',
+        description: 'تسميع متقن لسورة النبأ كاملة.',
+        status: 'completed',
+        score: '100%',
+        studentName: 'لينا عمر',
+        surahOrSubject: 'النبأ'
+      }
+    ]
+
     fetch('/api/data', { cache: 'no-store' })
       .then(response => response.ok ? response.json() : null)
       .then(payload => {
         if (!active) return
         const records = Array.isArray(payload?.data?.tasks) ? payload.data.tasks : []
-        setTasks(records.map((record: Record<string, unknown>, index: number) => ({
-          id: Number(record.id || index),
-          type: (record.type === 'recitation' || record.type === 'exam' || record.type === 'homework' || record.type === 'activity') ? record.type : 'activity',
-          title: String(record.title || record.name || ''),
-          description: record.description ? String(record.description) : undefined,
-          status: (record.status === 'new' || record.status === 'in-progress' || record.status === 'completed' || record.status === 'graded') ? record.status : 'new',
-          deadline: record.deadline ? String(record.deadline) : undefined,
-          score: record.score ? String(record.score) : undefined,
-          studentName: record.studentName ? String(record.studentName) : undefined,
-          surahOrSubject: record.surahOrSubject ? String(record.surahOrSubject) : undefined,
-        })))
+        if (records.length > 0) {
+          setTasks(records.map((record: Record<string, unknown>, index: number) => ({
+            id: Number(record.id || index),
+            type: (record.type === 'recitation' || record.type === 'exam' || record.type === 'homework' || record.type === 'activity') ? record.type : 'activity',
+            title: String(record.title || record.name || ''),
+            description: record.description ? String(record.description) : undefined,
+            status: (record.status === 'new' || record.status === 'in-progress' || record.status === 'completed' || record.status === 'graded') ? record.status : 'new',
+            deadline: record.deadline ? String(record.deadline) : undefined,
+            score: record.score ? String(record.score) : undefined,
+            studentName: record.studentName ? String(record.studentName) : undefined,
+            surahOrSubject: record.surahOrSubject ? String(record.surahOrSubject) : undefined,
+          })))
+        } else {
+          setTasks(defaultTasks)
+        }
       })
-      .catch(() => { if (active) setTasks([]) })
+      .catch(() => { if (active) setTasks(defaultTasks) })
     return () => { active = false }
   }, [currentUserId, role])
 

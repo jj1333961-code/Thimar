@@ -171,12 +171,22 @@ export function StudentHome() {
         </button>
       </div>
       
-      <div id="home-daily-task" className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-32 h-32 bg-emerald-50 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+      <div 
+        id="home-daily-task" 
+        onClick={() => {
+          if (typeof window !== 'undefined') {
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', 'tasks');
+            window.location.href = url.toString();
+          }
+        }}
+        className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm relative overflow-hidden cursor-pointer hover:shadow-md hover:border-emerald-200 transition-all group"
+      >
+        <div className="absolute top-0 left-0 w-32 h-32 bg-emerald-50 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 group-hover:scale-125 transition-transform" />
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="p-4 bg-emerald-50 rounded-2xl flex items-center gap-4 order-2 md:order-1">
-            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
-              <BookOpen className="w-6 h-6 text-emerald-600" />
+            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+              <BookOpen className="w-6 h-6 text-emerald-600 group-hover:text-white transition-colors" />
             </div>
             <div className="text-right">
               <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('التقدم')}</div>
@@ -184,8 +194,11 @@ export function StudentHome() {
             </div>
           </div>
           <div className="space-y-3 text-center md:text-right order-1 md:order-2">
-            <h2 className="text-3xl font-black text-gray-900 italic bg-gray-900 text-white px-4 py-1 rounded-xl inline-block">{t('مهمة اليوم')}</h2>
-            <p className="text-lg text-gray-500 font-medium italic">{t('سورة')} <span className="text-emerald-600">{t('النور')}</span> • {t('من الآية')} ١ {t('إلى الآية')} ٢٠</p>
+            <div className="flex items-center gap-2 justify-center md:justify-end">
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">اضغط لفتح صفحة المهام والتسميع 👈</span>
+              <h2 className="text-3xl font-black text-gray-900 italic bg-gray-900 text-white px-4 py-1 rounded-xl inline-block">{t('مهمة اليوم')}</h2>
+            </div>
+            <p className="text-lg text-gray-500 font-medium italic">{t('سورة')} <span className="text-emerald-600 font-bold">{t('النور')}</span> • {t('من الآية')} ١ {t('إلى الآية')} ٢٠</p>
           </div>
         </div>
       </div>
