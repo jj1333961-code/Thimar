@@ -1,11 +1,29 @@
 import { GoogleGenAI } from "@google/genai";
 
-export const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || '',
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
+let client: GoogleGenAI | null = null;
+
+function getAiClient(): GoogleGenAI {
+  if (!client) {
+    client = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY || '',
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
+  }
+  return client;
+}
+
+export const ai = new Proxy({} as GoogleGenAI, {
+  get(_target, prop, receiver) {
+    const instance = getAiClient();
+    const value = Reflect.get(instance, prop, receiver);
+    if (typeof value === 'function') {
+      return value.bind(instance);
     }
+    return value;
   }
 });
 

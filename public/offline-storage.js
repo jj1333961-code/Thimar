@@ -417,7 +417,7 @@
   }
 
   // Export to window
-  window.ThimarOffline = {
+  window.ThimarOffline = Object.assign(window.ThimarOffline || {}, {
     ADHAN_VOICES: ADHAN_VOICES,
     QURAN_RECITERS: QURAN_RECITERS,
     TAFSIR_EDITIONS: TAFSIR_EDITIONS,
@@ -435,6 +435,6 @@
     setSelectedAdhan: setSelectedAdhan,
     getAdhanAudioSource: getAdhanAudioSource,
     getAyahAudioUrl: getAyahAudioUrl
-  };
+  });
 
 })(window);

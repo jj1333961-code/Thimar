@@ -225,12 +225,12 @@
     start();
   }
 
-  window.ThimarOffline = {
+  window.ThimarOffline = Object.assign(window.ThimarOffline || {}, {
     flush: flush,
     refreshStatus: refreshStatus,
     readQueue: readQueue,
     enqueue: queueWrite,
     showIndicator: updateIndicator,
     isOffline: function () { return !navigator.onLine; }
-  };
+  });
 }());

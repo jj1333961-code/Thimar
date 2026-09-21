@@ -911,7 +911,7 @@ function initializeThimarApp(){if(window.__thimarAppInitialized)return;window.__
   const restoredPage = restoredSessionPage && pageAllowedForUser(restoredSessionPage) ? restoredSessionPage : routed;
   if(restoredPage && pageAllowedForUser(restoredPage)) showPage(restoredPage,{fromBrowser:true});
   else showPage(defaultPageForRole(currentType),{fromBrowser:true});
-}else restorePendingGoogleSignup()}; restoreDeviceSession().then(function(restored){ if(!restored) continueSession(); else { const expectedRole=/\/(?:admin|admin\.html)$/.test(location.pathname)?'admin':/(?:student|student\.html)$/.test(location.pathname)?'student':/(?:parent|parent\.html)$/.test(location.pathname)?'parent':null; if(expectedRole&&expectedRole!==currentType) history.replaceState({page:defaultPageForRole(currentType)},'',roleShellPath(currentType)); const routed=pageFromUrl(); const renderRestored=function(){ const restoredPage=restoredSessionPage&&pageAllowedForUser(restoredSessionPage)?restoredSessionPage:routed; if(restoredPage&&pageAllowedForUser(restoredPage)) showPage(restoredPage,{fromBrowser:true}); else showPage(defaultPageForRole(currentType),{fromBrowser:true}); }; hydrateDataFromNeon().catch(function(){}).finally(renderRestored); } });}
+}else restorePendingGoogleSignup()}; restoreDeviceSession().then(function(restored){ if(!restored) continueSession(); else { const expectedRole=/\/(?:admin|admin\.html)$/.test(location.pathname)?'admin':/(?:student|student\.html)$/.test(location.pathname)?'student':/(?:parent|parent\.html)$/.test(location.pathname)?'parent':null; if(expectedRole&&expectedRole!==currentType) history.replaceState({page:defaultPageForRole(currentType)},'',roleShellPath(currentType)); const routed=pageFromUrl(); const renderRestored=function(){ const restoredPage=restoredSessionPage&&pageAllowedForUser(restoredSessionPage)?restoredSessionPage:routed; if(restoredPage&&pageAllowedForUser(restoredPage)) showPage(restoredPage,{fromBrowser:true}); else showPage(defaultPageForRole(currentType),{fromBrowser:true}); }; renderRestored(); hydrateDataFromNeon().then(function(){ const activeEl=document.querySelector('.page:not(.hidden)'); if(activeEl){ if(activeEl.id==='adminDashboard'){renderAdminStats();updateMsgBadge();}else if(activeEl.id==='studentDashboard'){renderStudentDashboard();updateStudentMsgBadge();}else if(activeEl.id==='parentDashboard'){renderParentDashboard();updateParentMsgBadge();} } }).catch(function(){}); } });}
 
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeThimarApp, {once:true});
 else initializeThimarApp();
@@ -1301,36 +1301,41 @@ function renderStudentRecordsBox() {
   box.innerHTML = html;
 }
 
-function checkAndFinalizeDrafts() {
-  archiveDailyTasks();
-  try {
-    let students = getData('students');
-    let changed = false;
-    const now = Date.now();
-    const oneDay = 24 * 60 * 60 * 1000;
-    const todayStr = new Date().toISOString().split('T')[0];
+let lastDraftCheckTime = 0;
+function checkAndFinalizeDrafts(force) {
+  const now = Date.now();
+  if(!force && now - lastDraftCheckTime < 5 * 60 * 1000) return;
+  lastDraftCheckTime = now;
+  (window.requestIdleCallback || function(cb){ setTimeout(cb, 100); })(function(){
+    archiveDailyTasks();
+    try {
+      let students = getData('students');
+      let changed = false;
+      const oneDay = 24 * 60 * 60 * 1000;
+      const todayStr = new Date().toISOString().split('T')[0];
 
-    students.forEach(s => {
-      if(!s.sessions) return;
-      s.sessions.forEach(sess => {
-        let shouldClose = sess.isDraft && sess.draftCreatedAt && (now - sess.draftCreatedAt > oneDay);
-        if(sess.isDraft && sess.date && sess.date !== todayStr) {
-          shouldClose = true;
-        }
-        if(shouldClose) {
-          sess.isDraft = false;
-          sess.finalizedAt = new Date().toLocaleString('ar-EG');
-          changed = true;
-          let messages = getData('messages');
-          const msgText = 'تم إغلاق تسميع '+s.name+' بتاريخ '+sess.date+' بشكل نهائي. المجموع: '+sess.totalScore+' درجات من 16. لا يمكن التعديل بعد الآن.';
-          messages.push({type:'system', sender:'النظام', senderId:0, receiverType:'student', receiverId:s.id, text:msgText, reply:'', time:new Date().toLocaleString('ar-EG'), approved:true, read:false});
-          messages.push({type:'system', sender:'النظام', senderId:0, receiverType:'parent', receiverName:s.parent, text:msgText, reply:'', time:new Date().toLocaleString('ar-EG'), approved:true, read:false});
-          setData('messages', messages);
-        }
+      students.forEach(s => {
+        if(!s.sessions) return;
+        s.sessions.forEach(sess => {
+          let shouldClose = sess.isDraft && sess.draftCreatedAt && (now - sess.draftCreatedAt > oneDay);
+          if(sess.isDraft && sess.date && sess.date !== todayStr) {
+            shouldClose = true;
+          }
+          if(shouldClose) {
+            sess.isDraft = false;
+            sess.finalizedAt = new Date().toLocaleString('ar-EG');
+            changed = true;
+            let messages = getData('messages');
+            const msgText = 'تم إغلاق تسميع '+s.name+' بتاريخ '+sess.date+' بشكل نهائي. المجموع: '+sess.totalScore+' درجات من 16. لا يمكن التعديل بعد الآن.';
+            messages.push({type:'system', sender:'النظام', senderId:0, receiverType:'student', receiverId:s.id, text:msgText, reply:'', time:new Date().toLocaleString('ar-EG'), approved:true, read:false});
+            messages.push({type:'system', sender:'النظام', senderId:0, receiverType:'parent', receiverName:s.parent, text:msgText, reply:'', time:new Date().toLocaleString('ar-EG'), approved:true, read:false});
+            setData('messages', messages);
+          }
+        });
       });
-    });
-    if(changed) setData('students', students);
-  } catch(e) { console.error('checkAndFinalizeDrafts error:', e); }
+      if(changed) setData('students', students);
+    } catch(e) { console.error('checkAndFinalizeDrafts error:', e); }
+  });
 }
 
 function togglePassVisibility(inputId, iconEl) {

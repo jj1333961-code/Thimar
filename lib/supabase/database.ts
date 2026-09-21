@@ -1588,7 +1588,7 @@ export const proctoringDb = {
 
 export const joinRequestsDb = {
   async getAll(status?: 'pending' | 'approved' | 'rejected'): Promise<JoinRequest[]> {
-    if (adminDb) {
+    if (adminDb && isFirestoreEnabled) {
       try {
         let query: any = adminDb.collection('join_requests').orderBy('created_at', 'desc')
         if (status) {
@@ -1626,7 +1626,7 @@ export const joinRequestsDb = {
   },
 
   async create(request: Omit<JoinRequest, 'id' | 'created_at' | 'status'>): Promise<JoinRequest> {
-    if (adminDb) {
+    if (adminDb && isFirestoreEnabled) {
       try {
         // Check for existing
         const emailCheck = await adminDb.collection('join_requests').where('email', '==', request.email).get()
@@ -1692,7 +1692,7 @@ export const joinRequestsDb = {
   },
 
   async updateStatus(id: string, status: 'approved' | 'rejected' | 'banned', reviewedBy?: string, rejectionReason?: string): Promise<JoinRequest> {
-    if (adminDb) {
+    if (adminDb && isFirestoreEnabled) {
       try {
         const updates: any = {
           status,

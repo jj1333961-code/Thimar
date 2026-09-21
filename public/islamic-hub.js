@@ -964,6 +964,15 @@
     computeNext();
     paintCards();
     startTick();
+    try {
+      var todayStr = new Date().toISOString().split("T")[0];
+      localStorage.setItem("thimar_prayer_timings_cache", JSON.stringify({
+        date: todayStr,
+        timings: data.timings,
+        loc: state.loc,
+        meta: data.meta
+      }));
+    } catch(e) {}
     // إعادة جدولة منبهات الأذان في الطبقة الأصلية (Android) عند تحديث المواقيت/تغيّر الموقع
     try {
       if (window.THIMAR_PRAYER_SCREEN && typeof window.THIMAR_PRAYER_SCREEN.scheduleNative === "function") {
@@ -1371,19 +1380,36 @@
     var lockScreen = document.getElementById('lockScreen');
     if (lockScreen && !lockScreen.classList.contains('hidden')) return;
     mountAll();
-    if (state.loc) {
-      try {
-        var data = state.loc.manual
-          ? await fetchTimingsByAddress(state.loc.label)
-          : await fetchTimingsByCoords(state.loc.lat, state.loc.lng);
-        applyTimings(data, null);
-      } catch (e) { console.log("[v0] timings restore failed"); }
-    } else {
-      // إذا لم يكن هناك موقع محفوظ مسبقاً، نستخدم موقعاً افتراضياً مع إتاحة الزر للمستخدم لتحديده بدقة
-      try {
-        var data = await fetchTimingsByAddress("القاهرة");
-        applyTimings(data, { lat: 30.0444, lng: 31.2357, label: "القاهرة (افتراضي)", manual: true });
-      } catch (e) {}
+
+    // استعادة فورية للمواقيت من الذاكرة المحلية لليوم الحالي دون انتظار طلب شبكة
+    var todayStr = new Date().toISOString().split("T")[0];
+    var hasValidCache = false;
+    try {
+      var cachedRaw = localStorage.getItem("thimar_prayer_timings_cache");
+      if (cachedRaw) {
+        var cachedObj = JSON.parse(cachedRaw);
+        if (cachedObj && cachedObj.date === todayStr && cachedObj.timings) {
+          applyTimings({ timings: cachedObj.timings, meta: cachedObj.meta }, cachedObj.loc || state.loc);
+          hasValidCache = true;
+        }
+      }
+    } catch(e) {}
+
+    if (!hasValidCache) {
+      if (state.loc) {
+        try {
+          var data = state.loc.manual
+            ? await fetchTimingsByAddress(state.loc.label)
+            : await fetchTimingsByCoords(state.loc.lat, state.loc.lng);
+          applyTimings(data, null);
+        } catch (e) { console.log("[v0] timings restore failed"); }
+      } else {
+        // إذا لم يكن هناك موقع محفوظ مسبقاً، نستخدم موقعاً افتراضياً مع إتاحة الزر للمستخدم لتحديده بدقة
+        try {
+          var data = await fetchTimingsByAddress("القاهرة");
+          applyTimings(data, { lat: 30.0444, lng: 31.2357, label: "القاهرة (افتراضي)", manual: true });
+        } catch (e) {}
+      }
     }
     startTick();
   }

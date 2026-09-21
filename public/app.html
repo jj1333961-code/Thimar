@@ -2622,9 +2622,8 @@ try { window.alert = function(m){ showToast(m); }; } catch(e){}
         });
         return pdfLibPromise.then(function(pdf){ pdfDocument=pdf; totalPages=pdf.numPages; return pdf; });
       }
-      /* تجهيز الملف والصفحة الأولى في الخلفية بعد فتح الموقع */
-      if(typeof window.requestIdleCallback === 'function') window.requestIdleCallback(function(){ loadPdf().catch(function(){}); }, { timeout: 4000 });
-      else setTimeout(function(){ loadPdf().catch(function(){}); }, 2000);
+      /* تحميل المصحف الشريف عند الحاجة فقط عند فتح القارئ لتخفيف العبء عن المتصفح وتسريع تحميل المنصة */
+      // Lazy load on demand when openQuranReader or setPage is invoked
       function setPage(page){
         var requestedPage = parseInt(page, 10) || 1;
         if(requestedPage < 1 || (pdfDocument && requestedPage > totalPages)) return;

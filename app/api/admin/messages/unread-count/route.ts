@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb, isFirestoreEnabled } from '@/lib/firebase-admin';
 import { requireAdmin } from '@/lib/server-auth';
 
 export async function GET(req: NextRequest) {
   const { response } = await requireAdmin(req);
   if (response) return response;
+
+  if (!isFirestoreEnabled) {
+    return NextResponse.json({ count: 0 });
+  }
 
   try {
     const snapshot = await adminDb.collection('adminMessages')

@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ai } from "@/lib/gemini-server";
 
+// Cache welcome briefings in memory for 15 minutes per user/role
+const briefingCache = new Map<string, { data: any; expiresAt: number }>();
+
 export async function POST(req: NextRequest) {
   try {
     const { role = 'student', userName = 'المستخدم' } = await req.json();
+
+    const cacheKey = `${role}:${userName}`;
+    const cached = briefingCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return NextResponse.json(cached.data);
+    }
 
     const roleNameArabic = 
       role === 'admin' ? 'المسؤول العام' :
@@ -39,10 +48,12 @@ export async function POST(req: NextRequest) {
         const text = response.text;
         if (text) {
           const parsed = JSON.parse(text);
-          return NextResponse.json({
+          const result = {
             ...parsed,
             timestamp: new Date().toISOString(),
-          });
+          };
+          briefingCache.set(cacheKey, { data: result, expiresAt: Date.now() + 15 * 60 * 1000 });
+          return NextResponse.json(result);
         }
       } catch (err: any) {
         console.warn("[Gemini Welcome Briefing Fallback]:", err.message);

@@ -157,70 +157,95 @@ async function upsertNeonSnapshot(id: string, data: Record<string, unknown>): Pr
   return asSnapshot(row)
 }
 
+let memoryCache: { id: string; snapshot: PersistentSnapshot; cachedAt: number } | null = null
+const MEMORY_CACHE_TTL = 15000
+
 export function getStorageMode(): 'supabase' | 'neon' | 'local' {
   if (isServerSupabaseConfigured()) return 'supabase'
   return hasNeon() ? 'neon' : 'local'
 }
 
 export async function getPersistentSnapshot(id: string): Promise<PersistentSnapshot | null> {
-  // Try Firestore first as it's our primary cloud DB now
-  try {
-    const snap = await getFirestoreSnapshot(id)
-    if (snap) return snap
-  } catch {
-    // Fallback
+  // 1. Ultra-fast memory cache hit (< 0.1ms)
+  if (memoryCache && memoryCache.id === id && Date.now() - memoryCache.cachedAt < MEMORY_CACHE_TTL) {
+    return memoryCache.snapshot
+  }
+
+  // 2. Fast local disk snapshot (< 1ms)
+  const local = await getLocalSnapshot(id)
+  if (local && local.data && Object.keys(local.data).length > 0) {
+    memoryCache = { id, snapshot: local, cachedAt: Date.now() }
+    return local
+  }
+
+  // 3. Fallback to cloud sources only if local snapshot is empty/missing
+  if (isFirestoreEnabled) {
+    try {
+      const snap = await Promise.race([
+        getFirestoreSnapshot(id),
+        new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Firestore Timeout')), 800))
+      ])
+      if (snap) {
+        memoryCache = { id, snapshot: snap, cachedAt: Date.now() }
+        upsertLocalSnapshot(id, snap.data).catch(() => {})
+        return snap
+      }
+    } catch {
+      // Fallback
+    }
   }
 
   if (isServerSupabaseConfigured()) {
     try {
-      const snap = await getSupabaseSnapshot(id)
-      if (snap) return snap
+      const snap = await Promise.race([
+        getSupabaseSnapshot(id),
+        new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Supabase Timeout')), 800))
+      ])
+      if (snap) {
+        memoryCache = { id, snapshot: snap, cachedAt: Date.now() }
+        upsertLocalSnapshot(id, snap.data).catch(() => {})
+        return snap
+      }
     } catch {
       // Quiet fallback
     }
   }
+
   if (hasNeon()) {
     try {
       const snap = await Promise.race([
         getNeonSnapshot(id),
-        new Promise<null>((_, reject) => setTimeout(() => reject(new Error('DB Timeout')), 1500))
+        new Promise<null>((_, reject) => setTimeout(() => reject(new Error('DB Timeout')), 800))
       ])
-      if (snap) return snap
+      if (snap) {
+        memoryCache = { id, snapshot: snap, cachedAt: Date.now() }
+        upsertLocalSnapshot(id, snap.data).catch(() => {})
+        return snap
+      }
     } catch {
       markPostgresUnavailable()
     }
   }
-  return getLocalSnapshot(id)
+
+  return local
 }
 
 export async function upsertPersistentSnapshot(id: string, data: Record<string, unknown>): Promise<PersistentSnapshot> {
+  // Save locally first with file lock for immediate persistence
   const localSnapshot = await upsertLocalSnapshot(id, data)
+  memoryCache = { id, snapshot: localSnapshot, cachedAt: Date.now() }
 
-  // Sync to Firestore
-  try {
-    await upsertFirestoreSnapshot(id, data)
-  } catch {
-    // Fallback
-  }
-
-  if (isServerSupabaseConfigured()) {
-    try {
-      await upsertSupabaseSnapshot(id, data)
-    } catch {
-      // Quiet fallback
-    }
-  }
-
-  if (hasNeon()) {
-    try {
-      await Promise.race([
+  // Asynchronously sync to remote cloud databases in the background without blocking the user response
+  queueMicrotask(() => {
+    Promise.allSettled([
+      isFirestoreEnabled ? upsertFirestoreSnapshot(id, data) : Promise.resolve(),
+      isServerSupabaseConfigured() ? upsertSupabaseSnapshot(id, data) : Promise.resolve(),
+      hasNeon() ? Promise.race([
         upsertNeonSnapshot(id, data),
         new Promise<null>((_, reject) => setTimeout(() => reject(new Error('DB Timeout')), 1500))
-      ])
-    } catch {
-      markPostgresUnavailable()
-    }
-  }
+      ]).catch(() => markPostgresUnavailable()) : Promise.resolve(),
+    ]).catch(() => {})
+  })
 
   return localSnapshot
 }
