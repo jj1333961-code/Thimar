@@ -599,6 +599,15 @@
       modal.style.display = 'none';
     });
 
+    // Close modal when clicking outside of it
+    document.addEventListener('pointerdown', function (e) {
+      if (modal.style.display !== 'none') {
+        if (!modal.contains(e.target) && !fab.contains(e.target)) {
+          modal.style.display = 'none';
+        }
+      }
+    });
+
     document.getElementById('geminiClearBtn').addEventListener('click', function () {
       chatHistory = [];
       const cont = document.getElementById('geminiMessagesContainer');

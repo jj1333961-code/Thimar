@@ -18,24 +18,6 @@ const nextConfig = {
       { source: '/parent.html', destination: '/parent', permanent: true },
     ]
   },
-  async rewrites() {
-    return {
-      beforeFiles: [
-        { source: '/', destination: '/app.html' },
-        { source: '/login', destination: '/app.html' },
-        { source: '/signup', destination: '/app.html?page=signupStep1' },
-        { source: '/forgot-password', destination: '/app.html?page=accountRecoveryPage' },
-        { source: '/dashboard', destination: '/app.html?page=dashboardPage' },
-        { source: '/students', destination: '/app.html?page=studentsPage' },
-        { source: '/profile', destination: '/app.html?page=profilePage' },
-        { source: '/settings', destination: '/app.html?page=settingsPage' },
-        // كل الأدوار تستخدم shell واحدًا للحفاظ على حالة التطبيق والتنقل SPA.
-        { source: '/admin', destination: '/app.html' },
-        { source: '/student', destination: '/app.html' },
-        { source: '/parent', destination: '/app.html' },
-      ],
-    }
-  },
   async headers() {
     return [
       {
