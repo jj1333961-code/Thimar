@@ -17,7 +17,7 @@ const nextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
-        { source: '/', destination: '/login' },
+        { source: '/', destination: '/app.html' },
         { source: '/login', destination: '/app.html' },
         { source: '/signup', destination: '/app.html?page=signupStep1' },
         { source: '/forgot-password', destination: '/app.html?page=accountRecoveryPage' },

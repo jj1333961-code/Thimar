@@ -319,8 +319,23 @@ function updateCountryFieldHints(select) {
       ? (minLen === maxLen ? (minLen + ' digits for ' + countryName) : (minLen + '–' + maxLen + ' digits for ' + countryName))
       : (minLen === maxLen ? (minLen + ' أرقام بالضبط لدولة ' + countryName) : ('من ' + minLen + ' إلى ' + maxLen + ' رقم لدولة ' + countryName));
     phone.inputMode = 'numeric';
-    phone.maxLength = maxLen;
-    phone.minLength = minLen;
+    try {
+      phone.removeAttribute('minlength');
+      phone.removeAttribute('maxlength');
+      if (typeof maxLen === 'number' && !isNaN(maxLen) && maxLen > 0) {
+        phone.maxLength = maxLen;
+      }
+      if (typeof minLen === 'number' && !isNaN(minLen) && minLen >= 0) {
+        phone.minLength = minLen;
+      }
+    } catch(e) {
+      if (typeof maxLen === 'number' && !isNaN(maxLen) && maxLen > 0) {
+        phone.setAttribute('maxlength', String(maxLen));
+      }
+      if (typeof minLen === 'number' && !isNaN(minLen) && minLen >= 0) {
+        phone.setAttribute('minlength', String(minLen));
+      }
+    }
     let norm = normalizeLocalPhoneForRule(phone.value, rule);
     if(norm.length > maxLen) {
       norm = norm.slice(0, maxLen);
@@ -700,7 +715,14 @@ function applyLangToDom() {
   else run();
 }
 window.applyLangToDom = applyLangToDom;
-function toggleLang() { currentLang=activeLocale()==='ar'?'en':'ar'; localStorage.setItem('lang',currentLang); applyLangToDom(); }
+function toggleLang() {
+  currentLang = activeLocale() === 'ar' ? 'en' : 'ar';
+  localStorage.setItem('lang', currentLang);
+  if (window.ThimarI18n && typeof window.ThimarI18n.setLocale === 'function') {
+    window.ThimarI18n.setLocale(currentLang);
+  }
+  applyLangToDom();
+}
 // تتم ترجمة العقد الديناميكية بواسطة legacy-i18n.js؛ لا نسجل مراقباً ثانياً
 function initLanguage(){
   if (document.getElementById('lockScreen') && !document.querySelector('.page:not(.hidden):not(#lockScreen)')) return;

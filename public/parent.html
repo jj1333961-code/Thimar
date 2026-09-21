@@ -1883,6 +1883,9 @@ try { window.alert = function(m){ showToast(m); }; } catch(e){}
     document.documentElement.dir = next === 'en' ? 'ltr' : 'rtl';
     var btn = document.getElementById('langToggleBtn');
     if (btn) btn.textContent = next === 'en' ? 'ع' : 'EN';
+    if (window.ThimarI18n && typeof window.ThimarI18n.setLocale === 'function') {
+      window.ThimarI18n.setLocale(next);
+    }
     window.loadThimarAppCore().then(function(){
       window.dispatchEvent(new Event('languagechange'));
       if (typeof window.applyLangToDom === 'function') window.applyLangToDom();
