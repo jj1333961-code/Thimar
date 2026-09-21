@@ -990,46 +990,53 @@ export function MessagesView({ currentUser }: { currentUser?: { id?: string; ema
                     </div>
                   </div>
                 ) : (
-                  /* Message Input Box */
-                  <footer className="p-3 md:p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
-                    <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                      {/* Attachment Button */}
+                  /* Message Input Box matching the provided screenshot design */
+                  <footer className="p-3 md:p-4 bg-[#092820] border-t border-[#134235] text-white">
+                    <form onSubmit={handleSendMessage} className="flex items-center gap-2.5 max-w-4xl mx-auto" dir="rtl">
+                      {/* Send Button with text and icon styled exactly as in the image */}
+                      <button 
+                        type="submit"
+                        disabled={(!newMessage.trim() && !pendingAttachment) || sending}
+                        className="px-5 py-3 bg-[#00A86B] hover:bg-[#00925d] active:scale-95 text-white rounded-2xl shadow-lg shadow-emerald-950/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-bold text-xs md:text-sm shrink-0"
+                        title="إرسال"
+                      >
+                        {sending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4 rotate-180" />
+                        )}
+                        <span>إرسال</span>
+                      </button>
+
+                      {/* Text Input in the center with dark green container */}
+                      <div className="flex-1 relative">
+                        <input 
+                          type="text" 
+                          value={newMessage}
+                          onChange={e => setNewMessage(e.target.value)}
+                          placeholder="اكتب سؤالك أو استفسارك هنا..."
+                          className="w-full py-3 px-4 bg-[#133E33] border border-[#1E5C4C] rounded-2xl focus:ring-2 focus:ring-[#00A86B] focus:border-[#00A86B] focus:outline-none transition-all text-xs md:text-sm text-white placeholder:text-emerald-200/50"
+                        />
+                      </div>
+
+                      {/* Attachment Button styled with the exact same visual design as the mic */}
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="p-2.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-2xl transition-colors"
-                        title="إرفاق ملف أو صورة أو واجب قرآني"
+                        className="p-3 bg-[#133E33] hover:bg-[#1A4F41] border border-[#1E5C4C] text-emerald-200 hover:text-white rounded-2xl transition-all shrink-0 flex items-center justify-center shadow-xs"
+                        title="إرفاق ملف أو مستند أو صورة"
                       >
                         <Paperclip className="w-5 h-5" />
                       </button>
 
-                      {/* Text Input */}
-                      <input 
-                        type="text" 
-                        value={newMessage}
-                        onChange={e => setNewMessage(e.target.value)}
-                        placeholder="اكتب رسالتك أو استفسارك القرآني هنا..."
-                        className="flex-1 py-3 px-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all text-xs text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
-                      />
-
-                      {/* Voice Record Button */}
+                      {/* Voice Record Button matching the image */}
                       <button
                         type="button"
                         onClick={() => setIsRecordingVoice(true)}
-                        className="p-2.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-2xl transition-colors"
-                        title="تسجيل رسالة صوتية أو تسميع"
+                        className="p-3 bg-[#133E33] hover:bg-[#1A4F41] border border-[#1E5C4C] text-emerald-200 hover:text-white rounded-2xl transition-all shrink-0 flex items-center justify-center shadow-xs"
+                        title="تسجيل رسالة صوتية"
                       >
                         <Mic className="w-5 h-5" />
-                      </button>
-
-                      {/* Send Button */}
-                      <button 
-                        type="submit"
-                        disabled={(!newMessage.trim() && !pendingAttachment) || sending}
-                        className="p-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-2xl shadow-lg shadow-emerald-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[44px]"
-                        title="إرسال"
-                      >
-                        {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 rotate-180" />}
                       </button>
                     </form>
                   </footer>

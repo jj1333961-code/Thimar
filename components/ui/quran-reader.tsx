@@ -450,7 +450,7 @@ export function QuranReader() {
                       onClick={() => handleAyahClick(ayah.number)}
                       className={`quran-interactive-ayah inline cursor-pointer transition-all duration-200 px-1 py-0.5 rounded-2xl mx-0.5 ${
                         isSelected 
-                          ? 'ring-4 ring-white shadow-2xl bg-emerald-600/15 border-2 border-emerald-400 font-black text-emerald-950 scale-105 inline-block'
+                          ? 'bg-white text-gray-950 font-black shadow-2xl ring-4 ring-black/15 border-2 border-gray-300 rounded-2xl px-2 py-1 mx-1 inline-block scale-[1.02]'
                           : isCurrentlyPlaying
                           ? 'bg-amber-100/70 text-amber-900 border border-amber-300 rounded-xl'
                           : 'hover:bg-emerald-50/60'
@@ -459,7 +459,7 @@ export function QuranReader() {
                       {ayah.text}{' '}
                       <span className={`inline-flex items-center justify-center min-w-[2.2rem] h-[2.2rem] rounded-full border text-base font-black mx-1 align-middle ${
                         isSelected 
-                          ? 'border-emerald-600 bg-emerald-600 text-white shadow-md' 
+                          ? 'border-2 border-emerald-700 bg-white text-emerald-950 shadow-md ring-2 ring-emerald-500' 
                           : 'border-emerald-200 text-emerald-700 bg-white/80'
                       }`}>
                         {ayah.number}
