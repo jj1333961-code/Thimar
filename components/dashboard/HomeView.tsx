@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
 import { 
   Brain, 
@@ -29,6 +30,7 @@ import { t } from '@/lib/i18n'
 
 // Admin Home View
 export function AdminHome({ requests, notifications, loading, handleAction, setLiveSessionMode }: any) {
+  const router = useRouter()
   const [showHomeTour, setShowHomeTour] = useState(false)
 
   useEffect(() => {
@@ -74,14 +76,15 @@ export function AdminHome({ requests, notifications, loading, handleAction, setL
             </h3>
             <div className="flex items-center gap-2">
               {requests.length > 0 && <span className="bg-emerald-500 text-white text-[10px] font-black px-3 py-1 rounded-full">{requests.length}</span>}
-              <a
-                href="/admin?tab=messages"
+              <button
+                type="button"
+                onClick={() => router.push('?tab=messages')}
                 className="text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 transition-colors flex items-center gap-1"
                 title="فتح بريد ومحادثات المسؤول"
               >
                 <Mail className="w-3.5 h-3.5" />
                 <span>بريد الإدارة</span>
-              </a>
+              </button>
             </div>
           </div>
           <div className="space-y-4">
@@ -138,6 +141,7 @@ export function AdminHome({ requests, notifications, loading, handleAction, setL
 
 // Student Home View
 export function StudentHome() {
+  const router = useRouter()
   const [showHomeTour, setShowHomeTour] = useState(false)
 
   useEffect(() => {
@@ -174,11 +178,7 @@ export function StudentHome() {
       <div 
         id="home-daily-task" 
         onClick={() => {
-          if (typeof window !== 'undefined') {
-            const url = new URL(window.location.href);
-            url.searchParams.set('tab', 'tasks');
-            window.location.href = url.toString();
-          }
+          router.push('?tab=tasks')
         }}
         className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm relative overflow-hidden cursor-pointer hover:shadow-md hover:border-emerald-200 transition-all group"
       >
@@ -210,7 +210,11 @@ export function StudentHome() {
           </h3>
           <div className="space-y-3">
             {['الحصري', 'المنشاوي', 'عبدالباسط'].map((qari) => (
-              <div key={qari} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-emerald-50 transition-colors group cursor-pointer">
+              <div 
+                key={qari} 
+                onClick={() => router.push('?tab=quran')}
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-emerald-50 transition-colors group cursor-pointer"
+              >
                 <Play className="w-4 h-4 text-gray-400 group-hover:text-emerald-600" />
                 <span className="font-bold text-gray-700 group-hover:text-emerald-700 italic">{t('الشيخ')} {t(qari)}</span>
               </div>

@@ -52,35 +52,52 @@ export function BottomNav({ role, unreadNotificationsCount = 0, unreadMessagesCo
   const [unreadMsgs, setUnreadMsgs] = useState(unreadMessagesCount)
 
   useEffect(() => {
-    // Quick poll for notification / message badges if admin or user
-    if (role === 'admin') {
+    if (role !== 'admin') return
+
+    let isMounted = true
+
+    const fetchBadges = () => {
+      if (typeof document !== 'undefined' && document.hidden) return
+
       // Fetch notifications
       fetch('/api/supabase/notifications')
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : null)
         .then(data => {
+          if (!isMounted || !data) return
           if (Array.isArray(data?.notifications)) {
             const unread = data.notifications.filter((n: any) => !n.isRead && !n.read).length
-            setUnreadNotifs(unread)
+            setUnreadNotifs(prev => (prev !== unread ? unread : prev))
           }
         })
         .catch(() => {})
 
       // Fetch admin messages unread count
-      const token = localStorage.getItem('thimar_auth_token')
-      fetch('/api/admin/messages/unread-count', {
-        headers: { 
-          'Authorization': `Bearer ${token}` 
-        }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (typeof data.count === 'number') {
-            setUnreadMsgs(data.count)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('thimar_auth_token') : null
+      if (token) {
+        fetch('/api/admin/messages/unread-count', {
+          headers: { 
+            'Authorization': `Bearer ${token}` 
           }
         })
-        .catch(() => {})
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (!isMounted || !data) return
+            if (typeof data?.count === 'number') {
+              setUnreadMsgs(prev => (prev !== data.count ? data.count : prev))
+            }
+          })
+          .catch(() => {})
+      }
     }
-  }, [role, activeTab])
+
+    fetchBadges()
+    const timer = setInterval(fetchBadges, 30000)
+
+    return () => {
+      isMounted = false
+      clearInterval(timer)
+    }
+  }, [role])
 
   const handleTabChange = (tabId: string) => {
     if (tabId === activeTab) return

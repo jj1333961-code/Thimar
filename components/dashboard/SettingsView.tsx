@@ -211,13 +211,8 @@ export function SettingsView() {
               type="button"
               onClick={() => {
                 resetHomeTourPreference()
-                // Navigate to home tab if needed or dispatch event
-                const url = new URL(window.location.href)
-                url.searchParams.set('tab', 'home')
-                window.history.pushState({}, '', url.toString())
                 window.dispatchEvent(new CustomEvent('thimar:start-home-tour'))
-                // Also trigger router refresh if on settings tab
-                window.location.href = `${window.location.pathname}?tab=home`
+                router.push('?tab=home')
               }}
               className="py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-2xl font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
             >

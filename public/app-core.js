@@ -5077,6 +5077,22 @@ async function studentLogin() {
   }
 }
 
+function loadStudentSettings() {
+  const alertBox = document.getElementById('studentSettingsAlert');
+  if (alertBox) alertBox.innerHTML = '';
+  const curEl = document.getElementById('currentStudentPass');
+  const newEl = document.getElementById('newStudentPass');
+  if (curEl) curEl.value = '';
+  if (newEl) newEl.value = '';
+
+  if (typeof syncSettingsThemeButtons === 'function') syncSettingsThemeButtons();
+  if (typeof syncSettingsLangButtons === 'function') syncSettingsLangButtons();
+  const soundCb = document.getElementById('studentSoundCheckbox');
+  if (soundCb) soundCb.checked = localStorage.getItem('thimar_sound_enabled') !== 'false';
+  const pref = document.getElementById('studentMsgPreference');
+  if (pref) pref.value = localStorage.getItem('thimar_msg_pref') || 'all';
+}
+
 function saveStudentPass() {
   const curEl = document.getElementById('currentStudentPass');
   const newEl = document.getElementById('newStudentPass');
@@ -7850,6 +7866,7 @@ window.testNotificationSound = testNotificationSound;
 window.setAppMessageFilter = setAppMessageFilter;
 window.confirmAppLogout = confirmAppLogout;
 window.loadParentSettings = loadParentSettings;
+window.loadStudentSettings = loadStudentSettings;
 window.saveParentPass = saveParentPass;
 window.renderAdminReports = renderAdminReports;
 window.filterAdminReportsStudents = filterAdminReportsStudents;

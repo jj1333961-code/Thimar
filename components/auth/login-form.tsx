@@ -76,15 +76,12 @@ export function LoginForm() {
     // Special Admin Logic
     if (formData.identifier === 'thimar' && formData.password === '0101') {
       localStorage.setItem('thimar_auth_token', 'admin_local_bypass_token')
-      setTimeout(() => {
-        router.push('/admin')
-        setLoading(false)
-      }, 1000)
+      router.push('/admin')
       return
     }
 
     try {
-      // Use Firebase Client Auth
+      // Use Firebase Client Auth if available
       const userCredential = await signInWithEmailAndPassword(auth, formData.identifier, formData.password)
       const user = userCredential.user
       const idToken = await user.getIdToken()
@@ -98,10 +95,28 @@ export function LoginForm() {
       
       router.push(`/${userData.role || 'student'}`)
     } catch (err: any) {
-      console.error('Login Error:', err)
-      setError(err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' 
-        ? 'بيانات الدخول غير صحيحة' 
-        : 'فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.')
+      console.warn('Firebase login failed, trying direct password authentication:', err?.message)
+      try {
+        const res = await fetch('/api/auth/password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: formData.identifier, password: formData.password })
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.token) {
+            localStorage.setItem('thimar_auth_token', data.token)
+          }
+          router.push(`/${data.role || 'admin'}`)
+          return
+        }
+      } catch (fallbackErr) {
+        console.warn('Password API fallback error:', fallbackErr)
+      }
+
+      setError(err?.code === 'auth/user-not-found' || err?.code === 'auth/wrong-password' 
+        ? 'بيانات الدخول غير صحيحة. يرجى التحقق من اسم المستخدم أو البريد وكلمة المرور.' 
+        : 'فشل تسجيل الدخول. يمكنك استخدام أزرار الدخول السريع بالأسفل أو التأكد من البيانات.')
     } finally {
       setLoading(false)
     }

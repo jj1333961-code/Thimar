@@ -1,31 +1,60 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'motion/react'
-import { 
-  Book, Mic, Trophy, Calendar, 
-  Play, CheckCircle2, Star, Brain,
-  ChevronLeft, MessageSquare, Headphones,
-  Search, Award, Sparkles, Clock, Users, X, Music, Loader2
-} from 'lucide-react'
+import { Sparkles, Loader2 } from 'lucide-react'
 
-import { WelcomeWalkthrough, isWalkthroughDismissedForever } from '@/components/ui/welcome-walkthrough'
-import { AIChatBubble } from '@/components/ui/ai-chat-bubble'
-import { WelcomeMessage } from '@/components/ui/welcome-message'
+import { isWalkthroughDismissedForever } from '@/components/ui/welcome-walkthrough'
 import { PWAInstallButton } from '@/components/pwa-install-button'
-import { TuhfatAlAtfal } from '@/components/ui/tuhfat-al-atfal'
-import { QuranReader } from '@/components/ui/quran-reader'
-import { LiveRecitationSession } from '@/components/ui/live-recitation-session'
-
-import { Suspense } from 'react'
 import { BottomNav } from '@/components/dashboard/BottomNav'
 import { StudentHome } from '@/components/dashboard/HomeView'
-import { MessagesView } from '@/components/dashboard/MessagesView'
-import { ReportsView } from '@/components/dashboard/ReportsView'
-import { SettingsView } from '@/components/dashboard/SettingsView'
-import { TasksView } from '@/components/dashboard/TasksView'
+import { ViewSkeleton } from '@/components/dashboard/ViewSkeleton'
 import { useSearchParams } from 'next/navigation'
 import { getClientSession } from '@/lib/client-session'
+
+// Lazy loaded views to reduce bundle size and speed up initial render
+const QuranReader = dynamic(() => import('@/components/ui/quran-reader').then(m => m.QuranReader), {
+  loading: () => <ViewSkeleton title="جاري فتح المصحف الشريف..." />,
+  ssr: false,
+})
+
+const TuhfatAlAtfal = dynamic(() => import('@/components/ui/tuhfat-al-atfal').then(m => m.TuhfatAlAtfal), {
+  loading: () => <ViewSkeleton title="جاري فتح متن تحفة الأطفال..." />,
+  ssr: false,
+})
+
+const MessagesView = dynamic(() => import('@/components/dashboard/MessagesView').then(m => m.MessagesView), {
+  loading: () => <ViewSkeleton title="جاري تحميل الرسائل والمحادثات..." />,
+  ssr: false,
+})
+
+const TasksView = dynamic(() => import('@/components/dashboard/TasksView').then(m => m.TasksView), {
+  loading: () => <ViewSkeleton title="جاري تحميل المهام والتكاليف..." />,
+  ssr: false,
+})
+
+const ReportsView = dynamic(() => import('@/components/dashboard/ReportsView').then(m => m.ReportsView), {
+  loading: () => <ViewSkeleton title="جاري استخراج التقارير والنتائج..." />,
+  ssr: false,
+})
+
+const SettingsView = dynamic(() => import('@/components/dashboard/SettingsView').then(m => m.SettingsView), {
+  loading: () => <ViewSkeleton title="جاري فتح الإعدادات..." />,
+  ssr: false,
+})
+
+const WelcomeWalkthrough = dynamic(() => import('@/components/ui/welcome-walkthrough').then(m => m.WelcomeWalkthrough), {
+  ssr: false,
+})
+
+const LiveRecitationSession = dynamic(() => import('@/components/ui/live-recitation-session').then(m => m.LiveRecitationSession), {
+  ssr: false,
+})
+
+const AIChatBubble = dynamic(() => import('@/components/ui/ai-chat-bubble').then(m => m.AIChatBubble), {
+  ssr: false,
+})
 
 function StudentContent() {
   const searchParams = useSearchParams()

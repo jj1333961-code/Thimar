@@ -103,7 +103,11 @@ export function TasksView({ role, currentUserId }: { role: 'student' | 'parent',
       }
     ]
 
-    fetch('/api/data', { cache: 'no-store' })
+    const token = typeof window !== 'undefined' ? localStorage.getItem('thimar_auth_token') : null
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
+    fetch('/api/data', { cache: 'no-store', headers })
       .then(response => response.ok ? response.json() : null)
       .then(payload => {
         if (!active) return
@@ -143,10 +147,10 @@ export function TasksView({ role, currentUserId }: { role: 'student' | 'parent',
 
   const filteredTasks = tasks.filter(t => {
     // Role filter
-    if (role === 'student' && t.studentName !== 'ياسين عمر') {
+    if (role === 'student' && t.studentName && t.studentName !== 'ياسين عمر' && t.studentName !== 'الطالب') {
       return false
     }
-    if (role === 'parent' && selectedChild !== 'all' && t.studentName !== selectedChild) {
+    if (role === 'parent' && selectedChild !== 'all' && t.studentName && t.studentName !== selectedChild) {
       return false
     }
 

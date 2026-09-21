@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  compress: true,
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'motion', '@tanstack/react-query', 'date-fns'],
+  },
   serverExternalPackages: ["pdf-parse", "pdfjs-dist", "@napi-rs/canvas"],
   images: {
     unoptimized: true,

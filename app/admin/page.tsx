@@ -1,29 +1,51 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'motion/react'
-import { 
-  Users, CheckCircle2, XCircle, Bell, MessageSquare, 
-  Search, ShieldCheck, Filter, UserCheck, UserX,
-  LayoutDashboard, History, Settings, LogOut, Loader2,
-  RefreshCw, MoreVertical, Check, X, Brain, Video
-} from 'lucide-react'
+import { RefreshCw, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-import { AIChatBubble } from '@/components/ui/ai-chat-bubble'
-import { LiveRecitationSession } from '@/components/ui/live-recitation-session'
-import { WelcomeWalkthrough, isWalkthroughDismissedForever } from '@/components/ui/welcome-walkthrough'
-
-import { Suspense } from 'react'
+import { isWalkthroughDismissedForever } from '@/components/ui/welcome-walkthrough'
 import { BottomNav } from '@/components/dashboard/BottomNav'
 import { AdminHome } from '@/components/dashboard/HomeView'
-import { MessagesView } from '@/components/dashboard/MessagesView'
-import { NotificationsView } from '@/components/dashboard/NotificationsView'
-import { ReportsView } from '@/components/dashboard/ReportsView'
-import { SettingsView } from '@/components/dashboard/SettingsView'
+import { ViewSkeleton } from '@/components/dashboard/ViewSkeleton'
 import { useSearchParams } from 'next/navigation'
 import { requestJson } from '@/lib/api-client'
 import { getClientSession } from '@/lib/client-session'
+
+// Lazy loaded views
+const MessagesView = dynamic(() => import('@/components/dashboard/MessagesView').then(m => m.MessagesView), {
+  loading: () => <ViewSkeleton title="جاري تحميل الرسائل والمحادثات..." />,
+  ssr: false,
+})
+
+const NotificationsView = dynamic(() => import('@/components/dashboard/NotificationsView').then(m => m.NotificationsView), {
+  loading: () => <ViewSkeleton title="جاري تحميل التنبيهات..." />,
+  ssr: false,
+})
+
+const ReportsView = dynamic(() => import('@/components/dashboard/ReportsView').then(m => m.ReportsView), {
+  loading: () => <ViewSkeleton title="جاري استخراج تقارير الطلاب..." />,
+  ssr: false,
+})
+
+const SettingsView = dynamic(() => import('@/components/dashboard/SettingsView').then(m => m.SettingsView), {
+  loading: () => <ViewSkeleton title="جاري فتح الإعدادات..." />,
+  ssr: false,
+})
+
+const WelcomeWalkthrough = dynamic(() => import('@/components/ui/welcome-walkthrough').then(m => m.WelcomeWalkthrough), {
+  ssr: false,
+})
+
+const LiveRecitationSession = dynamic(() => import('@/components/ui/live-recitation-session').then(m => m.LiveRecitationSession), {
+  ssr: false,
+})
+
+const AIChatBubble = dynamic(() => import('@/components/ui/ai-chat-bubble').then(m => m.AIChatBubble), {
+  ssr: false,
+})
 
 function AdminContent() {
   const searchParams = useSearchParams()
