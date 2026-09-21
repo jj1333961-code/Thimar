@@ -1468,12 +1468,13 @@
   var pendingRoots = [];
 
   function scheduleApply(root) {
+    if (locale === 'ar') return;
     if (!root || isApplying) return;
     if (pendingRoots.indexOf(root) === -1) pendingRoots.push(root);
     if (observerFrame) return;
     var flush = function () {
       observerFrame = 0;
-      if (isApplying) return;
+      if (isApplying || locale === 'ar') return;
       isApplying = true;
       try {
         var roots = pendingRoots.splice(0, pendingRoots.length);
@@ -1488,14 +1489,16 @@
   }
 
   function init() {
-    isApplying = true;
-    try {
-      apply(document.body);
-    } finally {
-      isApplying = false;
+    if (locale !== 'ar') {
+      isApplying = true;
+      try {
+        apply(document.body);
+      } finally {
+        isApplying = false;
+      }
     }
     var observer = new MutationObserver(function (records) {
-      if (isApplying) return;
+      if (isApplying || locale === 'ar') return;
       records.forEach(function (record) {
         if (record.type === 'characterData') {
           scheduleApply(record.target.parentElement || document.body);

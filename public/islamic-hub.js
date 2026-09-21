@@ -56,7 +56,7 @@
   var notificationAudio = null;
   function playNotificationSound() {
     try {
-      if (!notificationAudio) { notificationAudio = new Audio("/sounds/notification-droplet.mp3"); notificationAudio.preload = "auto"; notificationAudio.volume = 0.65; }
+      if (!notificationAudio) { notificationAudio = new Audio("/sounds/notification-droplet.mp3"); notificationAudio.preload = "none"; notificationAudio.volume = 0.65; }
       notificationAudio.currentTime = 0;
       var playback = notificationAudio.play();
       if (playback && playback.catch) playback.catch(function () {});
@@ -1001,10 +1001,35 @@
     state.next = found;
   }
 
-  function paintCards() {
-    var hijri = hijriToday();
-    var greg = "";
-    try { greg = new Intl.DateTimeFormat("ar-EG", { weekday: "long", day: "numeric", month: "long" }).format(new Date()); } catch (e) {}
+  var cachedHijri = "";
+  var cachedGreg = "";
+  var lastDateDay = -1;
+
+  function getDatesCached() {
+    var now = new Date();
+    var curDay = now.getDate();
+    if (curDay !== lastDateDay || !cachedGreg) {
+      lastDateDay = curDay;
+      cachedHijri = hijriToday(now);
+      try {
+        cachedGreg = new Intl.DateTimeFormat("ar-EG", { weekday: "long", day: "numeric", month: "long" }).format(now);
+      } catch (e) {
+        cachedGreg = "";
+      }
+    }
+    return { hijri: cachedHijri, greg: cachedGreg };
+  }
+
+  var lastPaintedPrayerKey = "";
+  var lastTimingsHash = "";
+
+  function paintCards(forceStrip) {
+    var dates = getDatesCached();
+    var hijri = dates.hijri;
+    var greg = dates.greg;
+    var currentNextKey = state.next ? state.next.key : "";
+    var currentHash = state.timings ? JSON.stringify(state.timings) + currentNextKey : "";
+    var shouldUpdateStrip = forceStrip || (currentHash !== lastTimingsHash) || (currentNextKey !== lastPaintedPrayerKey);
 
     document.querySelectorAll("[data-isl-card]").forEach(function (card) {
       var nameEl = card.querySelector("[data-isl-pname]");
@@ -1014,23 +1039,34 @@
       var stripEl = card.querySelector("[data-isl-pstrip]");
 
       if (!state.next) {
-        nameEl.textContent = "مواقيت الصلاة";
-        timeEl.innerHTML = "--:--";
-        metaEl.textContent = greg + (hijri ? " • " + hijri : "");
-        cdEl.textContent = "جاري تحديد موقعك تلقائيًا…";
-        if (stripEl) stripEl.innerHTML = "";
+        if (nameEl) nameEl.textContent = "مواقيت الصلاة";
+        if (timeEl) timeEl.innerHTML = "--:--";
+        if (metaEl) metaEl.textContent = greg + (hijri ? " • " + hijri : "");
+        if (cdEl) cdEl.textContent = "جاري تحديد موقعك تلقائيًا…";
+        if (stripEl && stripEl.innerHTML) stripEl.innerHTML = "";
         return;
       }
       var f = fmt12(state.next.time);
-      nameEl.textContent = "الصلاة القادمة: " + state.next.name;
-      timeEl.innerHTML = esc(f.t) + "<small>" + f.mer + "</small>";
-      metaEl.innerHTML =
-        esc(greg) +
-        (hijri ? '<span class="isl-dot">•</span>' + esc(hijri) : "") +
-        (state.loc && state.loc.label ? '<span class="isl-dot">•</span>' + esc(state.loc.label) : "");
-      cdEl.textContent = "متبقٍ " + remainText(state.next.at);
+      if (nameEl && nameEl.dataset.curKey !== state.next.key) {
+        nameEl.dataset.curKey = state.next.key;
+        nameEl.textContent = "الصلاة القادمة: " + state.next.name;
+      }
+      if (timeEl && timeEl.dataset.curTime !== state.next.time) {
+        timeEl.dataset.curTime = state.next.time;
+        timeEl.innerHTML = esc(f.t) + "<small>" + f.mer + "</small>";
+      }
+      if (metaEl && !metaEl.dataset.painted) {
+        metaEl.dataset.painted = "1";
+        metaEl.innerHTML =
+          esc(greg) +
+          (hijri ? '<span class="isl-dot">•</span>' + esc(hijri) : "") +
+          (state.loc && state.loc.label ? '<span class="isl-dot">•</span>' + esc(state.loc.label) : "");
+      }
+      if (cdEl) {
+        cdEl.textContent = "متبقٍ " + remainText(state.next.at);
+      }
 
-      if (stripEl) {
+      if (stripEl && shouldUpdateStrip) {
         stripEl.innerHTML = state.timings
           ? PRAYER_KEYS.filter(function (p) { return !p.info; }).map(function (p) {
               var ff = fmt12(state.timings[p.key]);
@@ -1044,6 +1080,9 @@
           : "";
       }
     });
+
+    lastPaintedPrayerKey = currentNextKey;
+    lastTimingsHash = currentHash;
   }
 
   function remainText(at) {
@@ -1060,10 +1099,17 @@
       if (new Date() >= state.next.at) {
         announce(state.next);
         computeNext();
+        paintCards(true);
+        return;
       }
-      paintCards();
-      var body = document.querySelector("[data-times-body]");
-      if (body) renderTimesBody(body);
+      // Only update countdown text, avoid rebuilding DOM
+      document.querySelectorAll("[data-isl-card] [data-isl-pcd]").forEach(function (cdEl) {
+        cdEl.textContent = "متبقٍ " + remainText(state.next.at);
+      });
+      var bodyCd = document.querySelector("[data-times-body] [data-times-countdown]");
+      if (bodyCd) {
+        bodyCd.textContent = " — متبقٍ " + remainText(state.next.at);
+      }
     }, 1000);
   }
 
@@ -1164,7 +1210,7 @@
       : '<p class="isl-note">حدّد موقعك أولًا لعرض الموايت.</p>';
 
     var head = state.next
-      ? '<p class="isl-note">الصلاة القادمة: <strong>' + esc(state.next.name) + "</strong> — متبقٍ " + remainText(state.next.at) + "</p>"
+      ? '<p class="isl-note">الصلاة القادمة: <strong>' + esc(state.next.name) + "</strong><span data-times-countdown> — متبقٍ " + remainText(state.next.at) + "</span></p>"
       : "";
 
     body.innerHTML =

@@ -690,18 +690,17 @@ function translateValue(value) {
   return result;
 }
 let langApplyFrame = 0;
-function applyLangToDom() {
+function applyLangToDom(force) {
   currentLang = activeLocale();
   if (langApplyFrame) return;
   const run = function(){
     langApplyFrame = 0;
     document.documentElement.lang = currentLang;
     document.documentElement.dir = currentLang === 'en' ? 'ltr' : 'rtl';
-    if(window.ThimarI18n && typeof window.ThimarI18n.apply === 'function') {
-
-      window.ThimarI18n.apply(document.body);
-      // legacy-i18n.js owns translation and preserves the original Arabic source.
-
+    if(currentLang === 'en' || force) {
+      if(window.ThimarI18n && typeof window.ThimarI18n.apply === 'function') {
+        window.ThimarI18n.apply(document.body);
+      }
     }
     const btn=document.getElementById('langToggleBtn'); if(btn) btn.textContent=currentLang==='en'?'ع':'EN';
     if(typeof syncSignupRelationshipField === 'function') syncSignupRelationshipField();
@@ -721,7 +720,7 @@ function toggleLang() {
   if (window.ThimarI18n && typeof window.ThimarI18n.setLocale === 'function') {
     window.ThimarI18n.setLocale(currentLang);
   }
-  applyLangToDom();
+  applyLangToDom(true);
 }
 // تتم ترجمة العقد الديناميكية بواسطة legacy-i18n.js؛ لا نسجل مراقباً ثانياً
 function initLanguage(){
@@ -939,8 +938,14 @@ function recordCurrentDevice() {
     const record = { deviceId: deviceId, role: currentType, userId: account?.id || null, userName: account?.name || account?.parent || '', lastSeenAt: new Date().toISOString(), currentPage, lockedPage: '', userAgent: navigator.userAgent.slice(0, 240) };
     if(existing) Object.assign(existing, record);
     else devices.unshift(record);
-    if(currentType === 'admin') setData('devices', devices.slice(0, 100));
-    else {
+    if(currentType === 'admin') {
+      runtimeData['devices'] = devices.slice(0, 100);
+      const lastAdminDeviceSync = parseInt(sessionStorage.getItem('thimar_admin_device_synced') || '0', 10);
+      if (Date.now() - lastAdminDeviceSync > 300000) {
+        sessionStorage.setItem('thimar_admin_device_synced', String(Date.now()));
+        setData('devices', runtimeData['devices']);
+      }
+    } else {
       const payload = JSON.stringify({ device: record });
       const marker = deviceId + ':' + currentType;
       const alreadySent = localStorage.getItem('thimar_device_last_sent') === marker;
@@ -3890,7 +3895,7 @@ function renderParentExamResults(s){
   let arr=s.examResults||[];if(!arr.length)return '';
   let h='<div class="page" style="margin-top:15px;border-right:5px solid var(--info)"><h4 style="color:var(--info)">🧪 نتائج الاختبارات</h4>';
   arr.slice().reverse().forEach(ex=>{h+='<div class="history-element"><div class="history-element-name">📅 '+escapeHtml(ex.date||'')+'</div><div class="history-element-details"><div class="history-detail"><strong>الدرجة:</strong> '+ex.score+'/'+ex.maxScore+'</div><div class="history-detail"><strong>الوت:</strong> '+ex.totalDurationSeconds+' ثانية</div></div>';
-    if(ex.answers&&ex.questions){h+='<details style="margin-top:10px"><summary>ءء️ عرءء إجابات الطالب</summary>';ex.questions.forEach((q,i)=>{const a=ex.answers[i]||{},r=a.aiResult||{};h+='<div class="task-card"><strong>س'+(i+1)+':</strong> '+escapeHtml(q.prompt||'')+'<br><span>إجابة الطالب: '+escapeHtml(a.answer||'—')+'</span><br><span>النتيجة: '+(a.score>=1?'✅ كاملة':a.score===.5?'🟡 نصف درجة':'❌ غير صحيحة')+'</span>'+(r.reason?'<br><span>تقرير AI: '+escapeHtml(r.reason)+'</span>':'');if(q.type==='audio'&&a.audioData&&a.audioShareWithParent!==false){h+='<div style="margin-top:8px">🎙️ التسجيل: <audio controls preload="auto" src="'+a.audioData+'" style="height:38px"></audio></div>'}h+='</div>'});h+='</details>'}h+='</div>'});
+    if(ex.answers&&ex.questions){h+='<details style="margin-top:10px"><summary>ءء️ عرءء إجابات الطالب</summary>';ex.questions.forEach((q,i)=>{const a=ex.answers[i]||{},r=a.aiResult||{};h+='<div class="task-card"><strong>س'+(i+1)+':</strong> '+escapeHtml(q.prompt||'')+'<br><span>إجابة الطالب: '+escapeHtml(a.answer||'—')+'</span><br><span>النتيجة: '+(a.score>=1?'✅ كاملة':a.score===.5?'🟡 نصف درجة':'❌ غير صحيحة')+'</span>'+(r.reason?'<br><span>تقرير AI: '+escapeHtml(r.reason)+'</span>':'');if(q.type==='audio'&&a.audioData&&a.audioShareWithParent!==false){h+='<div style="margin-top:8px">🎙️ التسجيل: <audio controls preload="none" src="'+a.audioData+'" style="height:38px"></audio></div>'}h+='</div>'});h+='</details>'}h+='</div>'});
   return h+'</div>';
 }
 
@@ -4250,7 +4255,7 @@ function renderVoiceBox(key) {
   h += '<button class="voice-record-btn" id="vmBtn_'+key+'" onclick="toggleVoiceMsg(\''+key+'\')">🎙️</button>';
   h += '<span id="vmStatus_'+key+'" style="color:var(--text-light);">'+(v ? 'رسالة صوتية جاهزة ✅' : 'اضغط لتسجيل رسالة صوتية')+'</span>';
   if(v) {
-    h += '<audio controls preload="auto" src="'+v+'" style="height:40px;"></audio>';
+    h += '<audio controls preload="none" src="'+v+'" style="height:40px;"></audio>';
     h += '<button class="btn btn-xs btn-danger" onclick="clearVoiceMsg(\''+key+'\')">ءءء️ حذف</button>';
   }
   h += '</div>';
@@ -4283,7 +4288,7 @@ async function toggleVoiceMsg(key) {
   } catch(err) { showToast('❌ لا يمكن الوصول للميكروفون', 'error'); }
 }
 function voiceAudioHTML(m) {
-  return m.voiceData ? '<div style="margin:8px 0;">🎙️ رسالة صوتية: <audio controls preload="auto" src="'+m.voiceData+'" style="height:40px; vertical-align:middle;"></audio></div>' : '';
+  return m.voiceData ? '<div style="margin:8px 0;">🎙️ رسالة صوتية: <audio controls preload="none" src="'+m.voiceData+'" style="height:40px; vertical-align:middle;"></audio></div>' : '';
 }
 async function persistMessageWithFallback(message) {
   try {
@@ -4758,7 +4763,7 @@ function renderMessages() {
     }
     if(m.exam&&m.exam.status==='pending_audio_review') approvalBtns += '<div class="approval-btns"><button class="btn-approve" onclick="reviewAudioExam('+m.senderId+',\''+m.exam.id+'\',true)">التسجيل مطابق</button><button class="btn-reject" onclick="reviewAudioExam('+m.senderId+',\''+m.exam.id+'\',false)">التسجيل غير مطابق</button></div>';
     if(m.expiryKey&&m.parentPhone){const wa=examWhatsAppLink(m.parentPhone,m.text);if(wa)approvalBtns += '<a class="btn btn-sm btn-success" target="_blank" rel="noopener noreferrer" href="'+wa+'">إرسال تنبيه واتساب ولي الأمر</a>';}
-    html += '<div class="msg-item"><span class="sender">'+m.sender+'</span> <span class="badge '+(m.type === 'student' ? 'badge-primary' : m.type === 'parent' ? 'badge-success' : 'badge-warning')+'">'+m.type+'</span><p style="margin:8px 0">'+m.text+'</p>'+voiceAudioHTML(m)+(m.aiReport ? '<div class="alert alert-info" style="margin:8px 0;">🤖 تقرير الذكاء الاصطناعي: '+m.aiReport+(m.recitationTarget ? ' — المطلوب: '+m.recitationTarget : '')+'</div>' : '')+hasFile+shareBtn+approvalBtns+(m.replyVoice ? '<div class="msg-reply">🎙️ رد صوتي: <audio controls preload="auto" src="'+m.replyVoice+'" style="height:38px; vertical-align:middle;"></audio></div>' : '')+'<span class="time">🕐 '+m.time+'</span></div>';
+    html += '<div class="msg-item"><span class="sender">'+m.sender+'</span> <span class="badge '+(m.type === 'student' ? 'badge-primary' : m.type === 'parent' ? 'badge-success' : 'badge-warning')+'">'+m.type+'</span><p style="margin:8px 0">'+m.text+'</p>'+voiceAudioHTML(m)+(m.aiReport ? '<div class="alert alert-info" style="margin:8px 0;">🤖 تقرير الذكاء الاصطناعي: '+m.aiReport+(m.recitationTarget ? ' — المطلوب: '+m.recitationTarget : '')+'</div>' : '')+hasFile+shareBtn+approvalBtns+(m.replyVoice ? '<div class="msg-reply">🎙️ رد صوتي: <audio controls preload="none" src="'+m.replyVoice+'" style="height:38px; vertical-align:middle;"></audio></div>' : '')+'<span class="time">🕐 '+m.time+'</span></div>';
   });
   document.getElementById('messagesList').innerHTML = html;
   adminMsgs.forEach(m => { const ri = msgs.indexOf(m); if(document.getElementById('voiceBox_reply'+ri)) renderVoiceBox('reply'+ri); });
@@ -5355,7 +5360,7 @@ function renderStudentTasks() {
     } else if(task.type === 'reading') {
       html += '<div class="task-card" data-task-category="extra" style="border-right-color:var(--warning);"><h5>📖 قراءة: '+(task.text || (task.surah ? 'سورة '+task.surah : ''))+'</h5>';
       if(task.surah) html += '<p>لسورة: '+task.surah+' | من آية '+(task.from || '-')+' إلى آية '+(task.to || '-')+'</p>';
-      if(task.audio) html += '<div style="margin:8px 0;">🎙️ تسجيل من المسؤول: <audio controls preload="auto" src="'+task.audio+'" style="height:40px; vertical-align:middle;"></audio></div>';
+      if(task.audio) html += '<div style="margin:8px 0;">🎙️ تسجيل من المسؤول: <audio controls preload="none" src="'+task.audio+'" style="height:40px; vertical-align:middle;"></audio></div>';
       html += studentAyatBlock(task, 'rd'+originalIdx);
       html += status;
 
@@ -6036,7 +6041,7 @@ function renderStudentInbox() {
         fileBtn = '<div style="margin:8px 0;"><button class="btn btn-sm btn-info" onclick="openMessageFileById(\''+m.sourceMsgId+'\', true)">👁️ الاطلاع على الملف لمرسل (عرض فقط)</button></div>';
       }
     }
-    html += '<div class="msg-item"><span class="sender">'+m.sender+'</span><span class="badge badge-primary">'+m.type+'</span><p style="margin:8px 0">'+m.text+'</p>'+voiceAudioHTML(m)+fileBtn+(m.reply ? '<div class="msg-reply"><strong>رد المسؤول:</strong> '+m.reply+(m.replyVoice ? ' <audio controls preload="auto" src="'+m.replyVoice+'" style="height:38px; vertical-align:middle;"></audio>' : '')+'</div>' : '')+'<span class="time">🕐 '+m.time+'</span></div>';
+    html += '<div class="msg-item"><span class="sender">'+m.sender+'</span><span class="badge badge-primary">'+m.type+'</span><p style="margin:8px 0">'+m.text+'</p>'+voiceAudioHTML(m)+fileBtn+(m.reply ? '<div class="msg-reply"><strong>رد المسؤول:</strong> '+m.reply+(m.replyVoice ? ' <audio controls preload="none" src="'+m.replyVoice+'" style="height:38px; vertical-align:middle;"></audio>' : '')+'</div>' : '')+'<span class="time">🕐 '+m.time+'</span></div>';
   });
   document.getElementById('studentInboxList').innerHTML = html;
   renderVoiceBox('student');
@@ -6181,7 +6186,7 @@ function renderParentInbox() {
   if(myMsgs.length === 0) { document.getElementById('parentInboxList').innerHTML = '<div class="alert alert-info">لا توجد رسائل</div>'; renderVoiceBox('parent'); return; }
   let html = '';
   myMsgs.slice().reverse().forEach(m => {
-    html += '<div class="msg-item"><span class="sender">'+m.sender+'</span><span class="badge badge-primary">'+m.type+'</span><p style="margin:8px 0">'+m.text+'</p>'+voiceAudioHTML(m)+(m.reply ? '<div class="msg-reply"><strong>رد المسؤول:</strong> '+m.reply+(m.replyVoice ? ' <audio controls preload="auto" src="'+m.replyVoice+'" style="height:38px; vertical-align:middle;"></audio>' : '')+'</div>' : '')+'<span class="time">🕐 '+m.time+'</span></div>';
+    html += '<div class="msg-item"><span class="sender">'+m.sender+'</span><span class="badge badge-primary">'+m.type+'</span><p style="margin:8px 0">'+m.text+'</p>'+voiceAudioHTML(m)+(m.reply ? '<div class="msg-reply"><strong>رد المسؤول:</strong> '+m.reply+(m.replyVoice ? ' <audio controls preload="none" src="'+m.replyVoice+'" style="height:38px; vertical-align:middle;"></audio>' : '')+'</div>' : '')+'<span class="time">🕐 '+m.time+'</span></div>';
   });
   document.getElementById('parentInboxList').innerHTML = html;
   renderVoiceBox('parent');
@@ -6516,7 +6521,7 @@ function openFileModal(fileData, fileName, desc, fileType, readonly) {
   if(fileType && fileType.startsWith('image/')) {
     html += '<div style="text-align:center;"><img src="'+fileData+'" style="max-width:100%; max-height:70vh; border-radius:10px; box-shadow:0 5px 20px rgba(0,0,0,0.2);"></div>';
   } else if(fileType && fileType.startsWith('audio/')) {
-    html += '<div style="text-align:center; padding:40px;"><audio controls preload="auto" src="'+fileData+'" style="width:100%;"></audio></div>';
+    html += '<div style="text-align:center; padding:40px;"><audio controls preload="none" src="'+fileData+'" style="width:100%;"></audio></div>';
   } else if(fileType && fileType.startsWith('video/')) {
     html += '<div style="text-align:center;"><video controls src="'+fileData+'" style="max-width:100%; max-height:70vh; border-radius:10px;"></video></div>';
   } else if(fileType && fileType.includes('pdf')) {
@@ -7693,7 +7698,7 @@ function renderStudentTasksHub() {
               }
             } else if (t.type === 'voice' || t.type === 'reading') {
               let ayatBlock = studentAyatBlock(t, 'hub_' + rawIdx);
-              let teacherAudio = t.audio ? `<div style="margin:8px 0; font-size:0.85rem;">🎙️ تلاوة المعلم المرجعية:<br><audio controls preload="auto" src="${t.audio}" style="height:36px; margin-top:4px; max-width:320px;"></audio></div>` : '';
+              let teacherAudio = t.audio ? `<div style="margin:8px 0; font-size:0.85rem;">🎙️ تلاوة المعلم المرجعية:<br><audio controls preload="none" src="${t.audio}" style="height:36px; margin-top:4px; max-width:320px;"></audio></div>` : '';
               let recControls = '';
               if (item.category === 'pending' || item.category === 'rejected') {
                 recControls = studentVoiceRecorderHTML(rawIdx);
