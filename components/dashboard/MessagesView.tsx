@@ -31,7 +31,10 @@ import {
   X,
   Hash,
   UserCheck,
-  Radio
+  Radio,
+  LogOut,
+  UserPlus,
+  ShieldAlert
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { requestJson } from '@/lib/api-client'
@@ -80,6 +83,9 @@ interface Contact {
   online?: boolean
   isGroup?: boolean
   membersCount?: number
+  creatorId?: string
+  creatorName?: string
+  members?: string[]
 }
 
 export function MessagesView({ currentUser }: { currentUser?: { id?: string; email?: string; name?: string; role?: string } }) {
@@ -103,6 +109,11 @@ export function MessagesView({ currentUser }: { currentUser?: { id?: string; ema
   const [showIdSearchModal, setShowIdSearchModal] = useState(false)
   const [searchIdCode, setSearchIdCode] = useState('')
   const [idSearchError, setIdSearchError] = useState('')
+
+  // Add Member to Group Modal state
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false)
+  const [newMemberCode, setNewMemberCode] = useState('')
+  const [addMemberError, setAddMemberError] = useState('')
 
   // Attachment & Voice Recording state
   const [pendingAttachment, setPendingAttachment] = useState<MessageAttachment | null>(null)
@@ -197,7 +208,10 @@ export function MessagesView({ currentUser }: { currentUser?: { id?: string; ema
           avatar: 'ن',
           online: true,
           isGroup: true,
-          membersCount: 14
+          membersCount: 14,
+          creatorId: 'teacher_ahmed@thimar.org',
+          creatorName: 'الشيخ أ. أحمد علي',
+          members: ['teacher_ahmed@thimar.org', '#TCH-310', '#STU-8294', '#PAR-9921']
         },
         {
           id: 'group_tuhfa',
@@ -211,7 +225,10 @@ export function MessagesView({ currentUser }: { currentUser?: { id?: string; ema
           avatar: 'ت',
           online: true,
           isGroup: true,
-          membersCount: 22
+          membersCount: 22,
+          creatorId: 'admin@thimar.org',
+          creatorName: 'إدارة منصة ثمار',
+          members: ['admin@thimar.org', '#ADM-1001', '#TCH-310']
         },
         // Teachers
         {
@@ -285,6 +302,18 @@ export function MessagesView({ currentUser }: { currentUser?: { id?: string; ema
           if (Array.isArray(parsed)) {
             contactList = [...parsed, ...contactList]
           }
+        }
+      } catch {}
+
+      // Filter out groups that current user has explicitly left (prevent automatic return)
+      try {
+        const leftKey = `thimar_left_groups_${myId}`
+        const leftList: string[] = JSON.parse(localStorage.getItem(leftKey) || '[]')
+        const leftKeyId = `thimar_left_groups_${myIdentityCode}`
+        const leftListId: string[] = JSON.parse(localStorage.getItem(leftKeyId) || '[]')
+        const allLeft = Array.from(new Set([...leftList, ...leftListId]))
+        if (allLeft.length > 0) {
+          contactList = contactList.filter(c => !c.isGroup || !allLeft.includes(c.id))
         }
       } catch {}
 
@@ -493,7 +522,10 @@ export function MessagesView({ currentUser }: { currentUser?: { id?: string; ema
       avatar: newGroupName.trim()[0] || 'م',
       online: true,
       isGroup: true,
-      membersCount: selectedGroupMembers.length + 1
+      membersCount: selectedGroupMembers.length + 1,
+      creatorId: myId,
+      creatorName: myName,
+      members: [myId, myIdentityCode, ...selectedGroupMembers]
     }
 
     const updated = [newGroup, ...contacts]
@@ -508,6 +540,167 @@ export function MessagesView({ currentUser }: { currentUser?: { id?: string; ema
       const existing = JSON.parse(localStorage.getItem('thimar_custom_groups') || '[]')
       localStorage.setItem('thimar_custom_groups', JSON.stringify([newGroup, ...existing]))
     } catch {}
+  }
+
+  // Handle Leave Group (Any member can leave, cannot rejoin automatically)
+  const handleLeaveGroup = () => {
+    if (!selectedContact || !selectedContact.isGroup) return
+
+    const confirmed = window.confirm(
+      `هل أنت متأكد من مغادرة مجموعة "${selectedContact.name}"؟\n` +
+      `تنبيه: لن تتمكن من العودة للمجموعة تلقائياً إلا إذا قام منشئ المجموعة بإضافتك مجدداً.`
+    )
+    if (!confirmed) return
+
+    const groupId = selectedContact.id
+    const groupName = selectedContact.name
+
+    // 1. Record in left groups for current user so they cannot rejoin automatically
+    try {
+      const leftKey = `thimar_left_groups_${myId}`
+      const leftList: string[] = JSON.parse(localStorage.getItem(leftKey) || '[]')
+      if (!leftList.includes(groupId)) {
+        leftList.push(groupId)
+        localStorage.setItem(leftKey, JSON.stringify(leftList))
+      }
+      if (myIdentityCode) {
+        const leftKeyId = `thimar_left_groups_${myIdentityCode}`
+        const leftListId: string[] = JSON.parse(localStorage.getItem(leftKeyId) || '[]')
+        if (!leftListId.includes(groupId)) {
+          leftListId.push(groupId)
+          localStorage.setItem(leftKeyId, JSON.stringify(leftListId))
+        }
+      }
+    } catch {}
+
+    // 2. Remove member from custom groups if stored
+    try {
+      const stored = localStorage.getItem('thimar_custom_groups')
+      if (stored) {
+        let customGroups: Contact[] = JSON.parse(stored)
+        customGroups = customGroups.map(g => {
+          if (g.id === groupId) {
+            const updatedMembers = (g.members || []).filter(m => 
+              m.toLowerCase() !== myId.toLowerCase() && 
+              m.toUpperCase() !== myIdentityCode.toUpperCase()
+            )
+            return {
+              ...g,
+              members: updatedMembers,
+              membersCount: Math.max(1, (g.membersCount || 2) - 1)
+            }
+          }
+          return g
+        })
+        localStorage.setItem('thimar_custom_groups', JSON.stringify(customGroups))
+      }
+    } catch {}
+
+    // 3. Remove from current contacts state and deselect
+    setContacts(prev => prev.filter(c => c.id !== groupId))
+    setSelectedContact(null)
+
+    // 4. Send leave notice in conversation
+    const leaveNotice: Message = {
+      id: `leave_${Date.now()}`,
+      sender_id: myId,
+      sender_name: myName,
+      receiver_id: groupId,
+      body: `غادر العضو ${myName} المجموعة.`,
+      created_at: new Date().toISOString(),
+      read: true
+    }
+    setMessages(prev => [...prev, leaveNotice])
+
+    alert(`تمت مغادرة مجموعة "${groupName}" بنجاح.`)
+  }
+
+  // Handle Add Member to Group (STRICT CREATOR-ONLY ENFORCEMENT)
+  const handleAddMemberToGroup = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedContact || !selectedContact.isGroup) return
+
+    // Execution-level verification of group creator identity:
+    // Only the verified group creator (or platform admin if system group) is authorized to add members
+    const isCreator = Boolean(
+      (selectedContact.creatorId && (
+        selectedContact.creatorId.toLowerCase() === myId.toLowerCase() ||
+        selectedContact.creatorId.toUpperCase() === myIdentityCode.toUpperCase()
+      )) ||
+      (role === 'admin' && (selectedContact.creatorId === 'admin@thimar.org' || !selectedContact.creatorId))
+    )
+
+    if (!isCreator) {
+      setAddMemberError('⛔ غير مصرح: منشئ المجموعة فقط هو المصرح له بإضافة أعضاء جدد إلى هذه المجموعة.')
+      return
+    }
+
+    const cleanCode = newMemberCode.trim().toUpperCase()
+    if (!cleanCode) {
+      setAddMemberError('يرجى كتابة رمز المعرف (ID) أو البريد الإلكتروني للعضو المراد إضافته.')
+      return
+    }
+
+    // Check if member already in group
+    const currentMembers = selectedContact.members || []
+    if (currentMembers.some(m => m.toUpperCase() === cleanCode)) {
+      setAddMemberError('هذا العضو مضاف بالفعل إلى هذه المجموعة.')
+      return
+    }
+
+    // Re-admission: If this member previously left, re-adding them by the creator clears the leave restriction
+    try {
+      const keysToClear = [
+        `thimar_left_groups_${cleanCode}`,
+        `thimar_left_groups_${cleanCode.toLowerCase()}`
+      ]
+      keysToClear.forEach(k => {
+        const leftArr: string[] = JSON.parse(localStorage.getItem(k) || '[]')
+        const filtered = leftArr.filter(gid => gid !== selectedContact.id)
+        localStorage.setItem(k, JSON.stringify(filtered))
+      })
+    } catch {}
+
+    const updatedMembers = [...currentMembers, cleanCode]
+    const updatedCount = (selectedContact.membersCount || currentMembers.length || 1) + 1
+
+    const updatedGroup: Contact = {
+      ...selectedContact,
+      members: updatedMembers,
+      membersCount: updatedCount,
+      lastMessage: `قام منشئ المجموعة بإضافة عضو جديد: ${cleanCode}`,
+      lastMessageTime: 'الآن'
+    }
+
+    // Update contacts list and active group state
+    setContacts(prev => prev.map(c => c.id === selectedContact.id ? updatedGroup : c))
+    setSelectedContact(updatedGroup)
+
+    // Save updated custom group
+    try {
+      const stored = localStorage.getItem('thimar_custom_groups')
+      if (stored) {
+        const customGroups: Contact[] = JSON.parse(stored)
+        const updated = customGroups.map(g => g.id === selectedContact.id ? updatedGroup : g)
+        localStorage.setItem('thimar_custom_groups', JSON.stringify(updated))
+      }
+    } catch {}
+
+    // Add notification message in conversation
+    const addNotice: Message = {
+      id: `add_${Date.now()}`,
+      sender_id: myId,
+      sender_name: myName,
+      receiver_id: selectedContact.id,
+      body: `قام منشئ المجموعة ${myName} بإضافة العضو (${cleanCode}) بنجاح.`,
+      created_at: new Date().toISOString(),
+      read: true
+    }
+    setMessages(prev => [...prev, addNotice])
+
+    setShowAddMemberModal(false)
+    setNewMemberCode('')
+    setAddMemberError('')
   }
 
   // Search by Identity Code
@@ -818,8 +1011,54 @@ export function MessagesView({ currentUser }: { currentUser?: { id?: string; ema
                     </div>
                   </div>
 
-                  {/* Audio & Video Call Action Buttons */}
-                  <div className="flex items-center gap-1.5 text-gray-600">
+                  {/* Header Actions (Group Actions + Call Buttons) */}
+                  <div className="flex items-center gap-1.5 text-gray-600 flex-wrap justify-end">
+                    {/* Group Management Actions */}
+                    {selectedContact.isGroup && (
+                      <div className="flex items-center gap-1.5">
+                        {/* Only Creator can add members */}
+                        {Boolean(
+                          (selectedContact.creatorId && (
+                            selectedContact.creatorId.toLowerCase() === myId.toLowerCase() ||
+                            selectedContact.creatorId.toUpperCase() === myIdentityCode.toUpperCase()
+                          )) ||
+                          (role === 'admin' && (selectedContact.creatorId === 'admin@thimar.org' || !selectedContact.creatorId))
+                        ) ? (
+                          <button
+                            onClick={() => {
+                              setShowAddMemberModal(true)
+                              setNewMemberCode('')
+                              setAddMemberError('')
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold border border-emerald-200 shadow-xs transition-colors"
+                            title="إضافة عضو جديد (صلاحية خاصة بمنشئ المجموعة)"
+                          >
+                            <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
+                            <span className="hidden sm:inline">إضافة عضو</span>
+                          </button>
+                        ) : (
+                          <div 
+                            className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-xl text-[11px] font-medium border border-gray-200 dark:border-gray-700 select-none"
+                            title="إضافة الأعضاء محصورة على منشئ المجموعة فقط"
+                          >
+                            <ShieldAlert className="w-3 h-3 text-amber-500" />
+                            <span>الإضافة للمنشئ فقط</span>
+                          </div>
+                        )}
+
+                        {/* Any member can leave group */}
+                        <button 
+                          onClick={handleLeaveGroup}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold border border-rose-200 shadow-xs transition-colors"
+                          title="مغادرة المجموعة"
+                        >
+                          <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                          <span className="hidden sm:inline">مغادرة المجموعة</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Audio & Video Call Action Buttons */}
                     <button 
                       onClick={() => handleStartCall('audio')}
                       className="p-2.5 bg-gray-50 hover:bg-emerald-50 hover:text-emerald-700 rounded-2xl transition-colors border border-gray-100 shadow-xs"
@@ -1261,6 +1500,82 @@ export function MessagesView({ currentUser }: { currentUser?: { id?: string; ema
                   >
                     <UserCheck className="w-4 h-4" />
                     <span>بدء المحادثة</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ADD MEMBER TO GROUP MODAL (STRICT CREATOR ONLY) */}
+      <AnimatePresence>
+        {showAddMemberModal && selectedContact && selectedContact.isGroup && (
+          <div className="fixed inset-0 z-[115] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-white rounded-[2.5rem] p-6 md:p-8 shadow-2xl border border-emerald-100 text-right space-y-5"
+              dir="rtl"
+            >
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                    <UserPlus className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-gray-900 text-lg">إضافة عضو للمجموعة</h3>
+                    <p className="text-xs text-gray-500">{selectedContact.name}</p>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setShowAddMemberModal(false)}
+                  className="p-2 text-gray-400 hover:text-gray-700 rounded-xl"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="bg-emerald-50/70 p-3 rounded-2xl border border-emerald-200 text-xs text-emerald-900">
+                <div className="font-bold mb-0.5">صلاحية منشئ المجموعة:</div>
+                <div className="text-[11px] opacity-90">أنت مسجل كمنشئ لهذه المجموعة، ولديك الصلاحية الرسمية الحصرية لإضافة أعضاء جدد إليها.</div>
+              </div>
+
+              <form onSubmit={handleAddMemberToGroup} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">معرف العضو أو رمزه التعريفي (ID) *</label>
+                  <input 
+                    type="text"
+                    required
+                    value={newMemberCode}
+                    onChange={e => {
+                      setNewMemberCode(e.target.value)
+                      setAddMemberError('')
+                    }}
+                    placeholder="مثال: #STU-8294 أو #TCH-310 أو البريد"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-mono font-bold focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                  {addMemberError && (
+                    <p className="text-xs text-red-600 mt-1.5 font-bold bg-red-50 p-2 rounded-xl border border-red-200">{addMemberError}</p>
+                  )}
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddMemberModal(false)}
+                    className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl text-xs font-bold"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black shadow-lg shadow-emerald-600/20 flex items-center gap-1.5"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>تأكيد إضافة العضو</span>
                   </button>
                 </div>
               </form>
