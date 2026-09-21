@@ -111,6 +111,7 @@
 
   var TILES = [
     { id: "quran", label: "القرآن الكريم", icon: ICONS.quran },
+    { id: "tafsir", label: "التفسير والتلاوة", icon: ICONS.quran },
     { id: "tasbeeh", label: "التسبيح", icon: ICONS.adhkar },
     { id: "dua", label: "الدعاء", icon: ICONS.dua },
     { id: "hadith", label: "الأحاديث", icon: ICONS.hadith },
@@ -132,10 +133,18 @@
   try {
     var raw = localStorage.getItem(LS_LOC);
     if (raw) state.loc = JSON.parse(raw);
+    if (!state.loc && window.ThimarOffline && window.ThimarOffline.getSavedLocation) {
+      state.loc = window.ThimarOffline.getSavedLocation();
+    }
   } catch (e) {}
 
   function saveLoc() {
-    try { localStorage.setItem(LS_LOC, JSON.stringify(state.loc)); } catch (e) {}
+    try {
+      localStorage.setItem(LS_LOC, JSON.stringify(state.loc));
+      if (window.ThimarOffline && window.ThimarOffline.saveLocation) {
+        window.ThimarOffline.saveLocation(state.loc);
+      }
+    } catch (e) {}
   }
 
   /* ============================================================
@@ -550,6 +559,297 @@
   });
 
   /* ============================================================
+     1-ب) التفسير والتلاوة — بحث الآيات والاستماع والحفظ بدون إنترنت
+     ============================================================ */
+  var tafsirAudioPlayer = null;
+
+  function openTafsirExplorer(initialSurah, initialAyah) {
+    var surahsList = D.surahs || [];
+    var curSurah = initialSurah || 1;
+    var curAyah = initialAyah || 1;
+    var curEdition = "ar.muyassar";
+    var curReciter = "Alafasy_128kbps";
+
+    var tafsirEditions = (window.ThimarOffline && window.ThimarOffline.TAFSIR_EDITIONS) || [
+      { id: "ar.muyassar", name: "التفسير الميسر", author: "نخبة من العلماء" },
+      { id: "ar.ibnkathir", name: "تفسير ابن كثير", author: "الحافظ ابن كثير" },
+      { id: "ar.saadi", name: "تيسير الكريم الرحمن", author: "الشيخ السعدي" },
+      { id: "ar.baghawi", name: "معالم التنزيل", author: "الإمام البغوي" },
+      { id: "ar.qurtubi", name: "الجامع لأحكام القرآن", author: "الإمام القرطبي" }
+    ];
+
+    var reciters = (window.ThimarOffline && window.ThimarOffline.QURAN_RECITERS) || [
+      { id: "Alafasy_128kbps", name: "الشيخ مشاري راشد العفاسي", baseFolder: "Alafasy_128kbps" },
+      { id: "Abdul_Basit_Murattal_192kbps", name: "الشيخ عبد الباسط عبد الصمد", baseFolder: "Abdul_Basit_Murattal_192kbps" },
+      { id: "Minshawy_Murattal_128kbps", name: "الشيخ محمد صديق المنشاوي", baseFolder: "Minshawy_Murattal_128kbps" },
+      { id: "Husary_128kbps", name: "الشيخ محمود خليل الحصري", baseFolder: "Husary_128kbps" },
+      { id: "Ghamadi_40kbps", name: "الشيخ سعد الغامدي", baseFolder: "Ghamadi_40kbps" },
+      { id: "Maher_AlMuaiqly_64kbps", name: "الشيخ ماهر المعيقلي", baseFolder: "Maher_AlMuaiqly_64kbps" },
+      { id: "Abdurrahmaan_As-Sudais_192kbps", name: "الشيخ عبد الرحمن السديس", baseFolder: "Abdurrahmaan_As-Sudais_192kbps" },
+      { id: "Yasser_Ad-Dussary_128kbps", name: "الشيخ ياسر الدوسري", baseFolder: "Yasser_Ad-Dussary_128kbps" }
+    ];
+
+    var html =
+      '<div class="isl-tafsir-explorer" style="display:flex; flex-direction:column; gap:16px;">' +
+        // Selectors bar
+        '<div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:14px; padding:14px; display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px;">' +
+          '<div>' +
+            '<label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px; color:var(--text, #1e293b);">السورة</label>' +
+            '<select id="teSurahSelect" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit; background:#fff; font-size:0.9rem;">' +
+              surahsList.map(function(s) {
+                return '<option value="' + s.number + '" ' + (s.number === curSurah ? 'selected' : '') + '>' + s.number + '. سورة ' + esc(s.name) + ' (' + s.ayahs + ' آية)</option>';
+              }).join('') +
+            '</select>' +
+          '</div>' +
+          '<div>' +
+            '<label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px; color:var(--text, #1e293b);">رقم الآية</label>' +
+            '<div style="display:flex; gap:4px; align-items:center;">' +
+              '<button type="button" id="tePrevAyah" class="isl-btn ghost" style="padding:6px 10px; font-size:0.85rem;" title="الآية السابقة">◀</button>' +
+              '<select id="teAyahSelect" style="flex:1; padding:8px 10px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit; background:#fff; font-size:0.9rem;"></select>' +
+              '<button type="button" id="teNextAyah" class="isl-btn ghost" style="padding:6px 10px; font-size:0.85rem;" title="الآية التالية">▶</button>' +
+            '</div>' +
+          '</div>' +
+          '<div>' +
+            '<label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px; color:var(--text, #1e293b);">كتاب التفسير</label>' +
+            '<select id="teEditionSelect" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit; background:#fff; font-size:0.9rem;">' +
+              tafsirEditions.map(function(ed) {
+                return '<option value="' + ed.id + '" ' + (ed.id === curEdition ? 'selected' : '') + '>' + esc(ed.name) + ' - ' + esc(ed.author) + '</option>';
+              }).join('') +
+            '</select>' +
+          '</div>' +
+          '<div>' +
+            '<label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px; color:var(--text, #1e293b);">القارئ الصوتي</label>' +
+            '<select id="teReciterSelect" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit; background:#fff; font-size:0.9rem;">' +
+              reciters.map(function(r) {
+                return '<option value="' + r.baseFolder + '" ' + (r.baseFolder === curReciter ? 'selected' : '') + '>' + esc(r.name) + '</option>';
+              }).join('') +
+            '</select>' +
+          '</div>' +
+        '</div>' +
+
+        // Ayah Display Box
+        '<div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.03); text-align:center;">' +
+          '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">' +
+            '<span id="teHeaderTitle" style="font-weight:700; color:#047857; font-size:1rem;">سورة الفاتحة - الآية 1</span>' +
+            '<span id="teOfflineBadge" style="font-size:0.75rem; color:#059669; background:#ecfdf5; padding:2px 8px; border-radius:999px;">جاري التحقق من التخزين المحلي...</span>' +
+          '</div>' +
+          '<div id="teAyahText" style="font-family:\'Amiri\',\'Traditional Arabic\',Georgia,serif; font-size:1.6rem; line-height:2.2; color:#0f172a; margin:16px 0; min-height:60px;">' +
+            'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ﴿١﴾' +
+          '</div>' +
+          // Audio Controls
+          '<div style="display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:14px; padding-top:12px; border-top:1px dashed #e2e8f0;">' +
+            '<button type="button" id="tePlayBtn" class="isl-btn" style="background:#059669; color:#fff; padding:8px 18px; border-radius:999px; font-weight:700; display:flex; align-items:center; gap:6px;">' +
+              '<span>▶</span> <span>استماع للآية</span>' +
+            '</button>' +
+            '<button type="button" id="teDownloadAudioBtn" class="isl-btn ghost" style="padding:8px 14px; font-size:0.85rem; border-radius:999px;">' +
+              '📥 حفظ الآية للاستماع دون إنترنت' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+
+        // Tafsir Text Box
+        '<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; padding:18px;">' +
+          '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">' +
+            '<h4 id="teTafsirTitle" style="margin:0; font-size:1.05rem; font-weight:700; color:#1e293b;">التفسير الميسر</h4>' +
+            '<span id="teTafsirStatus" style="font-size:0.75rem; color:#64748b;">محفوظ محلياً</span>' +
+          '</div>' +
+          '<div id="teTafsirContent" style="font-size:0.95rem; line-height:1.8; color:#334155; text-align:justify; min-height:80px; white-space:pre-wrap;">' +
+            'جارٍ تحميل التفسير...' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    openSheet("التفسير والتلاوة المباركة", html, function (root) {
+      var surahSel = root.querySelector("#teSurahSelect");
+      var ayahSel = root.querySelector("#teAyahSelect");
+      var edSel = root.querySelector("#teEditionSelect");
+      var recSel = root.querySelector("#teReciterSelect");
+      var prevBtn = root.querySelector("#tePrevAyah");
+      var nextBtn = root.querySelector("#teNextAyah");
+      var titleEl = root.querySelector("#teHeaderTitle");
+      var ayahTextEl = root.querySelector("#teAyahText");
+      var tafsirTitleEl = root.querySelector("#teTafsirTitle");
+      var tafsirContentEl = root.querySelector("#teTafsirContent");
+      var tafsirStatusEl = root.querySelector("#teTafsirStatus");
+      var offlineBadge = root.querySelector("#teOfflineBadge");
+      var playBtn = root.querySelector("#tePlayBtn");
+      var downloadAudioBtn = root.querySelector("#teDownloadAudioBtn");
+
+      function updateAyahOptions() {
+        var sObj = surahsList.find(function(s) { return s.number === curSurah; }) || surahsList[0];
+        var total = (sObj && sObj.ayahs) || 7;
+        var opts = "";
+        for (var i = 1; i <= total; i++) {
+          opts += '<option value="' + i + '" ' + (i === curAyah ? 'selected' : '') + '>الآية ' + i + '</option>';
+        }
+        ayahSel.innerHTML = opts;
+      }
+
+      async function refreshView() {
+        var sObj = surahsList.find(function(s) { return s.number === curSurah; }) || surahsList[0];
+        titleEl.textContent = 'سورة ' + (sObj ? sObj.name : '') + ' - الآية ' + curAyah;
+        var edObj = tafsirEditions.find(function(e) { return e.id === curEdition; }) || tafsirEditions[0];
+        tafsirTitleEl.textContent = edObj.name + ' (' + edObj.author + ')';
+
+        // Stop current audio if playing
+        if (tafsirAudioPlayer) {
+          tafsirAudioPlayer.pause();
+          tafsirAudioPlayer = null;
+          playBtn.innerHTML = '<span>▶</span> <span>استماع للآية</span>';
+        }
+
+        // Fetch / cache Ayah text
+        var textKey = 'ayah_text_' + curSurah + '_' + curAyah;
+        var cachedText = localStorage.getItem(textKey);
+        if (cachedText) {
+          ayahTextEl.textContent = cachedText + ' ﴿' + curAyah + '﴾';
+        } else {
+          ayahTextEl.textContent = 'جارٍ تحميل نص الآية...';
+          fetch('https://api.alquran.cloud/v1/ayah/' + curSurah + ':' + curAyah + '/quran-uthmani')
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+              if (d && d.data && d.data.text) {
+                var txt = d.data.text;
+                try { localStorage.setItem(textKey, txt); } catch (e) {}
+                ayahTextEl.textContent = txt + ' ﴿' + curAyah + '﴾';
+              }
+            })
+            .catch(function() {
+              ayahTextEl.textContent = 'الآية رقم ' + curAyah + ' من سورة ' + (sObj ? sObj.name : '');
+            });
+        }
+
+        // Fetch / cache Tafsir
+        tafsirContentEl.textContent = 'جارٍ جلب التفسير من المصدر...';
+        tafsirStatusEl.textContent = 'جارٍ التحميل...';
+        if (window.ThimarOffline && window.ThimarOffline.fetchAndCacheTafsir) {
+          try {
+            var tafsirText = await window.ThimarOffline.fetchAndCacheTafsir(curSurah, curAyah, curEdition);
+            tafsirContentEl.textContent = tafsirText;
+            tafsirStatusEl.textContent = '✅ محفوظ في التخزين المحلي';
+          } catch (e) {
+            tafsirContentEl.textContent = 'تعذر جلب التفسير حاليًا، تحقق من اتصالك أول مرة لحفظه.';
+            tafsirStatusEl.textContent = '⚠️ بحاجة لاتصال';
+          }
+        }
+
+        // Check audio cache status
+        var audioKey = 'ayah_audio_' + curReciter + '_' + curSurah + '_' + curAyah;
+        if (window.ThimarOffline && window.ThimarOffline.isAudioCached) {
+          var isCached = await window.ThimarOffline.isAudioCached(audioKey);
+          offlineBadge.textContent = isCached ? '✅ الآية محملة محليًا بلا إنترنت' : '🌐 التلاوة عبر الإنترنت (جاهزة للحفظ)';
+          offlineBadge.style.color = isCached ? '#059669' : '#0284c7';
+          offlineBadge.style.background = isCached ? '#ecfdf5' : '#f0f9ff';
+          downloadAudioBtn.textContent = isCached ? '✅ الآية محفوظة محليًا بالفعل' : '📥 حفظ الآية للاستماع دون إنترنت';
+        }
+      }
+
+      // Event listeners
+      surahSel.addEventListener('change', function() {
+        curSurah = parseInt(this.value, 10);
+        curAyah = 1;
+        updateAyahOptions();
+        refreshView();
+      });
+
+      ayahSel.addEventListener('change', function() {
+        curAyah = parseInt(this.value, 10);
+        refreshView();
+      });
+
+      edSel.addEventListener('change', function() {
+        curEdition = this.value;
+        refreshView();
+      });
+
+      recSel.addEventListener('change', function() {
+        curReciter = this.value;
+        refreshView();
+      });
+
+      prevBtn.addEventListener('click', function() {
+        if (curAyah > 1) {
+          curAyah--;
+          ayahSel.value = curAyah;
+          refreshView();
+        }
+      });
+
+      nextBtn.addEventListener('click', function() {
+        var sObj = surahsList.find(function(s) { return s.number === curSurah; });
+        var total = (sObj && sObj.ayahs) || 7;
+        if (curAyah < total) {
+          curAyah++;
+          ayahSel.value = curAyah;
+          refreshView();
+        }
+      });
+
+      playBtn.addEventListener('click', async function() {
+        if (tafsirAudioPlayer && !tafsirAudioPlayer.paused) {
+          tafsirAudioPlayer.pause();
+          playBtn.innerHTML = '<span>▶</span> <span>استماع للآية</span>';
+          return;
+        }
+
+        var audioKey = 'ayah_audio_' + curReciter + '_' + curSurah + '_' + curAyah;
+        var url = (window.ThimarOffline && window.ThimarOffline.getAyahAudioUrl)
+          ? window.ThimarOffline.getAyahAudioUrl(curSurah, curAyah, curReciter)
+          : 'https://everyayah.com/data/' + curReciter + '/' + String(curSurah).padStart(3, '0') + String(curAyah).padStart(3, '0') + '.mp3';
+
+        playBtn.innerHTML = '<span>⏳</span> <span>جارٍ التشغيل...</span>';
+        try {
+          var playableSrc = url;
+          if (window.ThimarOffline && window.ThimarOffline.fetchAndCacheAudio) {
+            playableSrc = await window.ThimarOffline.fetchAndCacheAudio(url, audioKey);
+          }
+          if (tafsirAudioPlayer) {
+            tafsirAudioPlayer.pause();
+          }
+          tafsirAudioPlayer = new Audio(playableSrc);
+          tafsirAudioPlayer.play();
+          playBtn.innerHTML = '<span>⏸</span> <span>إيقاف مؤقت</span>';
+          tafsirAudioPlayer.onended = function() {
+            playBtn.innerHTML = '<span>▶</span> <span>استماع للآية</span>';
+          };
+          tafsirAudioPlayer.onerror = function() {
+            playBtn.innerHTML = '<span>▶</span> <span>استماع للآية</span>';
+            toast('تعذر تشغيل التسجيل الصوتي', 'error');
+          };
+        } catch (e) {
+          playBtn.innerHTML = '<span>▶</span> <span>استماع للآية</span>';
+          toast('تعذر تشغيل الصوت', 'error');
+        }
+      });
+
+      downloadAudioBtn.addEventListener('click', async function() {
+        var audioKey = 'ayah_audio_' + curReciter + '_' + curSurah + '_' + curAyah;
+        var url = (window.ThimarOffline && window.ThimarOffline.getAyahAudioUrl)
+          ? window.ThimarOffline.getAyahAudioUrl(curSurah, curAyah, curReciter)
+          : 'https://everyayah.com/data/' + curReciter + '/' + String(curSurah).padStart(3, '0') + String(curAyah).padStart(3, '0') + '.mp3';
+
+        downloadAudioBtn.textContent = '⏳ جاري الحفظ محليًا...';
+        try {
+          if (window.ThimarOffline && window.ThimarOffline.fetchAndCacheAudio) {
+            await window.ThimarOffline.fetchAndCacheAudio(url, audioKey);
+            downloadAudioBtn.textContent = '✅ تم الحفظ بنجاح على جهازك';
+            offlineBadge.textContent = '✅ الآية محملة محليًا بلا إنترنت';
+            offlineBadge.style.color = '#059669';
+            offlineBadge.style.background = '#ecfdf5';
+            toast('تم حفظ التسجيل الصوتي محليًا ليعمل بدون إنترنت', 'success');
+          }
+        } catch (e) {
+          downloadAudioBtn.textContent = 'فشل الحفظ';
+          toast('تعذر حفظ الملف الصوتي', 'error');
+        }
+      });
+
+      updateAyahOptions();
+      refreshView();
+    });
+  }
+
+  /* ============================================================
      2) الأدعية  3) الأذكار  4) الأحاديث
      ============================================================ */
   function catGrid(groups) {
@@ -820,6 +1120,11 @@
             });
           }
         }
+        if (e.target.closest("[data-adhan-voices]")) {
+          if (window.THIMAR_PRAYER_SCREEN && window.THIMAR_PRAYER_SCREEN.openAdhanVoicesModal) {
+            window.THIMAR_PRAYER_SCREEN.openAdhanVoicesModal();
+          }
+        }
       });
       body.addEventListener("keypress", function (e) {
         if (e.key === "Enter" && !e.nativeEvent?.isComposing && e.keyCode !== 229 && e.target.matches("[data-city-input]")) {
@@ -865,6 +1170,7 @@
       '<div class="isl-times">' + rows + "</div>" +
       '<button type="button" class="isl-btn ghost" data-notify style="margin-top:12px">تشغيل تنبيه وقت الصلاة</button>' +
       '<button type="button" class="isl-btn ghost" data-adhan-toggle style="margin-top:12px">' + adhanToggleLabel() + "</button>" +
+      '<button type="button" class="isl-btn ghost" data-adhan-voices style="margin-top:12px">🔊 قائمة أصوات الأذان وتنزيلها محليًا</button>' +
       '<button type="button" class="isl-btn ghost" data-preview-prayer style="margin-top:12px">معاينة شاشة الصلاة</button>' +
       '<p class="isl-note">المواقيت محسوبة بطريقة الهيئة المصرية العامة للمساحة عبر واجهة Aladhan، ويمكنك عرض مواقيت أي مدينة أخرى بكتابة اسمها. عند دخول وقت الصلاة تظهر شاشة الصلاة الكاملة ويُشغَّل الأذان تلقائيًا.</p>';
   }
@@ -877,9 +1183,13 @@
         try {
           var lat = pos.coords.latitude, lng = pos.coords.longitude;
           var data = await fetchTimingsByCoords(lat, lng);
-          applyTimings(data, { lat: lat, lng: lng, label: "موقعي الحالي", manual: false });
+          var locObj = { lat: lat, lng: lng, label: "موقعي الحالي", manual: false };
+          applyTimings(data, locObj);
+          if (window.ThimarOffline && window.ThimarOffline.saveLocation) {
+            window.ThimarOffline.saveLocation(locObj);
+          }
           if (body) renderTimesBody(body);
-          toast("تم تحديث المواقيت حسب موقعك", "success");
+          toast("تم حفظ موقعك وتحديث المواقيت واتجاه القبلة", "success");
         } catch (e) { toast("تعذّر جلب المواقيت", "error"); }
       },
       function () { toast("لم يُسمح بالوصول إلى الموقع", "error"); },
@@ -1027,6 +1337,7 @@
 
   function openSection(id) {
     ensureLayers();
+    if (id === "tafsir") return openTafsirExplorer();
     if (id === "tasbeeh") return openTasbeeh();
     if (id === "quran") return openQuran();
     if (id === "dua") return openGroups("الدعاء", D.duas || []);
@@ -1036,7 +1347,7 @@
     if (id === "qibla") return openQibla();
   }
 
-  /* ---------------- تحديد الموع تلقائيًا ---------------- */
+  /* ---------------- تحديد الموقع تلقائيًا ---------------- */
   function autoLocate() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -1045,7 +1356,6 @@
           var lat = pos.coords.latitude, lng = pos.coords.longitude;
           var data = await fetchTimingsByCoords(lat, lng);
           applyTimings(data, { lat: lat, lng: lng, label: "موقعي الحالي", manual: false });
-          // حدّث نافذة المواقيت إن كانت مفتوحة
           var body = document.querySelector("[data-times-body]");
           if (body) renderTimesBody(body);
           console.log("[v0] auto-location resolved");
@@ -1068,11 +1378,12 @@
           : await fetchTimingsByCoords(state.loc.lat, state.loc.lng);
         applyTimings(data, null);
       } catch (e) { console.log("[v0] timings restore failed"); }
-      // حدّث الموقع تلقائيًا في الخلفية إن كان الموقع محفوظًا عبر GPS
-      if (!state.loc.manual) autoLocate();
     } else {
-      // لا يوجد موقع محفوظ: حدّد موقع المستخدم تلقائيًا
-      autoLocate();
+      // إذا لم يكن هناك موقع محفوظ مسبقاً، نستخدم موقعاً افتراضياً مع إتاحة الزر للمستخدم لتحديده بدقة
+      try {
+        var data = await fetchTimingsByAddress("القاهرة");
+        applyTimings(data, { lat: 30.0444, lng: 31.2357, label: "القاهرة (افتراضي)", manual: true });
+      } catch (e) {}
     }
     startTick();
   }

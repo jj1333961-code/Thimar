@@ -37,10 +37,19 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        cursor: pointer;
+        cursor: grab;
         z-index: 10001;
-        transition: transform 0.2s, box-shadow 0.2s, bottom 0.25s ease;
+        transition: transform 0.2s, box-shadow 0.2s;
         border: 2px solid rgba(255, 255, 255, 0.3);
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .gemini-fab.is-dragging {
+        cursor: grabbing;
+        transform: scale(1.12);
+        box-shadow: 0 16px 32px rgba(5, 150, 105, 0.6);
+        transition: none !important;
       }
       .gemini-fab:hover {
         transform: scale(1.08);
@@ -465,11 +474,123 @@
     `;
     document.body.appendChild(modal);
 
-    // Event Handlers
-    fab.addEventListener('click', function () {
+    // Restore saved FAB position
+    try {
+      var savedPos = localStorage.getItem('thimar_ai_fab_pos');
+      if (savedPos) {
+        var pos = JSON.parse(savedPos);
+        if (typeof pos.left === 'number' && typeof pos.top === 'number') {
+          var maxLeft = Math.max(10, window.innerWidth - 68);
+          var maxTop = Math.max(10, window.innerHeight - 68);
+          fab.style.left = Math.min(Math.max(10, pos.left), maxLeft) + 'px';
+          fab.style.top = Math.min(Math.max(10, pos.top), maxTop) + 'px';
+          fab.style.bottom = 'auto';
+          fab.style.right = 'auto';
+        }
+      }
+    } catch (e) {}
+
+    // Drag-and-drop logic for FAB with touch and mouse support
+    var isDragging = false;
+    var hasMoved = false;
+    var dragStartX = 0;
+    var dragStartY = 0;
+    var initialLeft = 0;
+    var initialTop = 0;
+
+    fab.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      isDragging = true;
+      hasMoved = false;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+
+      var rect = fab.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+
+      try {
+        fab.setPointerCapture(e.pointerId);
+      } catch (err) {}
+    });
+
+    fab.addEventListener('pointermove', function (e) {
+      if (!isDragging) return;
+      var dx = e.clientX - dragStartX;
+      var dy = e.clientY - dragStartY;
+
+      if (!hasMoved && Math.hypot(dx, dy) > 4) {
+        hasMoved = true;
+        fab.classList.add('is-dragging');
+      }
+
+      if (hasMoved) {
+        var newLeft = initialLeft + dx;
+        var newTop = initialTop + dy;
+        var maxL = Math.max(10, window.innerWidth - 68);
+        var maxT = Math.max(10, window.innerHeight - 68);
+
+        newLeft = Math.min(Math.max(10, newLeft), maxL);
+        newTop = Math.min(Math.max(10, newTop), maxT);
+
+        fab.style.left = newLeft + 'px';
+        fab.style.top = newTop + 'px';
+        fab.style.bottom = 'auto';
+        fab.style.right = 'auto';
+      }
+    });
+
+    function finishDrag(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      fab.classList.remove('is-dragging');
+      try {
+        fab.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+
+      if (hasMoved) {
+        // Save new position
+        var rect = fab.getBoundingClientRect();
+        try {
+          localStorage.setItem('thimar_ai_fab_pos', JSON.stringify({
+            left: Math.round(rect.left),
+            top: Math.round(rect.top)
+          }));
+        } catch (err) {}
+      }
+    }
+
+    fab.addEventListener('pointerup', finishDrag);
+    fab.addEventListener('pointercancel', finishDrag);
+
+    // Click handler (only opens modal if user did not drag)
+    fab.addEventListener('click', function (e) {
+      if (hasMoved) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       modal.style.display = modal.style.display === 'none' ? 'flex' : 'none';
       if (modal.style.display === 'flex') {
-        const input = document.getElementById('geminiTextInput');
+        // If modal would overflow or be off-screen, adjust position nicely
+        var fabRect = fab.getBoundingClientRect();
+        if (window.innerWidth > 640) {
+          if (fabRect.left > window.innerWidth / 2) {
+            modal.style.left = 'auto';
+            modal.style.right = (window.innerWidth - fabRect.right) + 'px';
+          } else {
+            modal.style.left = Math.max(10, fabRect.left) + 'px';
+            modal.style.right = 'auto';
+          }
+          if (fabRect.top < window.innerHeight / 2) {
+            modal.style.top = (fabRect.bottom + 12) + 'px';
+            modal.style.bottom = 'auto';
+          } else {
+            modal.style.bottom = (window.innerHeight - fabRect.top + 12) + 'px';
+            modal.style.top = 'auto';
+          }
+        }
+        var input = document.getElementById('geminiTextInput');
         if (input) input.focus();
       }
     });

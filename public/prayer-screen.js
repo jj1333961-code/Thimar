@@ -173,6 +173,7 @@
         "</div>" +
         '<div class="ps-controls">' +
           '<button type="button" class="ps-btn" data-ps-adhan-toggle></button>' +
+          '<button type="button" class="ps-btn ps-btn-voices" data-ps-adhan-voices style="margin-top:8px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:#fff; border-radius:999px; padding:8px 18px; cursor:pointer; font-weight:600;">🔊 أصوات الأذان من العالم العربي</button>' +
         "</div>" +
       "</div>";
 
@@ -187,9 +188,13 @@
     els.ayah = root.querySelector("[data-ps-ayah]");
     els.ayahRef = root.querySelector("[data-ps-ayahref]");
     els.adhanBtn = root.querySelector("[data-ps-adhan-toggle]");
+    els.voicesBtn = root.querySelector("[data-ps-adhan-voices]");
 
     root.querySelector(".ps-close").addEventListener("click", hide);
     els.adhanBtn.addEventListener("click", function () { setAdhanEnabled(!isAdhanEnabled()); });
+    if (els.voicesBtn) {
+      els.voicesBtn.addEventListener("click", function () { openAdhanVoicesModal(); });
+    }
 
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && root.getAttribute("data-open") === "1") hide();
@@ -207,27 +212,167 @@
     els.adhanBtn.setAttribute("aria-pressed", on ? "true" : "false");
   }
 
+  /* ---------- نافذة اختيار وتحميل أصوات الأذان ---------- */
+  var previewAudio = null;
+  function openAdhanVoicesModal() {
+    var oldModal = document.getElementById("thimarAdhanModal");
+    if (oldModal) oldModal.remove();
+
+    var voices = (window.ThimarOffline && window.ThimarOffline.ADHAN_VOICES) || [
+      { id: "adhan_makkah", name: "أذان الحرم المكي الشريف", country: "السعودية", flag: "🇸🇦" },
+      { id: "adhan_madinah", name: "أذان المسجد النبوي الشريف", country: "السعودية", flag: "🇸🇦" },
+      { id: "adhan_aqsa", name: "أذان المسجد الأقصى المبارك", country: "فلسطين", flag: "🇵🇸" },
+      { id: "adhan_abdulbasit", name: "أذان الشيخ عبد الباسط عبد الصمد", country: "مصر", flag: "🇪🇬" },
+      { id: "adhan_ismail", name: "أذان الشيخ مصطفى إسماعيل", country: "مصر", flag: "🇪🇬" },
+      { id: "adhan_umayyad", name: "أذان الجامع الأموي الكبير", country: "سوريا", flag: "🇸🇾" },
+      { id: "adhan_qatami", name: "أذان الشيخ ناصر القطامي", country: "السعودية", flag: "🇸🇦" },
+      { id: "adhan_alafasy", name: "أذان الشيخ مشاري العفاسي", country: "الكويت", flag: "🇰🇼" }
+    ];
+
+    var currentSelected = (window.ThimarOffline && window.ThimarOffline.getSelectedAdhan()) || voices[0];
+
+    var modal = document.createElement("div");
+    modal.id = "thimarAdhanModal";
+    modal.style.cssText = "position:fixed; inset:0; z-index:10005; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; padding:16px;";
+
+    var content = document.createElement("div");
+    content.style.cssText = "background:#0f2c22; color:#fff; border:1px solid #235c46; border-radius:20px; width:100%; max-width:540px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,0.6);";
+
+    content.innerHTML =
+      '<div style="padding:16px 20px; border-bottom:1px solid #1e4d3a; display:flex; align-items:center; justify-content:space-between;">' +
+        '<h3 style="margin:0; font-size:1.15rem; font-weight:700; color:#fef08a;">🔊 أصوات الأذان من العالم العربي</h3>' +
+        '<button type="button" class="close-adhan-modal" style="background:transparent; border:none; color:#94a3b8; font-size:24px; cursor:pointer;">&times;</button>' +
+      '</div>' +
+      '<div style="padding:12px 20px; background:rgba(16,185,129,0.1); font-size:0.85rem; color:#a7f3d0; border-bottom:1px solid #1e4d3a;">' +
+        'اختر صوت الأذان المفضل، وسيتم تحميله إلى جهازك محليًا ليعمل بدون الحاجة للإنترنت بعد ذلك.' +
+      '</div>' +
+      '<div class="adhan-list" style="padding:16px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:10px;">' +
+      '</div>';
+
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+
+    var listEl = content.querySelector(".adhan-list");
+    voices.forEach(function (v) {
+      var isSelected = v.id === currentSelected.id;
+      var card = document.createElement("div");
+      card.style.cssText = "background:rgba(255,255,255,0.06); border:1px solid " + (isSelected ? "#10b981" : "rgba(255,255,255,0.1)") + "; border-radius:14px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px; transition:all 0.2s;";
+
+      card.innerHTML =
+        '<div style="flex:1; text-align:right;">' +
+          '<div style="font-weight:700; font-size:0.95rem; color:#fff; display:flex; align-items:center; gap:6px;">' +
+            '<span>' + (v.flag || "🕌") + '</span>' +
+            '<span>' + v.name + '</span>' +
+            (isSelected ? '<span style="background:#10b981; color:#064e3b; font-size:0.7rem; padding:2px 8px; border-radius:999px; font-weight:700;">الصوت الحالي</span>' : '') +
+          '</div>' +
+          '<div style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">' + (v.country || "") + '</div>' +
+          '<div class="download-badge-' + v.id + '" style="font-size:0.75rem; color:#34d399; margin-top:4px;">جارٍ التحقق من التخزين...</div>' +
+        '</div>' +
+        '<div style="display:flex; align-items:center; gap:6px;">' +
+          '<button type="button" class="preview-btn-' + v.id + '" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px; padding:6px 12px; font-size:0.8rem; cursor:pointer;">استماع</button>' +
+          '<button type="button" class="select-btn-' + v.id + '" style="background:' + (isSelected ? "#059669" : "#10b981") + '; border:none; color:#fff; border-radius:8px; padding:6px 14px; font-size:0.85rem; font-weight:700; cursor:pointer;">' + (isSelected ? "مُحدد" : "اختيار") + '</button>' +
+        '</div>';
+
+      listEl.appendChild(card);
+
+      // Check cache status
+      if (window.ThimarOffline && window.ThimarOffline.isAudioCached) {
+        window.ThimarOffline.isAudioCached("adhan_" + v.id).then(function (cached) {
+          var badge = card.querySelector(".download-badge-" + v.id);
+          if (badge) {
+            badge.textContent = cached ? "✅ محفوظ محليًا على جهازك (بدون إنترنت)" : "🌐 يتطلب التحميل لأول مرة";
+            badge.style.color = cached ? "#34d399" : "#fbbf24";
+          }
+        });
+      }
+
+      // Preview button
+      var prevBtn = card.querySelector(".preview-btn-" + v.id);
+      if (prevBtn) {
+        prevBtn.addEventListener("click", async function () {
+          if (previewAudio && previewAudio._playingId === v.id) {
+            previewAudio.pause();
+            previewAudio = null;
+            prevBtn.textContent = "استماع";
+            return;
+          }
+          if (previewAudio) {
+            previewAudio.pause();
+            previewAudio = null;
+            content.querySelectorAll("[class^='preview-btn-']").forEach(function (b) { b.textContent = "استماع"; });
+          }
+          prevBtn.textContent = "جارٍ التحميل...";
+          try {
+            var src = v.url;
+            if (window.ThimarOffline && window.ThimarOffline.fetchAndCacheAudio) {
+              src = await window.ThimarOffline.fetchAndCacheAudio(v.url, "adhan_" + v.id);
+            }
+            previewAudio = new Audio(src);
+            previewAudio._playingId = v.id;
+            prevBtn.textContent = "إيقاف";
+            previewAudio.play().catch(function () { prevBtn.textContent = "استماع"; });
+            previewAudio.onended = function () { prevBtn.textContent = "استماع"; previewAudio = null; };
+          } catch (e) {
+            prevBtn.textContent = "استماع";
+          }
+        });
+      }
+
+      // Select button
+      var selBtn = card.querySelector(".select-btn-" + v.id);
+      if (selBtn) {
+        selBtn.addEventListener("click", async function () {
+          selBtn.textContent = "جارٍ الحفظ...";
+          if (window.ThimarOffline && window.ThimarOffline.setSelectedAdhan) {
+            await window.ThimarOffline.setSelectedAdhan(v.id);
+          } else {
+            localStorage.setItem("thimar_selected_adhan_id", v.id);
+          }
+          if (typeof showToast === "function") {
+            showToast("تم اختيار " + v.name + " وحفظه محليًا على جهازك", "success");
+          }
+          openAdhanVoicesModal(); // refresh UI
+        });
+      }
+    });
+
+    content.querySelector(".close-adhan-modal").addEventListener("click", function () {
+      if (previewAudio) { previewAudio.pause(); previewAudio = null; }
+      modal.remove();
+    });
+    modal.addEventListener("click", function (e) {
+      if (e.target === modal) {
+        if (previewAudio) { previewAudio.pause(); previewAudio = null; }
+        modal.remove();
+      }
+    });
+  }
+
   /* ---------- تشغيل/إيقاف الأذان (محليًا بلا إنترنت) ---------- */
-  function playAdhan(src) {
+  async function playAdhan(src) {
     if (!isAdhanEnabled()) return;
     try {
       if (!adhanAudio) {
         adhanAudio = new Audio();
         adhanAudio.preload = "auto";
         adhanAudio.addEventListener("error", function () {
-          // في حال غياب ملف الأذان، نرجع إلى نغمة التنبيه المدمجة
           if (adhanAudio.src.indexOf(FALLBACK_ADHAN) === -1) {
             adhanAudio.src = FALLBACK_ADHAN;
             adhanAudio.play().catch(function () {});
           }
         });
       }
-      var chosenSrc = src || (typeof localStorage !== "undefined" && localStorage.getItem("thimar_selected_adhan_src")) || DEFAULT_ADHAN;
+      var chosenSrc = src;
+      if (!chosenSrc && window.ThimarOffline && window.ThimarOffline.getAdhanAudioSource) {
+        chosenSrc = await window.ThimarOffline.getAdhanAudioSource();
+      }
+      if (!chosenSrc) {
+        chosenSrc = (typeof localStorage !== "undefined" && localStorage.getItem("thimar_selected_adhan_src")) || DEFAULT_ADHAN;
+      }
       adhanAudio.src = chosenSrc;
       adhanAudio.currentTime = 0;
       var p = adhanAudio.play();
       if (p && p.catch) p.catch(function () {
-        // تشغيل تلقائي محظور قبل تفاعل المستخدم — نتجاهل بهدوء
         console.log("[v0] adhan autoplay blocked");
       });
     } catch (e) { console.log("[v0] adhan play failed", e); }
@@ -371,6 +516,7 @@
     hide: hide,
     isAdhanEnabled: isAdhanEnabled,
     setAdhanEnabled: setAdhanEnabled,
+    openAdhanVoicesModal: openAdhanVoicesModal,
     scheduleNative: scheduleNative,
     hasNativeBridge: function () { return !!nativeBridge(); },
   };
