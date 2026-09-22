@@ -59,22 +59,33 @@
         width: 28px;
         height: 28px;
       }
-      .gemini-modal {
+      .gemini-backdrop {
         position: fixed;
-        bottom: calc(75px + env(safe-area-inset-bottom, 0px) + 78px);
-        left: 20px;
-        width: 420px;
-        max-width: calc(100vw - 40px);
-        height: 560px;
-        max-height: calc(100vh - 165px);
+        inset: 0;
+        background: rgba(0, 0, 0, 0.52);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 10002;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: clamp(14px, 3.5vw, 32px);
+        box-sizing: border-box;
+      }
+      .gemini-modal {
+        position: relative;
+        width: min(92vw, 860px);
+        height: min(86vh, 760px);
+        max-width: 95vw;
+        max-height: 90vh;
         background: var(--card-bg, #ffffff);
         color: var(--text-color, #1e293b);
         border: 1px solid var(--border, #e2e8f0);
         border-radius: 20px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
         display: flex;
         flex-direction: column;
-        z-index: 10001;
+        z-index: 10003;
         overflow: hidden;
         animation: geminiSlideUp 0.25s ease-out;
       }
@@ -385,14 +396,13 @@
         color: #047857;
       }
       @media(max-width: 600px) {
+        .gemini-backdrop {
+          padding: 8px;
+        }
         .gemini-modal {
-          bottom: 16px;
-          left: 12px;
-          right: 12px;
-          width: auto;
-          max-width: none;
-          height: calc(100vh - 32px);
-          max-height: none;
+          width: 100%;
+          height: calc(100vh - 36px);
+          max-height: 94vh;
           border-radius: 16px;
         }
       }
@@ -411,11 +421,14 @@
     `;
     document.body.appendChild(fab);
 
-    // Create Modal container
+    // Create Backdrop & Modal container
+    const backdrop = document.createElement('div');
+    backdrop.id = 'geminiModalBackdrop';
+    backdrop.className = 'gemini-backdrop';
+
     const modal = document.createElement('div');
     modal.id = 'geminiChatModal';
     modal.className = 'gemini-modal';
-    modal.style.display = 'none';
 
     modal.innerHTML = `
       <div class="gemini-header">
@@ -472,7 +485,21 @@
         </button>
       </div>
     `;
-    document.body.appendChild(modal);
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+
+    function openGeminiChat() {
+      backdrop.style.display = 'flex';
+      var input = document.getElementById('geminiTextInput');
+      if (input) setTimeout(function () { input.focus(); }, 100);
+    }
+
+    function closeGeminiChat() {
+      backdrop.style.display = 'none';
+    }
+
+    window.openGeminiChat = openGeminiChat;
+    window.closeGeminiChat = closeGeminiChat;
 
     // Restore saved FAB position
     try {
@@ -570,40 +597,29 @@
         e.stopPropagation();
         return;
       }
-      modal.style.display = modal.style.display === 'none' ? 'flex' : 'none';
-      if (modal.style.display === 'flex') {
-        // If modal would overflow or be off-screen, adjust position nicely
-        var fabRect = fab.getBoundingClientRect();
-        if (window.innerWidth > 640) {
-          if (fabRect.left > window.innerWidth / 2) {
-            modal.style.left = 'auto';
-            modal.style.right = (window.innerWidth - fabRect.right) + 'px';
-          } else {
-            modal.style.left = Math.max(10, fabRect.left) + 'px';
-            modal.style.right = 'auto';
-          }
-          if (fabRect.top < window.innerHeight / 2) {
-            modal.style.top = (fabRect.bottom + 12) + 'px';
-            modal.style.bottom = 'auto';
-          } else {
-            modal.style.bottom = (window.innerHeight - fabRect.top + 12) + 'px';
-            modal.style.top = 'auto';
-          }
-        }
-        var input = document.getElementById('geminiTextInput');
-        if (input) input.focus();
+      if (backdrop.style.display === 'flex') {
+        closeGeminiChat();
+      } else {
+        openGeminiChat();
       }
     });
 
-    document.getElementById('geminiCloseBtn').addEventListener('click', function () {
-      modal.style.display = 'none';
+    document.getElementById('geminiCloseBtn').addEventListener('click', function (e) {
+      e.stopPropagation();
+      closeGeminiChat();
     });
 
-    // Close modal when clicking outside of it
+    // Close modal when clicking outside of it (on backdrop or outside modal & fab)
+    backdrop.addEventListener('pointerdown', function (e) {
+      if (e.target === backdrop) {
+        closeGeminiChat();
+      }
+    });
+
     document.addEventListener('pointerdown', function (e) {
-      if (modal.style.display !== 'none') {
+      if (backdrop.style.display === 'flex') {
         if (!modal.contains(e.target) && !fab.contains(e.target)) {
-          modal.style.display = 'none';
+          closeGeminiChat();
         }
       }
     });

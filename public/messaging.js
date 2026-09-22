@@ -112,6 +112,76 @@
   }
 
   function contacts(role) {
+    var me = actor(role);
+    var result = [];
+
+    // 1. Groups
+    var allGroups = getData("messaging_groups") || [];
+    var myGroups = allGroups.filter(function (g) {
+      if (!g || !g.id) return false;
+      if (g.creatorId === me.id || (me.ids && me.ids.indexOf(String(g.creatorId)) >= 0)) return true;
+      return Array.isArray(g.members) && g.members.some(function (m) {
+        return String(m.id) === String(me.id) || (me.ids && me.ids.indexOf(String(m.id)) >= 0);
+      });
+    });
+    if (myGroups.length > 0) {
+      result.push({
+        title: "المجموعات (جروبات)",
+        items: myGroups.map(function (g) {
+          return {
+            id: String(g.id),
+            role: "group",
+            isGroup: true,
+            name: g.name,
+            subtitle: "مشرف: " + (g.creatorName || "المسؤول") + " (" + (g.members ? g.members.length : 1) + " أعضاء)",
+            creatorId: g.creatorId,
+            creatorName: g.creatorName,
+            members: g.members || []
+          };
+        })
+      });
+    }
+
+    // 2. Pending Registration Requests (For Admin)
+    if (role === "admin") {
+      var requests = getData("joinRequests") || [];
+      var pending = requests.filter(function (r) { return r && (r.status === "pending" || r.status === "معلق"); });
+      if (pending.length > 0) {
+        result.push({
+          title: "طلبات الانضمام والحسابات المعلقة (" + pending.length + ")",
+          items: pending.map(function (r) {
+            return {
+              id: String(r.id),
+              role: "applicant",
+              name: r.name || "مستخدم جديد",
+              subtitle: "طلب جديد (" + (r.authProvider || r.provider || "معلق") + ")",
+              requestData: r
+            };
+          })
+        });
+      }
+    }
+
+    // 3. Custom Contacts (Added via + button)
+    var custom = getData("custom_contacts") || [];
+    var myCustom = custom.filter(function (c) {
+      return c && c.ownerId === me.id;
+    });
+    if (myCustom.length > 0) {
+      result.push({
+        title: "الأصدقاء وجهات الاتصال المضافة",
+        items: myCustom.map(function (c) {
+          return {
+            id: String(c.id),
+            role: c.role || "student",
+            name: c.name,
+            subtitle: "صديق (" + (c.username || c.national || c.id) + ")"
+          };
+        })
+      });
+    }
+
+    // 4. Default Base Contacts
     var students = getData("students") || [];
     if (role === "admin") {
       var parents = [];
@@ -120,26 +190,43 @@
           parents.push({ id: student.parent, role: "parent", name: student.parent, subtitle: "ولي أمر" });
         }
       });
-      return [
-        { title: "الطلاب", items: students.map(function (student) { return { id: String(student.id), role: "student", name: student.name, subtitle: student.username || "طالب" }; }) },
-        { title: "أولياء الأمور", items: parents }
-      ];
+      result.push({
+        title: "الطلاب",
+        items: students.map(function (student) { return { id: String(student.id), role: "student", name: student.name, subtitle: student.username || "طالب" }; })
+      });
+      result.push({
+        title: "أولياء الأمور",
+        items: parents
+      });
+      return result;
     }
+
     if (role === "student") {
-      return [{ title: "جهات الاتصال", items: [
-        { id: "admin", role: "admin", name: "المسؤول", subtitle: "المعلم" },
-        { id: currentUser.parent || "", role: "parent", name: currentUser.parent || "ولي الأمر", subtitle: "ولي الأمر" }
-      ].filter(function (item) { return item.id; }) }];
+      result.push({
+        title: "المسؤول والمعلمون",
+        items: [
+          { id: "admin", role: "admin", name: "المسؤول", subtitle: "إدارة المنصة" },
+          { id: currentUser.parent || "", role: "parent", name: currentUser.parent || "ولي الأمر", subtitle: "ولي الأمر" }
+        ].filter(function (item) { return item.id; })
+      });
+      return result;
     }
-    return [{ title: "جهات الاتصال", items: [{ id: "admin", role: "admin", name: "المسؤول", subtitle: "المعلم" }].concat((currentUser || []).map(function (student) {
-      return { id: String(student.id), role: "student", name: student.name, subtitle: "الابن / الابنة" };
-    })) }];
+
+    result.push({
+      title: "جهات الاتصال",
+      items: [{ id: "admin", role: "admin", name: "المسؤول", subtitle: "المعلم" }].concat((currentUser || []).map(function (student) {
+        return { id: String(student.id), role: "student", name: student.name, subtitle: "الابن / الابنة" };
+      }))
+    });
+    return result;
   }
 
   function contactButton(item, role) {
     var selected = activeContact[role] && activeContact[role].role === item.role && activeContact[role].id === item.id;
+    var icon = item.isGroup ? "👥" : (item.role === "applicant" ? "⏳" : esc((item.name || "؟").trim().charAt(0)));
+    var avatarStyle = item.isGroup ? ' style="background:#4f46e5;"' : (item.role === "applicant" ? ' style="background:#d97706;"' : '');
     return '<button type="button" class="messenger-contact'+(selected ? ' active' : '')+'" data-chat-role="'+esc(role)+'" data-contact-role="'+esc(item.role)+'" data-contact-id="'+esc(item.id)+'">'+
-      '<span class="messenger-avatar" aria-hidden="true">'+esc((item.name || "؟").trim().charAt(0))+'</span><span class="messenger-contact-copy"><span class="messenger-contact-name">'+esc(item.name)+'</span><span class="messenger-contact-role">'+esc(item.subtitle)+'</span></span></button>';
+      '<span class="messenger-avatar"'+avatarStyle+' aria-hidden="true">'+icon+'</span><span class="messenger-contact-copy"><span class="messenger-contact-name">'+esc(item.name)+'</span><span class="messenger-contact-role">'+esc(item.subtitle)+'</span></span></button>';
   }
 
   function render(role) {
@@ -149,7 +236,7 @@
     var list = groups.map(function (group) {
       return '<div class="messenger-group-title">'+esc(group.title)+'</div>'+group.items.map(function (item) { return contactButton(item, role); }).join("");
     }).join("");
-    host.innerHTML = '<div class="messenger-shell'+(activeContact[role] ? ' has-selection' : '')+'" data-messenger="'+role+'"><aside class="messenger-contacts"><div class="messenger-contacts-head"><h3>المحادثات <span class="messenger-unread-summary" data-message-badge="'+(role === "admin" ? "admin" : "student")+'" hidden></span></h3><p>اختر محادثة لبدء الدردشة</p></div>'+list+'</aside><section class="messenger-chat">'+(activeContact[role] ? chatHtml(role) : '<div class="messenger-placeholder">اختر محادثة من القائمة لعرض الرسائل</div>')+'</section></div>';
+    host.innerHTML = '<div class="messenger-shell'+(activeContact[role] ? ' has-selection' : '')+'" data-messenger="'+role+'"><aside class="messenger-contacts"><div class="messenger-contacts-head"><div class="messenger-head-row"><h3>المحادثات <span class="messenger-unread-summary" data-message-badge="'+(role === "admin" ? "admin" : "student")+'" hidden></span></h3><button type="button" class="messenger-add-action-btn" id="messengerAddActionBtn" title="خيارات إضافية: عمل جروب أو إضافة صديق">+</button></div><p>اختر محادثة لبدء الدردشة</p></div>'+list+'</aside><section class="messenger-chat">'+(activeContact[role] ? chatHtml(role) : '<div class="messenger-placeholder">اختر محادثة من القائمة لعرض الرسائل أو اضغط (+) لعمل جروب / إضافة صديق</div>')+'</section></div>';
     bind(host, role);
     scrollThread(host);
     updateBadges();
@@ -212,6 +299,12 @@
   }
 
   function isBetween(message, me, contact) {
+    if (contact.isGroup || contact.role === "group") {
+      return String(message.groupId) === String(contact.id) || String(message.recipientId) === String(contact.id) || String(message.receiverId) === String(contact.id);
+    }
+    if (contact.role === "applicant") {
+      return String(message.senderId) === String(contact.id) || String(message.recipientId) === String(contact.id) || String(message.receiverId) === String(contact.id);
+    }
     var item = normalized(message);
     return (item.fromRole === me.role && endpointMatches(item.fromId, message.senderName || message.sender, me) && item.toRole === contact.role && item.toId === contact.id) ||
       (item.fromRole === contact.role && item.fromId === contact.id && item.toRole === me.role && endpointMatches(item.toId, message.recipientName, me));
@@ -250,16 +343,87 @@
 
   function chatHtml(role) {
     var contact = activeContact[role];
-    if (!contact) return '<div class="messenger-placeholder">اختر شخصًا لبدء المحادثة</div>';
+    if (!contact) return '<div class="messenger-placeholder">اختر شخصًا أو مجموعة لبدء المحادثة</div>';
     var me = actor(role);
     markVisibleMessagesRead(role, contact);
     var messages = (getData("messages") || []).filter(function (message) { return isBetween(message, me, contact); });
     var thread = messages.length ? messages.map(function (message) {
       var item = normalized(message);
       var sent = item.fromRole === me.role && endpointMatches(item.fromId, message.senderName || message.sender, me);
-      return '<article class="messenger-bubble '+(sent ? 'sent' : 'received')+'">'+(message.text ? '<p>'+esc(message.text)+'</p>' : '')+voiceAudioHTML(message)+attachmentHTML(message, role)+'<time>'+esc(message.time || "")+'</time></article>';
+      var senderLabel = (contact.isGroup && !sent) ? '<div style="font-size:0.75rem;font-weight:700;color:var(--primary);margin-bottom:3px;">'+esc(message.sender || message.senderName || "عضو")+'</div>' : '';
+      return '<article class="messenger-bubble '+(sent ? 'sent' : 'received')+'">'+senderLabel+(message.text ? '<p>'+esc(message.text)+'</p>' : '')+voiceAudioHTML(message)+attachmentHTML(message, role)+'<time>'+esc(message.time || "")+'</time></article>';
     }).join("") : '<div class="messenger-empty">لا توجد رسائل بعد. ابدأ المحادثة الآن.</div>';
-    return '<header class="messenger-chat-head"><button type="button" class="messenger-back" aria-label="العودة إلى المحادثات">رجوع</button><span class="messenger-avatar" aria-hidden="true">'+esc(contact.name.charAt(0))+'</span><div><strong>'+esc(contact.name)+'</strong><div class="messenger-contact-role">'+esc(contact.subtitle)+'</div></div></header><div class="messenger-thread" aria-live="polite">'+thread+'</div><div class="messenger-preview" hidden></div><div class="messenger-composer"><label class="messenger-icon-button" title="إرفاق ملف"><input class="messenger-file" type="file" hidden>إرفاق</label><button type="button" class="messenger-record" title="تسجيل صوتي">تسجيل صوتي</button><textarea rows="1" aria-label="نص الرسالة" placeholder="اكتب رسالة..."></textarea><button type="button" class="messenger-send">إرسال</button></div>';
+
+    // Group Header Controls
+    var isCreator = contact.isGroup && (contact.creatorId === me.id || (me.ids && me.ids.indexOf(String(contact.creatorId)) >= 0));
+    var groupHeaderActions = "";
+    if (contact.isGroup) {
+      groupHeaderActions = '<div class="messenger-group-actions-bar">' +
+        (isCreator ? '<button type="button" class="messenger-group-btn" style="background:#059669;color:#fff;" data-group-action="add-member" data-group-id="'+esc(contact.id)+'" title="إضافة عضو للجروب">➕ إضافة عضو</button><button type="button" class="messenger-group-btn" style="background:#dc2626;color:#fff;" data-group-action="delete-group" data-group-id="'+esc(contact.id)+'" title="حذف الجروب بالكامل">🗑️ حذف</button>' : '') +
+        '<button type="button" class="messenger-group-btn" style="background:#d97706;color:#fff;" data-group-action="leave-group" data-group-id="'+esc(contact.id)+'" title="مغادرة الجروب">🚪 مغادرة</button>' +
+        '</div>';
+    }
+
+    // Applicant Status Banner for Admin
+    var applicantBanner = "";
+    if (role === "admin" && contact.role === "applicant") {
+      applicantBanner = '<div class="messenger-applicant-status-banner">' +
+        '<div class="messenger-applicant-status-text">⚠️ حساب معلق: طلب انضمام جديد باسم ('+esc(contact.name)+') بانتظار القرار</div>' +
+        '<div class="messenger-applicant-actions">' +
+        '<button type="button" class="messenger-applicant-btn approve" data-applicant-action="approve" data-applicant-id="'+esc(contact.id)+'">✅ موافقة وتفعيل</button>' +
+        '<button type="button" class="messenger-applicant-btn reject" data-applicant-action="reject" data-applicant-id="'+esc(contact.id)+'">❌ رفض الطلب</button>' +
+        '<button type="button" class="messenger-applicant-btn ban" data-applicant-action="ban" data-applicant-id="'+esc(contact.id)+'">🚫 حظر الحساب</button>' +
+        '</div></div>';
+    }
+
+    var avatarIcon = contact.isGroup ? "👥" : (contact.role === "applicant" ? "⏳" : esc(contact.name.charAt(0)));
+    var avatarStyle = contact.isGroup ? ' style="background:#4f46e5;"' : (contact.role === "applicant" ? ' style="background:#d97706;"' : '');
+
+    return '<header class="messenger-chat-head">' +
+      '<div class="messenger-chat-head-user">' +
+        '<button type="button" class="messenger-back" aria-label="العودة إلى المحادثات">رجوع</button>' +
+        '<span class="messenger-avatar"'+avatarStyle+' aria-hidden="true">'+avatarIcon+'</span>' +
+        '<div><strong>'+esc(contact.name)+'</strong><div class="messenger-contact-role">'+esc(contact.subtitle)+'</div>'+groupHeaderActions+'</div>' +
+      '</div>' +
+      '<div class="messenger-call-tools">' +
+        '<button type="button" class="messenger-call-btn" data-call-type="video" title="بدء مكالمة فيديو">' +
+          '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>' +
+        '</button>' +
+        '<button type="button" class="messenger-call-btn" data-call-type="audio" title="بدء مكالمة هاتفية">' +
+          '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>' +
+        '</button>' +
+      '</div>' +
+      '</header>' +
+      applicantBanner +
+      '<div class="messenger-thread" aria-live="polite">'+thread+'</div>' +
+      '<div class="messenger-preview" hidden></div>' +
+      /* SCREENSHOT-MATCHED COMPOSER */
+      '<div class="messenger-composer-pill-bar">' +
+        '<button type="button" class="messenger-pill-action messenger-pill-voice" id="messengerVoiceBtn" title="تسجيل صوتي">' +
+          '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>' +
+            '<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>' +
+            '<line x1="12" y1="19" x2="12" y2="23"></line>' +
+            '<line x1="8" y1="23" x2="16" y2="23"></line>' +
+          '</svg>' +
+        '</button>' +
+        '<label class="messenger-pill-action messenger-pill-file" title="إرفاق ملف">' +
+          '<input class="messenger-file" type="file" hidden>' +
+          '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>' +
+          '</svg>' +
+        '</label>' +
+        '<div class="messenger-pill-input-box">' +
+          '<textarea rows="1" aria-label="نص الرسالة" placeholder="اكتب سؤالك أو استفسارك هنا"></textarea>' +
+        '</div>' +
+        '<button type="button" class="messenger-send-pill-btn">' +
+          '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<line x1="22" y1="2" x2="11" y2="13"></line>' +
+            '<polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>' +
+          '</svg>' +
+          '<span>إرسال</span>' +
+        '</button>' +
+      '</div>';
   }
 
   function persistCloudMessage(message) {
@@ -273,6 +437,543 @@
       .catch(function () { return null; });
   }
 
+  // ===== VIDEO / AUDIO CALL SCREEN =====
+  function openCallScreen(role, contact, callType) {
+    var isVideo = callType === "video";
+    var modalBackdrop = document.createElement("div");
+    modalBackdrop.className = "messenger-modal-backdrop";
+
+    var callDurationSeconds = 0;
+    var timerInterval = null;
+    var localStream = null;
+    var isMuted = false;
+    var isCameraOff = false;
+
+    modalBackdrop.innerHTML = '<div class="messenger-call-screen">' +
+      '<div style="font-size:0.9rem;opacity:0.85;margin-bottom:8px;">' + (isVideo ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية') + '</div>' +
+      '<h3 style="margin:0 0 4px;font-size:1.3rem;">' + esc(contact.name) + '</h3>' +
+      '<div id="callStatusText" style="font-size:0.88rem;color:#6ee7b7;margin-bottom:14px;">جارٍ الاتصال...</div>' +
+      (isVideo ?
+        '<div class="messenger-call-video-container">' +
+          '<div style="width:100%;height:100%;display:grid;place-items:center;background:#062319;">' +
+            '<div class="messenger-call-avatar">' + esc(contact.name.charAt(0)) + '</div>' +
+          '</div>' +
+          '<video id="callSelfVideo" class="messenger-call-self-video" autoplay playsinline muted></video>' +
+        '</div>'
+        :
+        '<div class="messenger-call-avatar">' + esc(contact.name.charAt(0)) + '</div>'
+      ) +
+      '<div class="messenger-call-controls">' +
+        '<button type="button" class="messenger-call-action-btn" id="callMuteBtn" style="background:#1e3a30;color:#fff;" title="كتم الصوت">🎙️</button>' +
+        (isVideo ? '<button type="button" class="messenger-call-action-btn" id="callCamBtn" style="background:#1e3a30;color:#fff;" title="إيقاف الكاميرا">📷</button>' : '') +
+        '<button type="button" class="messenger-call-action-btn messenger-call-end-btn" id="callEndBtn" title="إنهاء المكالمة">🔴</button>' +
+      '</div>' +
+    '</div>';
+
+    document.body.appendChild(modalBackdrop);
+
+    function formatTime(s) {
+      var m = Math.floor(s / 60);
+      var sec = s % 60;
+      return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec;
+    }
+
+    // Try camera access
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true }).then(function (stream) {
+        localStream = stream;
+        if (isVideo) {
+          var vid = document.getElementById("callSelfVideo");
+          if (vid) vid.srcObject = stream;
+        }
+      }).catch(function () {});
+    }
+
+    // Simulate connection after 2 seconds
+    var connectTimeout = setTimeout(function () {
+      var statusEl = document.getElementById("callStatusText");
+      if (statusEl) {
+        statusEl.textContent = "متصل — 00:00";
+        statusEl.style.color = "#34d399";
+      }
+      timerInterval = setInterval(function () {
+        callDurationSeconds++;
+        var el = document.getElementById("callStatusText");
+        if (el) el.textContent = "متصل — " + formatTime(callDurationSeconds);
+      }, 1000);
+    }, 2000);
+
+    function cleanupCall() {
+      clearTimeout(connectTimeout);
+      if (timerInterval) clearInterval(timerInterval);
+      if (localStream) {
+        localStream.getTracks().forEach(function (t) { t.stop(); });
+      }
+      if (modalBackdrop.parentNode) modalBackdrop.parentNode.removeChild(modalBackdrop);
+
+      // Log call into messages thread
+      var me = actor(role);
+      var durationMsg = callDurationSeconds > 0 ? " (المدة: " + formatTime(callDurationSeconds) + ")" : " (لم يتم الرد)";
+      var callLog = {
+        id: "call-" + Date.now(),
+        senderRole: me.role,
+        senderId: me.id,
+        sender: me.name,
+        recipientRole: contact.role,
+        recipientId: contact.id,
+        groupId: contact.isGroup ? contact.id : undefined,
+        text: (isVideo ? "📹 مكالمة فيديو " : "📞 مكالمة صوتية ") + durationMsg,
+        time: new Date().toLocaleString("ar-EG"),
+        read: true
+      };
+      var msgs = getData("messages") || [];
+      msgs.push(callLog);
+      setData("messages", msgs);
+      render(role);
+    }
+
+    document.getElementById("callEndBtn").addEventListener("click", cleanupCall);
+
+    var muteBtn = document.getElementById("callMuteBtn");
+    if (muteBtn) {
+      muteBtn.addEventListener("click", function () {
+        isMuted = !isMuted;
+        muteBtn.textContent = isMuted ? "🔇" : "🎙️";
+        muteBtn.style.background = isMuted ? "#dc2626" : "#1e3a30";
+        if (localStream) {
+          localStream.getAudioTracks().forEach(function (t) { t.enabled = !isMuted; });
+        }
+      });
+    }
+
+    var camBtn = document.getElementById("callCamBtn");
+    if (camBtn) {
+      camBtn.addEventListener("click", function () {
+        isCameraOff = !isCameraOff;
+        camBtn.textContent = isCameraOff ? "🚫" : "📷";
+        camBtn.style.background = isCameraOff ? "#dc2626" : "#1e3a30";
+        if (localStream) {
+          localStream.getVideoTracks().forEach(function (t) { t.enabled = !isCameraOff; });
+        }
+      });
+    }
+  }
+
+  // ===== (+) ACTION MODAL (CREATE GROUP / ADD CONTACT) =====
+  function openAddActionModal(role) {
+    var me = actor(role);
+    var modalBackdrop = document.createElement("div");
+    modalBackdrop.className = "messenger-modal-backdrop";
+
+    modalBackdrop.innerHTML = '<div class="messenger-modal-dialog">' +
+      '<div class="messenger-modal-head">' +
+        '<h4>خيارات التواصل والمحادثات</h4>' +
+        '<button type="button" class="messenger-modal-close" id="closeAddModal">×</button>' +
+      '</div>' +
+      '<div class="messenger-modal-body">' +
+        '<button type="button" class="btn btn-primary" id="openCreateGroupBtn" style="padding:14px;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:10px;">' +
+          '<span>👥</span> <strong>إنشاء مجموعة جديدة (جروب)</strong>' +
+        '</button>' +
+        '<button type="button" class="btn btn-outline" id="openAddFriendBtn" style="padding:14px;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:10px;">' +
+          '<span>👤</span> <strong>إضافة صديق / مستخدم جديد</strong>' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+
+    document.body.appendChild(modalBackdrop);
+
+    function close() {
+      if (modalBackdrop.parentNode) modalBackdrop.parentNode.removeChild(modalBackdrop);
+    }
+
+    document.getElementById("closeAddModal").addEventListener("click", close);
+    modalBackdrop.addEventListener("click", function (e) { if (e.target === modalBackdrop) close(); });
+
+    document.getElementById("openCreateGroupBtn").addEventListener("click", function () {
+      close();
+      openCreateGroupModal(role);
+    });
+
+    document.getElementById("openAddFriendBtn").addEventListener("click", function () {
+      close();
+      openAddFriendModal(role);
+    });
+  }
+
+  // Modal: Create Group
+  function openCreateGroupModal(role) {
+    var me = actor(role);
+    var availableContacts = allContacts(role).filter(function (c) { return !c.isGroup; });
+    var modalBackdrop = document.createElement("div");
+    modalBackdrop.className = "messenger-modal-backdrop";
+
+    var contactsCheckboxes = availableContacts.map(function (c) {
+      return '<label style="display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid var(--border);cursor:pointer;">' +
+        '<input type="checkbox" value="'+esc(c.id)+'" data-role="'+esc(c.role)+'" data-name="'+esc(c.name)+'" style="width:18px;height:18px;">' +
+        '<span><strong>'+esc(c.name)+'</strong> ('+esc(c.subtitle || c.role)+')</span>' +
+      '</label>';
+    }).join("");
+
+    modalBackdrop.innerHTML = '<div class="messenger-modal-dialog">' +
+      '<div class="messenger-modal-head">' +
+        '<h4>👥 إنشاء مجموعة جديدة (جروب)</h4>' +
+        '<button type="button" class="messenger-modal-close" id="closeCreateGroup">×</button>' +
+      '</div>' +
+      '<div class="messenger-modal-body">' +
+        '<div class="form-group">' +
+          '<label>اسم المجموعة *</label>' +
+          '<input type="text" id="newGroupName" placeholder="اكتب اسم المجموعة (مثلاً: حلقة تحفيظ، نقاش المعلمين)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;">' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label>اختر الأعضاء من جهات الاتصال الخاصة بك:</label>' +
+          '<div style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px;">' +
+            (contactsCheckboxes || '<div style="padding:10px;color:var(--text-light);text-align:center;">لا توجد جهات اتصال متاحة حالياً</div>') +
+          '</div>' +
+        '</div>' +
+        '<button type="button" class="btn btn-success" id="submitCreateGroupBtn" style="width:100%;padding:12px;">✅ تأكيد إنشاء المجموعة</button>' +
+      '</div>' +
+    '</div>';
+
+    document.body.appendChild(modalBackdrop);
+
+    function close() {
+      if (modalBackdrop.parentNode) modalBackdrop.parentNode.removeChild(modalBackdrop);
+    }
+
+    document.getElementById("closeCreateGroup").addEventListener("click", close);
+
+    document.getElementById("submitCreateGroupBtn").addEventListener("click", function () {
+      var nameInput = document.getElementById("newGroupName");
+      var name = nameInput ? nameInput.value.trim() : "";
+      if (!name) {
+        showToast("يرجى كتابة اسم المجموعة أولاً", "error");
+        return;
+      }
+
+      var selectedMembers = [{ id: me.id, name: me.name, role: me.role }];
+      modalBackdrop.querySelectorAll('input[type="checkbox"]:checked').forEach(function (cb) {
+        selectedMembers.push({ id: cb.value, name: cb.dataset.name, role: cb.dataset.role });
+      });
+
+      var newGroup = {
+        id: "grp-" + Date.now(),
+        name: name,
+        creatorId: me.id,
+        creatorName: me.name,
+        creatorRole: me.role,
+        members: selectedMembers,
+        createdAt: new Date().toLocaleString("ar-EG")
+      };
+
+      var groups = getData("messaging_groups") || [];
+      groups.push(newGroup);
+      setData("messaging_groups", groups);
+
+      // Post initial message
+      var msgs = getData("messages") || [];
+      msgs.push({
+        id: "msg-" + Date.now(),
+        groupId: newGroup.id,
+        senderRole: me.role,
+        senderId: me.id,
+        sender: me.name,
+        recipientRole: "group",
+        recipientId: newGroup.id,
+        text: "🎉 تم إنشاء المجموعة (" + name + ") بواسطة مشرف المجموعة: " + me.name,
+        time: new Date().toLocaleString("ar-EG"),
+        read: true
+      });
+      setData("messages", msgs);
+
+      close();
+      activeContact[role] = {
+        id: newGroup.id,
+        role: "group",
+        isGroup: true,
+        name: newGroup.name,
+        subtitle: "مشرف: " + me.name + " (" + newGroup.members.length + " أعضاء)",
+        creatorId: me.id,
+        creatorName: me.name,
+        members: newGroup.members
+      };
+      render(role);
+      showToast("تم إنشاء المجموعة بنجاح!", "success");
+    });
+  }
+
+  // Modal: Add Friend / Contact
+  function openAddFriendModal(role) {
+    var me = actor(role);
+    var modalBackdrop = document.createElement("div");
+    modalBackdrop.className = "messenger-modal-backdrop";
+
+    modalBackdrop.innerHTML = '<div class="messenger-modal-dialog">' +
+      '<div class="messenger-modal-head">' +
+        '<h4>👤 إضافة صديق أو مستخدم جديد</h4>' +
+        '<button type="button" class="messenger-modal-close" id="closeAddFriend">×</button>' +
+      '</div>' +
+      '<div class="messenger-modal-body">' +
+        '<p style="color:var(--text-light);font-size:0.88rem;margin:0;">أدخل اسم المستخدم أو كود الهوية الوطنية / جواز السفر لإضافته إلى قائمة الأصدقاء والمحادثات.</p>' +
+        '<div class="form-group">' +
+          '<label>اسم المستخدم أو كود الهوية *</label>' +
+          '<input type="text" id="friendIdentifierInput" placeholder="أدخل اسم المستخدم أو الرقم القومي أو المعرّف" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;">' +
+        '</div>' +
+        '<div id="addFriendFeedback"></div>' +
+        '<button type="button" class="btn btn-primary" id="searchAndAddFriendBtn" style="width:100%;padding:12px;">🔍 بحث وإضافة الصديق</button>' +
+      '</div>' +
+    '</div>';
+
+    document.body.appendChild(modalBackdrop);
+
+    function close() {
+      if (modalBackdrop.parentNode) modalBackdrop.parentNode.removeChild(modalBackdrop);
+    }
+
+    document.getElementById("closeAddFriend").addEventListener("click", close);
+
+    document.getElementById("searchAndAddFriendBtn").addEventListener("click", function () {
+      var input = document.getElementById("friendIdentifierInput");
+      var val = input ? input.value.trim() : "";
+      if (!val) {
+        showToast("يرجى إدخال اسم المستخدم أو كود الهوية", "error");
+        return;
+      }
+
+      var students = getData("students") || [];
+      var found = students.find(function (s) {
+        return (s.username && s.username.toLowerCase() === val.toLowerCase()) ||
+               (s.national && s.national === val) ||
+               (s.name && s.name.toLowerCase() === val.toLowerCase());
+      });
+
+      var friendData = null;
+      if (found) {
+        friendData = {
+          id: String(found.id),
+          role: "student",
+          name: found.name,
+          username: found.username || found.national || found.name,
+          national: found.national || "",
+          ownerId: me.id
+        };
+      } else {
+        // Direct addition with entered handle
+        friendData = {
+          id: "usr-" + val.replace(/\s+/g, "_"),
+          role: "student",
+          name: val,
+          username: val,
+          national: val,
+          ownerId: me.id
+        };
+      }
+
+      var custom = getData("custom_contacts") || [];
+      if (!custom.some(function (c) { return c.ownerId === me.id && String(c.id) === String(friendData.id); })) {
+        custom.push(friendData);
+        setData("custom_contacts", custom);
+      }
+
+      close();
+      activeContact[role] = {
+        id: friendData.id,
+        role: friendData.role,
+        name: friendData.name,
+        subtitle: "صديق (" + friendData.username + ")"
+      };
+      render(role);
+      showToast("تمت إضافة الصديق بنجاح إلى قائمة المحادثات", "success");
+    });
+  }
+
+  // Modal: Add Member to existing Group (Creator Only)
+  function openAddGroupMemberModal(role, groupId) {
+    var groups = getData("messaging_groups") || [];
+    var group = groups.find(function (g) { return String(g.id) === String(groupId); });
+    if (!group) return;
+
+    var existingMemberIds = (group.members || []).map(function (m) { return String(m.id); });
+    var availableContacts = allContacts(role).filter(function (c) {
+      return !c.isGroup && existingMemberIds.indexOf(String(c.id)) < 0;
+    });
+
+    var modalBackdrop = document.createElement("div");
+    modalBackdrop.className = "messenger-modal-backdrop";
+
+    var listHtml = availableContacts.map(function (c) {
+      return '<label style="display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid var(--border);cursor:pointer;">' +
+        '<input type="checkbox" value="'+esc(c.id)+'" data-role="'+esc(c.role)+'" data-name="'+esc(c.name)+'" style="width:18px;height:18px;">' +
+        '<span><strong>'+esc(c.name)+'</strong> ('+esc(c.subtitle || c.role)+')</span>' +
+      '</label>';
+    }).join("");
+
+    modalBackdrop.innerHTML = '<div class="messenger-modal-dialog">' +
+      '<div class="messenger-modal-head">' +
+        '<h4>➕ إضافة أعضاء إلى ('+esc(group.name)+')</h4>' +
+        '<button type="button" class="messenger-modal-close" id="closeAddMemberModal">×</button>' +
+      '</div>' +
+      '<div class="messenger-modal-body">' +
+        '<div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px;">' +
+          (listHtml || '<div style="padding:14px;color:var(--text-light);text-align:center;">جميع جهات اتصالك مضافة بالفعل في هذه المجموعة</div>') +
+        '</div>' +
+        '<button type="button" class="btn btn-success" id="confirmAddMembersBtn" style="width:100%;padding:12px;">✅ إضافة الأعضاء المحددين</button>' +
+      '</div>' +
+    '</div>';
+
+    document.body.appendChild(modalBackdrop);
+
+    function close() {
+      if (modalBackdrop.parentNode) modalBackdrop.parentNode.removeChild(modalBackdrop);
+    }
+
+    document.getElementById("closeAddMemberModal").addEventListener("click", close);
+
+    document.getElementById("confirmAddMembersBtn").addEventListener("click", function () {
+      var added = [];
+      modalBackdrop.querySelectorAll('input[type="checkbox"]:checked').forEach(function (cb) {
+        var member = { id: cb.value, name: cb.dataset.name, role: cb.dataset.role };
+        group.members.push(member);
+        added.push(member.name);
+      });
+
+      if (added.length === 0) {
+        showToast("لم تقم بتحديد أي عضو لإضافته", "info");
+        return;
+      }
+
+      setData("messaging_groups", groups);
+
+      // Post in chat
+      var me = actor(role);
+      var msgs = getData("messages") || [];
+      msgs.push({
+        id: "msg-" + Date.now(),
+        groupId: group.id,
+        senderRole: me.role,
+        senderId: me.id,
+        sender: me.name,
+        recipientRole: "group",
+        recipientId: group.id,
+        text: "➕ قام مشرف المجموعة بإضافة: " + added.join("، "),
+        time: new Date().toLocaleString("ar-EG"),
+        read: true
+      });
+      setData("messages", msgs);
+
+      close();
+      if (activeContact[role] && activeContact[role].id === group.id) {
+        activeContact[role].members = group.members;
+        activeContact[role].subtitle = "مشرف: " + group.creatorName + " (" + group.members.length + " أعضاء)";
+      }
+      render(role);
+      showToast("تمت إضافة الأعضاء بنجاح!", "success");
+    });
+  }
+
+  // Handle Applicant Decision (Approve, Reject, Ban)
+  function handleApplicantAction(action, applicantId) {
+    var requests = getData("joinRequests") || [];
+    var req = requests.find(function (r) { return String(r.id) === String(applicantId); });
+    if (!req) return;
+
+    var me = actor("admin");
+    var msgs = getData("messages") || [];
+
+    if (action === "approve") {
+      req.status = "approved";
+      req.approvedAt = new Date().toLocaleString("ar-EG");
+
+      // Register student if not already present
+      var students = getData("students") || [];
+      if (!students.some(function (s) { return String(s.id) === String(req.studentId || req.id); })) {
+        var newStudent = {
+          id: req.studentId || Date.now(),
+          name: req.name,
+          username: req.username || (req.name ? req.name.replace(/\s+/g, "").toLowerCase() : "user_" + Date.now()),
+          national: req.national || "",
+          phone: req.phone || "",
+          parent: req.relationshipName || req.parent || "ولي الأمر",
+          subjects: req.subjects || [{ id: "quran", name: "قرآن كريم" }],
+          authProvider: req.authProvider || "google",
+          createdAt: new Date().toLocaleString("ar-EG")
+        };
+        students.push(newStudent);
+        setData("students", students);
+      }
+
+      msgs.push({
+        id: "msg-" + Date.now(),
+        senderRole: "admin",
+        senderId: "admin",
+        sender: "المسؤول",
+        recipientRole: "applicant",
+        recipientId: applicantId,
+        receiverId: applicantId,
+        text: "🎉 تهانينا! تمت الموافقة على طلب تسجيل حسابك وتفعيله بنجاح. يمكنك الآن تسجيل الدخول بكامل الميزات.",
+        time: new Date().toLocaleString("ar-EG"),
+        read: false
+      });
+
+      setData("joinRequests", requests);
+      setData("messages", msgs);
+      render("admin");
+      showToast("تم قبول الحساب وتفعيله بنجاح وإرسال إشعار للمستخدم", "success");
+    } else if (action === "reject") {
+      req.status = "rejected";
+      msgs.push({
+        id: "msg-" + Date.now(),
+        senderRole: "admin",
+        senderId: "admin",
+        sender: "المسؤول",
+        recipientRole: "applicant",
+        recipientId: applicantId,
+        receiverId: applicantId,
+        text: "❌ نعتذر، تم رفض طلب تسجيل الحساب من قبل الإدارة.",
+        time: new Date().toLocaleString("ar-EG"),
+        read: false
+      });
+      setData("joinRequests", requests);
+      setData("messages", msgs);
+      render("admin");
+      showToast("تم رفض الطلب", "info");
+    } else if (action === "ban") {
+      req.status = "banned";
+      // Record in notifications
+      var notifications = getData("notifications", []);
+      notifications.unshift({
+        id: "notif-ban-" + Date.now(),
+        type: "account_ban",
+        title: "⚠️ حظر حساب مستخدم",
+        name: req.name,
+        roleLabel: "حساب محظور",
+        nationalId: req.national || "",
+        phone: req.phone || "",
+        message: "تم حظر حساب " + req.name + " (" + (req.authProvider || "طلب جديد") + ") ومنعه من الوصول للمنصة.",
+        time: new Date().toLocaleString("ar-EG"),
+        read: false
+      });
+      setData("notifications", notifications);
+
+      msgs.push({
+        id: "msg-" + Date.now(),
+        senderRole: "admin",
+        senderId: "admin",
+        sender: "المسؤول",
+        recipientRole: "applicant",
+        recipientId: applicantId,
+        receiverId: applicantId,
+        text: "🚫 تم حظر هذا الحساب من قِبل إدارة التطبيق.",
+        time: new Date().toLocaleString("ar-EG"),
+        read: false
+      });
+
+      setData("joinRequests", requests);
+      setData("messages", msgs);
+      render("admin");
+      showToast("تم حظر الحساب بنجاح وإدراجه في التنبيهات", "error");
+    }
+  }
+
   function bind(host, role) {
     host.querySelectorAll("[data-contact-id]").forEach(function (button) {
       button.addEventListener("click", function () {
@@ -282,15 +983,80 @@
         if (shell) shell.classList.add('chat-open');
       });
     });
+
+    // (+) Button
+    var addBtn = host.querySelector("#messengerAddActionBtn");
+    if (addBtn) {
+      addBtn.addEventListener("click", function () {
+        openAddActionModal(role);
+      });
+    }
+
+    // Video & Phone call buttons
+    host.querySelectorAll(".messenger-call-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var contact = activeContact[role];
+        if (!contact) return;
+        var callType = btn.dataset.callType;
+        openCallScreen(role, contact, callType);
+      });
+    });
+
+    // Group action buttons
+    host.querySelectorAll("[data-group-action]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var action = btn.dataset.groupAction;
+        var groupId = btn.dataset.groupId;
+        var me = actor(role);
+        var groups = getData("messaging_groups") || [];
+        var group = groups.find(function (g) { return String(g.id) === String(groupId); });
+        if (!group) return;
+
+        if (action === "add-member") {
+          openAddGroupMemberModal(role, groupId);
+        } else if (action === "delete-group") {
+          if (!confirm("هل أنت متأكد من رغبتك في حذف المجموعة بالكامل؟ هذا الإجراء لا يمكن التراجع عنه.")) return;
+          groups = groups.filter(function (g) { return String(g.id) !== String(groupId); });
+          setData("messaging_groups", groups);
+          activeContact[role] = null;
+          render(role);
+          showToast("تم حذف المجموعة بنجاح", "success");
+        } else if (action === "leave-group") {
+          if (!confirm("هل أنت متأكد من رغبتك في مغادرة المجموعة؟")) return;
+          group.members = (group.members || []).filter(function (m) {
+            return String(m.id) !== String(me.id) && (!me.ids || me.ids.indexOf(String(m.id)) < 0);
+          });
+          if (group.members.length === 0) {
+            groups = groups.filter(function (g) { return String(g.id) !== String(groupId); });
+          }
+          setData("messaging_groups", groups);
+          activeContact[role] = null;
+          render(role);
+          showToast("تمت مغادرة المجموعة", "info");
+        }
+      });
+    });
+
+    // Applicant action buttons (Admin only)
+    host.querySelectorAll("[data-applicant-action]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        handleApplicantAction(btn.dataset.applicantAction, btn.dataset.applicantId);
+      });
+    });
+
     var back = host.querySelector(".messenger-back");
     if (back) back.addEventListener("click", function () { host.querySelector(".messenger-shell").classList.remove("chat-open"); });
-    var textarea = host.querySelector(".messenger-composer textarea");
-    var send = host.querySelector(".messenger-send");
+
+    // Composer elements
+    var textarea = host.querySelector(".messenger-pill-input-box textarea") || host.querySelector(".messenger-composer textarea");
+    var send = host.querySelector(".messenger-send-pill-btn") || host.querySelector(".messenger-send");
     var fileInput = host.querySelector(".messenger-file");
-    var recordButton = host.querySelector(".messenger-record");
+    var recordButton = host.querySelector("#messengerVoiceBtn") || host.querySelector(".messenger-record");
     var preview = host.querySelector(".messenger-preview");
+
     host.querySelectorAll("[data-review]").forEach(function (button) { button.addEventListener("click", function () { reviewAttachment(button.dataset.messageId, button.dataset.review); }); });
     host.querySelectorAll("[data-view-file]").forEach(function (button) { button.addEventListener("click", function () { var message = messageForId(button.dataset.viewFile); if (message && message.attachment) { var type = String(message.attachment.type || ""); if (type.indexOf("image/") === 0 || type.indexOf("audio/") === 0 || type === "application/pdf") { window.open(message.attachment.data, "_blank", "noopener"); } else { showToast("هذا النوع لا يدعم المعاينة الداخلية", "info"); } } }); });
+
     var pendingAttachment = null, attachmentReady = true;
     if (fileInput) fileInput.addEventListener("change", function () {
       var file = fileInput.files && fileInput.files[0];
@@ -305,6 +1071,7 @@
       reader.onerror = function () { attachmentReady = true; if (send) send.disabled = false; if (preview) { preview.hidden = false; preview.textContent = "فشل تجهيز الملف، حاول اختيار الملف مرة أخرى"; } showToast("تعذر تجهيز الملف", "error"); };
       reader.readAsDataURL(file);
     });
+
     if (recordButton) recordButton.addEventListener("click", function () { toggleRecording(recordButton, preview, function (audio) { pendingAttachment = audio; }); });
     if (send) send.addEventListener("click", function () { if (attachmentReady) sendDirect(role, textarea, pendingAttachment, fileInput); });
     if (textarea) textarea.addEventListener("keydown", function (event) {
@@ -316,9 +1083,23 @@
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { showToast("تسجيل الصوت غير مدعوم في هذا المتصفح", "error"); return; }
     if (button._recorder) { button._recorder.stop(); return; }
     navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
-      var chunks = [], recorder = new MediaRecorder(stream); button._recorder = recorder; button.textContent = "إيقاف التسجيل"; button.classList.add("recording");
+      var chunks = [], recorder = new MediaRecorder(stream);
+      button._recorder = recorder;
+      button.classList.add("recording");
       recorder.ondataavailable = function (event) { if (event.data.size) chunks.push(event.data); };
-      recorder.onstop = function () { stream.getTracks().forEach(function (track) { track.stop(); }); button._recorder = null; button.textContent = "تسجيل صوتي"; button.classList.remove("recording"); var blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" }); if (blob.size > 8 * 1024 * 1024) return showToast("التسجيل كبير جدًا", "error"); var reader = new FileReader(); reader.onload = function () { onDone({ name: "رسالة صوتية.webm", type: blob.type, data: reader.result }); if (preview) { preview.textContent = "التسجيل جاهز للإرسال"; preview.hidden = false; } }; reader.readAsDataURL(blob); };
+      recorder.onstop = function () {
+        stream.getTracks().forEach(function (track) { track.stop(); });
+        button._recorder = null;
+        button.classList.remove("recording");
+        var blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        if (blob.size > 8 * 1024 * 1024) return showToast("التسجيل كبير جدًا", "error");
+        var reader = new FileReader();
+        reader.onload = function () {
+          onDone({ name: "تسجيل صوتي.webm", type: blob.type, data: reader.result });
+          if (preview) { preview.textContent = "التسجيل جاهز للإرسال"; preview.hidden = false; }
+        };
+        reader.readAsDataURL(blob);
+      };
       recorder.start();
     }).catch(function () { showToast("تعذر الوصول إلى الميكروفون", "error"); });
   }
@@ -332,21 +1113,38 @@
       return;
     }
     var me = actor(role);
-    var cloudMessage = !attachment ? await persistCloudMessage({
+    var isGrp = contact.isGroup || contact.role === "group";
+    var isApp = contact.role === "applicant";
+
+    var cloudMessage = (!attachment && !isGrp && !isApp) ? await persistCloudMessage({
       recipientId: contact.id,
       recipientName: contact.name,
       recipientRole: contact.role,
       senderRole: me.role,
       text: text,
     }) : null;
+
     var localMessage = cloudMessage ? cloudMessageToLocal(cloudMessage) : {
-      id: "chat-"+Date.now()+"-"+Math.random().toString(16).slice(2),
-      type: me.role, sender: me.name, senderId: me.id, senderRole: me.role,
-      receiverType: contact.role, receiverId: contact.role === "parent" ? undefined : contact.id,
+      id: "chat-" + Date.now() + "-" + Math.random().toString(16).slice(2),
+      type: me.role,
+      sender: me.name,
+      senderId: me.id,
+      senderRole: me.role,
+      receiverType: contact.role,
+      receiverId: contact.role === "parent" ? undefined : contact.id,
       receiverName: contact.role === "parent" ? contact.id : undefined,
-      recipientRole: contact.role, recipientId: contact.id, recipientName: contact.name,
-      text: text, attachment: attachment || null, attachmentStatus: attachment && me.role === "student" ? "pending" : "approved", time: new Date().toLocaleString("ar-EG"), read: false, approved: !(attachment && me.role === "student")
+      recipientRole: contact.role,
+      recipientId: contact.id,
+      recipientName: contact.name,
+      groupId: isGrp ? contact.id : undefined,
+      text: text,
+      attachment: attachment || null,
+      attachmentStatus: attachment && me.role === "student" ? "pending" : "approved",
+      time: new Date().toLocaleString("ar-EG"),
+      read: false,
+      approved: !(attachment && me.role === "student")
     };
+
     var messages = getData("messages") || [];
     messages.push(localMessage);
     try {
