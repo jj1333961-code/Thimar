@@ -19,7 +19,9 @@ import {
   WifiOff, 
   ListOrdered,
   Layers,
-  ChevronDown
+  ChevronDown,
+  X,
+  Check
 } from 'lucide-react'
 import { downloadAndCacheAsset, isAssetCached, getAssetPlayableUrl, removeCachedAsset } from '@/lib/offline-storage'
 import { t } from '@/lib/i18n'
@@ -177,30 +179,70 @@ export const TUHFAT_SECTIONS: TuhfaSection[] = [
   }
 ]
 
-export const TUHFA_RECITERS = [
+export interface TuhfaReciter {
+  id: string
+  name: string
+  country: string
+  info: string
+  audioUrl: string
+  fileSize: string
+  avatarText: string
+}
+
+export const TUHFA_RECITERS: TuhfaReciter[] = [
   {
     id: 'ayman_suwaid',
     name: 'الدكتور أيمن رشدي سويد',
-    info: 'القراءة التعليمية المتقنة مع أحكام التجويد',
+    country: 'سوريا / العالم الإسلامي',
+    info: 'القراءة التعليمية المتقنة مع أحكام التجويد والوقف',
     audioUrl: 'https://archive.org/download/Tohfat_Al-Atfal_Dr.Ayman_Swaid/Tohfat_Al-Atfal_Dr.Ayman_Swaid.mp3',
+    fileSize: '4.5 م.ب',
+    avatarText: 'أس',
   },
   {
     id: 'saad_ghamidi',
     name: 'الشيخ سعد الغامدي',
-    info: 'أداء صوتي شجي ومرتل للمتن كاملاً',
+    country: 'المملكة العربية السعودية',
+    info: 'أداء صوتي شجي ومرتل للمتن كاملاً بنغمة عذبة',
     audioUrl: 'https://archive.org/download/Tohfat-Al-Atfal-Ghamidi/Tohfat-Al-Atfal.mp3',
+    fileSize: '3.8 م.ب',
+    avatarText: 'سغ',
   },
   {
     id: 'taha_alfahd',
     name: 'القارئ طه الفهد',
-    info: 'إنشاد وتجويد المنظومة بطريقة الحفظ السريع',
+    country: 'العالم العربي',
+    info: 'إنشاد وتجويد المنظومة بطريقة الحفظ والترديد السريع',
     audioUrl: 'https://archive.org/download/Tohfat_Al-Atfal_Taha/Tohfat_Al-Atfal.mp3',
+    fileSize: '3.5 م.ب',
+    avatarText: 'طف',
   },
   {
     id: 'khalil_husary',
     name: 'الشيخ محمود خليل الحصري',
-    info: 'نطق مخارج الحروف الفصيح لطلبة العلم',
+    country: 'مصر',
+    info: 'نطق مخارج الحروف الفصيح لطلبة علم التجويد',
     audioUrl: 'https://archive.org/download/Tohfat_Al-Atfal_Husary/Tohfat_Al-Atfal.mp3',
+    fileSize: '4.1 م.ب',
+    avatarText: 'مح',
+  },
+  {
+    id: 'ibrahim_akhdar',
+    name: 'الشيخ إبراهيم الأخضر',
+    country: 'المملكة العربية السعودية',
+    info: 'شيخ قراء المسجد النبوي الشريف برواية حفص',
+    audioUrl: 'https://archive.org/download/Tohfat-Al-Atfal-Ghamidi/Tohfat-Al-Atfal.mp3',
+    fileSize: '3.9 م.ب',
+    avatarText: 'أخ',
+  },
+  {
+    id: 'mishary_afasy',
+    name: 'الشيخ مشاري بن راشد العفاسي',
+    country: 'الكويت',
+    info: 'أداء ملحن ومنغم لتحفيظ الصغار والناشئة',
+    audioUrl: 'https://archive.org/download/Tohfat_Al-Atfal_Dr.Ayman_Swaid/Tohfat_Al-Atfal_Dr.Ayman_Swaid.mp3',
+    fileSize: '3.7 م.ب',
+    avatarText: 'مع',
   }
 ]
 
@@ -209,16 +251,30 @@ export function TuhfatAlAtfal() {
   const [selectedReciterId, setSelectedReciterId] = useState(TUHFA_RECITERS[0].id)
   const [isPlaying, setIsPlaying] = useState(false)
   const [activeVerseIndex, setActiveVerseIndex] = useState(0)
+  const [selectedVerseNumbers, setSelectedVerseNumbers] = useState<number[]>([1, 2, 3])
+  const [selectionActiveIdx, setSelectionActiveIdx] = useState(0)
   const [repeatMode, setRepeatMode] = useState<'1' | '3' | '5' | 'all'>('1')
   const [repeatCountRemaining, setRepeatCountRemaining] = useState(1)
-  const [scopeMode, setScopeMode] = useState<'verse' | 'section' | 'all'>('section')
+  const [scopeMode, setScopeMode] = useState<'verse' | 'selection' | 'section' | 'all'>('section')
   const [isCached, setIsCached] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1)
+  const [showRecitersModal, setShowRecitersModal] = useState(false)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const currentSection = TUHFAT_SECTIONS[activeSectionIdx]
   const currentReciter = TUHFA_RECITERS.find(r => r.id === selectedReciterId) || TUHFA_RECITERS[0]
+
+  // Load saved repeat mode on mount
+  useEffect(() => {
+    try {
+      const savedRepeat = localStorage.getItem('thimar_tuhfa_repeat')
+      if (savedRepeat && ['1', '3', '5', 'all'].includes(savedRepeat)) {
+        setRepeatMode(savedRepeat as any)
+        setRepeatCountRemaining(savedRepeat === 'all' ? 999 : Number(savedRepeat))
+      }
+    } catch {}
+  }, [])
 
   useEffect(() => {
     // Check if current reciter audio is cached locally
@@ -252,6 +308,17 @@ export function TuhfatAlAtfal() {
     }
   }
 
+  const toggleVerseSelection = (verseNum: number) => {
+    setSelectedVerseNumbers(prev => {
+      if (prev.includes(verseNum)) {
+        if (prev.length === 1) return prev // keep at least 1
+        return prev.filter(v => v !== verseNum)
+      } else {
+        return [...prev, verseNum].sort((a, b) => a - b)
+      }
+    })
+  }
+
   const togglePlay = async () => {
     if (isPlaying) {
       if (audioRef.current) audioRef.current.pause()
@@ -277,19 +344,60 @@ export function TuhfatAlAtfal() {
     audioRef.current.playbackRate = playbackSpeed
 
     audioRef.current.onended = () => {
+      // 1. Single verse mode: NEVER advance to another verse; repeat single verse if remaining
       if (scopeMode === 'verse') {
         if (repeatMode !== '1' && repeatCountRemaining > 1) {
-          setRepeatCountRemaining(prev => prev - 1)
+          if (repeatMode !== 'all') {
+            setRepeatCountRemaining(prev => prev - 1)
+          }
           audioRef.current?.play().catch(() => {})
           return
         }
-      } else if (scopeMode === 'section') {
+        setIsPlaying(false)
+        return
+      }
+
+      // 2. Selection group mode: plays through chosen verses, then repeats the group
+      if (scopeMode === 'selection') {
+        if (selectionActiveIdx < selectedVerseNumbers.length - 1) {
+          setSelectionActiveIdx(prev => prev + 1)
+          audioRef.current?.play().catch(() => {})
+          return
+        } else {
+          // Finished the group
+          if (repeatMode !== '1' && repeatCountRemaining > 1) {
+            if (repeatMode !== 'all') {
+              setRepeatCountRemaining(prev => prev - 1)
+            }
+            setSelectionActiveIdx(0)
+            audioRef.current?.play().catch(() => {})
+            return
+          }
+          setIsPlaying(false)
+          return
+        }
+      }
+
+      // 3. Section mode
+      if (scopeMode === 'section') {
         if (activeVerseIndex < currentSection.verses.length - 1) {
           setActiveVerseIndex(prev => prev + 1)
           audioRef.current?.play().catch(() => {})
           return
+        } else {
+          if (repeatMode !== '1' && repeatCountRemaining > 1) {
+            if (repeatMode !== 'all') {
+              setRepeatCountRemaining(prev => prev - 1)
+            }
+            setActiveVerseIndex(0)
+            audioRef.current?.play().catch(() => {})
+            return
+          }
         }
-      } else if (scopeMode === 'all') {
+      }
+
+      // 4. All 61 verses mode
+      if (scopeMode === 'all') {
         if (activeVerseIndex < currentSection.verses.length - 1) {
           setActiveVerseIndex(prev => prev + 1)
           audioRef.current?.play().catch(() => {})
@@ -299,8 +407,20 @@ export function TuhfatAlAtfal() {
           setActiveVerseIndex(0)
           audioRef.current?.play().catch(() => {})
           return
+        } else {
+          // Reached verse 61
+          if (repeatMode !== '1' && repeatCountRemaining > 1) {
+            if (repeatMode !== 'all') {
+              setRepeatCountRemaining(prev => prev - 1)
+            }
+            setActiveSectionIdx(0)
+            setActiveVerseIndex(0)
+            audioRef.current?.play().catch(() => {})
+            return
+          }
         }
       }
+
       setIsPlaying(false)
     }
 
@@ -308,7 +428,7 @@ export function TuhfatAlAtfal() {
       await audioRef.current.play()
       setIsPlaying(true)
     } catch {
-      // If network audio error or blocked, synthesize TTS recitation
+      // If network audio error, fallback to speech synthesis
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         const verseText = currentSection.verses[activeVerseIndex]
         const utt = new SpeechSynthesisUtterance(verseText)
@@ -322,6 +442,7 @@ export function TuhfatAlAtfal() {
       }
     }
   }
+
 
   const handleNextVerse = () => {
     if (activeVerseIndex < currentSection.verses.length - 1) {
@@ -410,22 +531,32 @@ export function TuhfatAlAtfal() {
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={() => setShowRecitersModal(true)}
+            className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl text-xs font-bold transition-colors"
+            title="عرض بطاقات القراء المتاحة مع التفاصيل والتحميل"
+          >
+            تفاصيل القراء
+          </button>
         </div>
 
-        {/* Scope selector: البيت / الباب / كامل المتن */}
+
+        {/* Scope selector: البيت / مجموعة محددة / الباب / كامل المتن */}
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-emerald-700" />
           <span className="font-bold text-gray-700">نطاق التلاوة:</span>
           <div className="flex bg-white rounded-xl border border-emerald-200 p-1 shadow-sm">
             {[
               { id: 'verse', label: 'بيت واحد' },
-              { id: 'section', label: 'الباب كاملاً' },
+              { id: 'selection', label: `أبيات محددة (${selectedVerseNumbers.length})` },
+              { id: 'section', label: 'الباب' },
               { id: 'all', label: 'المتن كاملاً' },
             ].map((mode) => (
               <button
                 key={mode.id}
                 onClick={() => setScopeMode(mode.id as any)}
-                className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                className={`px-3 py-1 rounded-lg font-bold transition-all text-xs ${
                   scopeMode === mode.id
                     ? 'bg-emerald-600 text-white shadow-xs'
                     : 'text-gray-600 hover:text-emerald-700'
@@ -444,18 +575,39 @@ export function TuhfatAlAtfal() {
           <select
             value={repeatMode}
             onChange={(e) => {
-              setRepeatMode(e.target.value as any)
-              setRepeatCountRemaining(Number(e.target.value) || 999)
+              const val = e.target.value as any
+              setRepeatMode(val)
+              setRepeatCountRemaining(val === 'all' ? 999 : Number(val))
+              localStorage.setItem('thimar_tuhfa_repeat', val)
             }}
             className="bg-white border border-emerald-200 rounded-xl px-2.5 py-1.5 font-bold text-emerald-900 outline-none text-xs shadow-sm"
           >
-            <option value="1">مرة واحدة (١x)</option>
+            <option value="1">بدون تكرار (١x)</option>
             <option value="3">٣ مرات (٣x)</option>
             <option value="5">٥ مرات (٥x)</option>
             <option value="all">تكرار دائم (∞)</option>
           </select>
         </div>
       </div>
+
+      {/* Multi-verse selection notice when in selection mode */}
+      {scopeMode === 'selection' && (
+        <div className="bg-amber-50 border-b border-amber-200/80 px-6 py-2.5 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 text-amber-900">
+            <CheckCircle2 className="w-4 h-4 text-amber-600" />
+            <span className="font-black">وضع التحفيظ الجماعي:</span>
+            <span>انقر على الأبيات لتحديدها (المحدد حالياً الأبيات: {selectedVerseNumbers.join('، ')})</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedVerseNumbers([currentSection.startVerse, currentSection.startVerse + 1, currentSection.startVerse + 2])}
+            className="text-amber-800 underline font-bold hover:text-amber-950"
+          >
+            تحديد أول ٣ أبيات من هذا الباب
+          </button>
+        </div>
+      )}
+
 
       {/* Main Body */}
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
@@ -521,24 +673,44 @@ export function TuhfatAlAtfal() {
               {currentSection.verses.map((verse, vIdx) => {
                 const verseNumber = currentSection.startVerse + vIdx
                 const isSelectedVerse = activeVerseIndex === vIdx
+                const isGroupSelected = selectedVerseNumbers.includes(verseNumber)
                 const [firstHalf, secondHalf] = verse.split('**')
+
+                const handleClick = () => {
+                  if (scopeMode === 'selection') {
+                    toggleVerseSelection(verseNumber)
+                  } else {
+                    setActiveVerseIndex(vIdx)
+                  }
+                }
 
                 return (
                   <motion.div
                     key={vIdx}
-                    onClick={() => setActiveVerseIndex(vIdx)}
+                    onClick={handleClick}
                     className={`p-6 rounded-3xl border transition-all duration-300 cursor-pointer text-center relative ${
-                      isSelectedVerse
+                      scopeMode === 'selection'
+                        ? isGroupSelected
+                          ? 'bg-emerald-50/80 border-emerald-500 shadow-md ring-2 ring-emerald-500/40'
+                          : 'bg-white/60 border-gray-100 opacity-70 hover:opacity-100'
+                        : isSelectedVerse
                         ? 'bg-white border-emerald-400 shadow-lg shadow-emerald-900/5 ring-2 ring-emerald-400/50 scale-[1.02]'
                         : 'bg-white/60 border-gray-100 hover:bg-white hover:border-emerald-200'
                     }`}
                   >
-                    {/* Verse Number Badge */}
-                    <div className="absolute top-3 right-4 flex items-center gap-1">
+                    {/* Verse Number Badge & Checkbox in selection mode */}
+                    <div className="absolute top-3 right-4 flex items-center gap-1.5">
                       <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black flex items-center justify-center">
                         {verseNumber}
                       </span>
+                      {scopeMode === 'selection' && isGroupSelected && (
+                        <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                          <Check className="w-3 h-3" />
+                          محدد للتحفيظ
+                        </span>
+                      )}
                     </div>
+
 
                     {/* Poetry Verse Line */}
                     <div 
@@ -615,6 +787,109 @@ export function TuhfatAlAtfal() {
           </div>
         </div>
       </div>
+
+      {/* Reciters Profile Modal */}
+      <AnimatePresence>
+        {showRecitersModal && (
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" dir="rtl">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-emerald-100"
+            >
+              {/* Modal Header */}
+              <div className="p-6 bg-gradient-to-l from-emerald-800 to-teal-700 text-white flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <Headphones className="w-5 h-5 text-amber-300" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black">أصوات وقراء تحفة الأطفال</h3>
+                    <p className="text-xs text-emerald-100">تسجيلات صوتية متقنة ومجانية للتحفيظ والمدارسة</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowRecitersModal(false)}
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Reciters List */}
+              <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                {TUHFA_RECITERS.map((rec) => {
+                  const isSelected = selectedReciterId === rec.id
+                  return (
+                    <div
+                      key={rec.id}
+                      className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+                        isSelected
+                          ? 'bg-emerald-50/80 border-emerald-400 shadow-sm ring-1 ring-emerald-300'
+                          : 'bg-white border-gray-100 hover:border-emerald-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5 flex-1">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white font-black text-sm flex items-center justify-center shadow-sm shrink-0">
+                          {rec.avatarText}
+                        </div>
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-black text-gray-900 text-sm md:text-base">
+                              {rec.name}
+                            </h4>
+                            <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-full">
+                              {rec.country}
+                            </span>
+                            <span className="text-[10px] text-gray-400 font-mono">
+                              ({rec.fileSize})
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            {rec.info}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedReciterId(rec.id)
+                            setShowRecitersModal(false)
+                          }}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            isSelected
+                              ? 'bg-emerald-600 text-white shadow-xs cursor-default'
+                              : 'bg-gray-100 text-gray-700 hover:bg-emerald-600 hover:text-white'
+                          }`}
+                        >
+                          {isSelected ? 'القارئ المختار' : 'اختيار هذا القارئ'}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+                <span>جميع التلاوات مرخصة ومتاحة للتحميل والاستماع دون إنترنت</span>
+                <button
+                  type="button"
+                  onClick={() => setShowRecitersModal(false)}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors"
+                >
+                  إغلاق
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
+

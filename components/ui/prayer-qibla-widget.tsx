@@ -49,6 +49,9 @@ export function PrayerQiblaWidget() {
   const [location, setLocation] = useState<UserLocation>(PRESET_CITIES[0])
   const [locating, setLocating] = useState(false)
   const [qiblaBearing, setQiblaBearing] = useState<number>(0)
+  const [deviceHeading, setDeviceHeading] = useState<number>(0)
+  const [hasOrientationSensor, setHasOrientationSensor] = useState(false)
+  const [sensorCalibrating, setSensorCalibrating] = useState(false)
   const [activeTab, setActiveTab] = useState<'times' | 'qibla'>('times')
   const [savedSuccess, setSavedSuccess] = useState(false)
   const [currentAdhanName, setCurrentAdhanName] = useState('أذان الحرم المكي')
@@ -68,7 +71,7 @@ export function PrayerQiblaWidget() {
     return Math.round(qibla)
   }
 
-  // Load saved location on mount
+  // Load saved location on mount and check silent permission
   useEffect(() => {
     try {
       const saved = localStorage.getItem('thimar_user_location')
@@ -84,10 +87,83 @@ export function PrayerQiblaWidget() {
 
       const adhanTitle = localStorage.getItem('thimar_selected_adhan_title')
       if (adhanTitle) setCurrentAdhanName(adhanTitle)
+
+      // Silent update if permission was previously granted and online
+      const wasPermitted = localStorage.getItem('thimar_geo_permission_granted') === 'true'
+      if (wasPermitted && navigator.geolocation && navigator.onLine) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const updatedLoc: UserLocation = {
+              city: 'موقعي الحالي (GPS)',
+              country: 'تم التحديث تلقائياً',
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+              isManual: false
+            }
+            saveLocation(updatedLoc)
+          },
+          () => {
+            // Silently fallback to saved location without interrupting
+          },
+          { timeout: 8000, enableHighAccuracy: false }
+        )
+      }
     } catch {}
   }, [])
 
-  // Detect user GPS location
+  // Device orientation sensor listener (Gyroscope / Magnetometer)
+  useEffect(() => {
+    if (activeTab !== 'qibla') return
+
+    const handleOrientation = (e: DeviceOrientationEvent) => {
+      let heading = 0
+      // iOS specific webkit compass heading (0 = North)
+      if (typeof (e as any).webkitCompassHeading === 'number') {
+        heading = (e as any).webkitCompassHeading
+        setHasOrientationSensor(true)
+        setDeviceHeading(Math.round(heading))
+      } else if (e.alpha !== null) {
+        // Standard Android / Web orientation
+        heading = 360 - e.alpha
+        setHasOrientationSensor(true)
+        setDeviceHeading(Math.round(heading))
+      }
+    }
+
+    if (typeof window !== 'undefined' && 'DeviceOrientationEvent' in window) {
+      window.addEventListener('deviceorientation', handleOrientation, true)
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('deviceorientation', handleOrientation, true)
+      }
+    }
+  }, [activeTab])
+
+  // Request orientation sensor permission for iOS
+  const requestCompassPermission = async () => {
+    if (
+      typeof window !== 'undefined' &&
+      typeof (DeviceOrientationEvent as any)?.requestPermission === 'function'
+    ) {
+      try {
+        setSensorCalibrating(true)
+        const permission = await (DeviceOrientationEvent as any).requestPermission()
+        if (permission === 'granted') {
+          setHasOrientationSensor(true)
+        }
+      } catch (err) {
+        console.warn('Compass permission error:', err)
+      } finally {
+        setSensorCalibrating(false)
+      }
+    } else {
+      setHasOrientationSensor(true)
+    }
+  }
+
+  // Detect user GPS location with explicit permission prompt and persistence
   const handleDetectGPS = () => {
     if (!navigator.geolocation) {
       alert('الموقع الجغرافي غير مدعوم في متصفحك')
@@ -97,6 +173,7 @@ export function PrayerQiblaWidget() {
     setLocating(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        localStorage.setItem('thimar_geo_permission_granted', 'true')
         const newLoc: UserLocation = {
           city: 'موقعي الحالي (GPS)',
           country: 'تم التحديد بدقة',
@@ -110,9 +187,9 @@ export function PrayerQiblaWidget() {
       (err) => {
         console.warn('Geolocation error:', err)
         setLocating(false)
-        alert('تعذر تحديد موقع GPS تلقائياً، يرجى اختيار مدينتك من القائمة')
+        alert('تعذر تحديد موقع GPS، سيتم استخدام آخر موقع محفوظ أو يمكنك اختيار مدينتك من القائمة')
       },
-      { timeout: 10000, enableHighAccuracy: true }
+      { timeout: 12000, enableHighAccuracy: true }
     )
   }
 
@@ -126,6 +203,12 @@ export function PrayerQiblaWidget() {
       setTimeout(() => setSavedSuccess(false), 2500)
     } catch {}
   }
+
+  // Relative Qibla needle rotation accounting for phone compass rotation
+  const liveCompassAngle = hasOrientationSensor 
+    ? (qiblaBearing - deviceHeading + 360) % 360 
+    : qiblaBearing
+
 
   // Calculate approximate prayer times based on latitude and day of year
   const getPrayerTimes = (lat: number, lng: number) => {
@@ -275,11 +358,11 @@ export function PrayerQiblaWidget() {
                 <span className="absolute right-2 font-bold text-xs text-gray-400">شرق (E)</span>
                 <span className="absolute left-2 font-bold text-xs text-gray-400">غرب (W)</span>
 
-                {/* Needle pointing to Qibla */}
+                {/* Needle pointing to Qibla (Live Sensor Direction) */}
                 <motion.div
-                  className="absolute w-full h-full flex items-center justify-center"
-                  animate={{ rotate: qiblaBearing }}
-                  transition={{ type: 'spring', stiffness: 120, damping: 15 }}
+                  className="absolute w-full h-full flex items-center justify-center pointer-events-none"
+                  animate={{ rotate: liveCompassAngle }}
+                  transition={{ type: 'spring', stiffness: 100, damping: 20 }}
                 >
                   <div className="relative flex flex-col items-center h-48">
                     {/* Kaaba indicator */}
@@ -287,7 +370,7 @@ export function PrayerQiblaWidget() {
                       🕋
                     </div>
                     {/* Arrow needle */}
-                    <div className="w-2 h-20 bg-gradient-to-t from-emerald-600 to-amber-500 rounded-t-full shadow-sm" />
+                    <div className="w-2.5 h-20 bg-gradient-to-t from-emerald-600 to-amber-500 rounded-t-full shadow-sm" />
                     <div className="w-2 h-20 bg-gray-300 rounded-b-full opacity-60" />
                   </div>
                 </motion.div>
@@ -297,14 +380,35 @@ export function PrayerQiblaWidget() {
               </div>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-2">
               <div className="text-xl font-black text-gray-900">
                 زاوية القبلة: <span className="text-emerald-700 font-mono">{qiblaBearing}°</span> درجة
               </div>
               <p className="text-xs text-gray-500 max-w-md mx-auto">
                 من موقعك في <span className="font-bold text-gray-700">{location.city}</span> باتجاه الكعبة المشرفة بمكة المكرمة
               </p>
+
+              {/* Sensor Active Indicator */}
+              <div className="pt-2">
+                {hasOrientationSensor ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 text-[11px] font-bold rounded-full border border-emerald-200">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                    <span>مستشعر الهاتف نشط: قم بتدوير هاتفك وستتحرك القبلة حياً ({Math.round(deviceHeading)}°)</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={requestCompassPermission}
+                    disabled={sensorCalibrating}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 text-sky-800 text-xs font-bold rounded-xl border border-sky-200 hover:bg-sky-100 transition-colors"
+                  >
+                    <Compass className="w-3.5 h-3.5 text-sky-600" />
+                    <span>{sensorCalibrating ? 'جاري تفعيل الحساس...' : 'تفعيل بوصلة الهاتف الحية'}</span>
+                  </button>
+                )}
+              </div>
             </div>
+
           </div>
         )}
       </div>

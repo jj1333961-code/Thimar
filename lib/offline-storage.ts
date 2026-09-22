@@ -206,8 +206,61 @@ export async function removeCachedAsset(key: string): Promise<boolean> {
       const tx = db.transaction(STORE_METADATA, 'readwrite')
       tx.objectStore(STORE_METADATA).delete(key)
     }
+    window.dispatchEvent(new CustomEvent('thimar:asset-removed', { detail: { key } }))
     return true
   } catch {
     return false
   }
 }
+
+export interface CachedAssetRecord {
+  key: string
+  url: string
+  size?: number
+  type?: string
+  title: string
+  category: 'adhan' | 'quran' | 'tafsir' | 'tuhfa' | 'general'
+  reciter?: string
+  downloadedAt: number
+}
+
+/**
+ * Lists all cached assets with metadata
+ */
+export async function getAllCachedAssets(): Promise<CachedAssetRecord[]> {
+  if (typeof window === 'undefined') return []
+  try {
+    const db = await openDB()
+    if (!db) return []
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_METADATA, 'readonly')
+      const req = tx.objectStore(STORE_METADATA).getAll()
+      req.onsuccess = () => resolve(req.result || [])
+      req.onerror = () => resolve([])
+    })
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Clears all cached assets and storage
+ */
+export async function clearAllCachedAssets(): Promise<boolean> {
+  if (typeof window === 'undefined') return false
+  try {
+    if ('caches' in window) {
+      await caches.delete(CACHE_NAME)
+    }
+    const db = await openDB()
+    if (db) {
+      const tx = db.transaction(STORE_METADATA, 'readwrite')
+      tx.objectStore(STORE_METADATA).clear()
+    }
+    window.dispatchEvent(new CustomEvent('thimar:storage-cleared'))
+    return true
+  } catch {
+    return false
+  }
+}
+

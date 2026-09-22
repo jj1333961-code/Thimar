@@ -17,13 +17,16 @@ import {
   Clock
 } from 'lucide-react'
 import { FAMOUS_ADHANS, type AdhanVoice } from '@/lib/adhan-data'
-import { downloadAndCacheAsset, isAssetCached, getAssetPlayableUrl } from '@/lib/offline-storage'
+import { downloadAndCacheAsset, isAssetCached, getAssetPlayableUrl, removeCachedAsset } from '@/lib/offline-storage'
 import { t } from '@/lib/i18n'
+import { Trash2 } from 'lucide-react'
 
 export function AdhanSoundSelector() {
   const [selectedId, setSelectedId] = useState<string>('adhan_makkah_mulla')
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [countryFilter, setCountryFilter] = useState<string>('all')
   const [cachedStatus, setCachedStatus] = useState<Record<string, boolean>>({
     adhan_makkah_mulla: true // Default is bundled locally
   })
@@ -46,11 +49,17 @@ export function AdhanSoundSelector() {
     }
     checkCaches()
 
+    const handleCacheUpdated = () => checkCaches()
+    window.addEventListener('thimar:asset-cached', handleCacheUpdated)
+    window.addEventListener('thimar:asset-removed', handleCacheUpdated)
+
     return () => {
       if (audioRef.current) {
         audioRef.current.pause()
         audioRef.current = null
       }
+      window.removeEventListener('thimar:asset-cached', handleCacheUpdated)
+      window.removeEventListener('thimar:asset-removed', handleCacheUpdated)
     }
   }, [])
 
@@ -111,6 +120,18 @@ export function AdhanSoundSelector() {
     setDownloadingId(null)
   }
 
+  const handleDelete = async (adhan: AdhanVoice) => {
+    if (adhan.id === 'adhan_makkah_mulla') return
+    setDeletingId(adhan.id)
+    if (playingId === adhan.id && audioRef.current) {
+      audioRef.current.pause()
+      setPlayingId(null)
+    }
+    await removeCachedAsset(`adhan_${adhan.id}`)
+    setCachedStatus(prev => ({ ...prev, [adhan.id]: false }))
+    setDeletingId(null)
+  }
+
   const handleSelectAdhan = async (adhan: AdhanVoice) => {
     setSelectedId(adhan.id)
     localStorage.setItem('thimar_selected_adhan_id', adhan.id)
@@ -129,6 +150,14 @@ export function AdhanSoundSelector() {
       detail: { id: adhan.id, src: activeSrc, title: adhan.title }
     }))
   }
+
+  const filteredAdhans = FAMOUS_ADHANS.filter(adhan => {
+    if (countryFilter === 'all') return true
+    if (countryFilter === 'gulf') return ['sa', 'ae', 'kw', 'qa', 'bh', 'om'].includes(adhan.countryKey)
+    if (countryFilter === 'maghreb') return ['ma', 'dz', 'tn', 'ly'].includes(adhan.countryKey)
+    if (countryFilter === 'levant') return ['sy', 'jo', 'ps', 'iq'].includes(adhan.countryKey)
+    return adhan.countryKey === countryFilter
+  })
 
   return (
     <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden" dir="rtl">
@@ -157,12 +186,39 @@ export function AdhanSoundSelector() {
         </div>
       </div>
 
+      {/* Country Filters Bar */}
+      <div className="px-6 pt-5 pb-2 border-b border-gray-100 flex items-center gap-2 overflow-x-auto text-xs font-bold scrollbar-none">
+        {[
+          { id: 'all', label: 'جميع البلدان' },
+          { id: 'sa', label: '🇸🇦 السعودية' },
+          { id: 'eg', label: '🇪🇬 مصر' },
+          { id: 'gulf', label: '🇰🇼 الخليج العربي' },
+          { id: 'levant', label: '🇵🇸 بلاد الشام والعراق' },
+          { id: 'maghreb', label: '🇲🇦 المغرب العربي' },
+          { id: 'sd', label: '🇸🇩 السودان' },
+        ].map(filter => (
+          <button
+            key={filter.id}
+            type="button"
+            onClick={() => setCountryFilter(filter.id)}
+            className={`px-3.5 py-1.5 rounded-xl whitespace-nowrap transition-all ${
+              countryFilter === filter.id
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+
       {/* Voice List */}
       <div className="p-6 md:p-8 space-y-4">
-        {FAMOUS_ADHANS.map((adhan) => {
+        {filteredAdhans.map((adhan) => {
           const isSelected = selectedId === adhan.id
           const isPlaying = playingId === adhan.id
           const isDownloading = downloadingId === adhan.id
+          const isDeleting = deletingId === adhan.id
           const isDownloaded = cachedStatus[adhan.id] || adhan.isDefault
 
           return (
@@ -187,13 +243,18 @@ export function AdhanSoundSelector() {
                     </h4>
                     {adhan.isDefault && (
                       <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-lg">
-                        {t('الصوت التلقائي المدمج')}
+                        {t('الصوت التلقائي المدمج (أوفلاين)')}
                       </span>
                     )}
                     {isDownloaded && !adhan.isDefault && (
                       <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" />
                         {t('محفوظ محلياً')}
+                      </span>
+                    )}
+                    {adhan.fileSize && (
+                      <span className="text-[10px] text-gray-400 font-mono">
+                        ({adhan.fileSize})
                       </span>
                     )}
                   </div>
@@ -207,7 +268,7 @@ export function AdhanSoundSelector() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2 w-full md:w-auto justify-end border-t md:border-t-0 pt-3 md:pt-0 border-gray-100">
+              <div className="flex items-center gap-2 w-full md:w-auto justify-end border-t md:border-t-0 pt-3 md:pt-0 border-gray-100 flex-wrap">
                 {/* Preview Button */}
                 <button
                   type="button"
@@ -239,6 +300,17 @@ export function AdhanSoundSelector() {
                     )}
                     <span>{isDownloading ? t('جاري التحميل...') : t('تحميل للجهاز')}</span>
                   </button>
+                ) : !adhan.isDefault ? (
+                  /* Delete Button to allow user to free storage and re-download */
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(adhan)}
+                    disabled={isDeleting}
+                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-40"
+                    title="حذف الصوت المحمل من الجهاز وإعادة إتاحة زر التحميل"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 ) : null}
 
                 {/* Select / Active Button */}
@@ -262,3 +334,4 @@ export function AdhanSoundSelector() {
     </div>
   )
 }
+
