@@ -28,6 +28,8 @@ import { resetHomeTourPreference } from '@/components/ui/home-tour'
 import { AdhanSoundSelector } from '@/components/ui/adhan-sound-selector'
 import { PrayerQiblaWidget } from '@/components/ui/prayer-qibla-widget'
 
+import { clearClientSession } from '@/lib/client-session'
+
 export function SettingsView() {
   const router = useRouter()
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system')
@@ -97,7 +99,7 @@ export function SettingsView() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('thimar_auth_token')
+    clearClientSession()
     router.push('/login')
   }
 

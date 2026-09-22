@@ -40,11 +40,24 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { name, email, phone, role, country, identity_code, age, provider = 'direct' } = body
+    const { 
+      name, 
+      phone, 
+      role, 
+      country, 
+      identity_code, 
+      age, 
+      provider = 'direct',
+      target_juz,
+      target_surah,
+      student_name
+    } = body
 
-    if (!name || !email || !phone || !role || !country || !identity_code) {
-      return json({ error: 'جميع الحقول مطلوبة' }, 400)
+    if (!name || !phone || !role || !country || !identity_code) {
+      return json({ error: 'الاسم، رقم الهاتف، نوع الحساب، البلد وكود الهوية مطلوبة' }, 400)
     }
+
+    const email = body.email?.trim() || `${provider}_${identity_code.replace(/[^a-zA-Z0-9]/g, '') || Date.now()}@thimar.app`
 
     const request_entry = await joinRequestsDb.create({
       name,
@@ -53,7 +66,10 @@ export async function POST(request: NextRequest) {
       role,
       country,
       identity_code,
-      age,
+      age: age ? parseInt(String(age)) : undefined,
+      target_juz: target_juz ? parseInt(String(target_juz)) : undefined,
+      target_surah: target_surah ? String(target_surah) : undefined,
+      student_name: student_name ? String(student_name) : undefined,
       provider,
     })
 
@@ -61,24 +77,29 @@ export async function POST(request: NextRequest) {
     try {
       const { notificationsDb, messagesDb } = await import('@/lib/supabase/database')
       const roleLabel = role === 'teacher' ? 'معلم' : role === 'student' ? 'طالب' : 'ولي أمر'
-      const providerLabel = provider === 'google' ? 'Google' : provider === 'facebook' ? 'Facebook' : provider === 'whatsapp' ? 'WhatsApp' : 'التسجيل المباشر'
+      const providerLabel = provider === 'google' ? 'Google' : provider === 'facebook' ? 'Facebook' : 'التسجيل المباشر'
       
+      const parentDetails = role === 'parent' && (student_name || target_juz || target_surah)
+        ? ` • (الابن: ${student_name || 'طالب'} - الجزء: ${target_juz || '—'} - سورة: ${target_surah || '—'})`
+        : ''
+
       await notificationsDb.create({
         user_id: 'admin',
         title: `طلب انضمام جديد (${providerLabel}): ${name}`,
-        message: `سجل ${name} عبر (${providerLabel}) كـ (${roleLabel}) بكود هوية: ${identity_code}. الحساب بانتظار الاعتماد.`,
+        message: `سجل ${name} عبر (${providerLabel}) كـ (${roleLabel})${parentDetails} بكود هوية: ${identity_code}. الحساب بانتظار الاعتماد.`,
         type: 'signup',
         category: 'students'
       }).catch(() => {})
 
       // Automated pre-sent message to Admin
+      const starterBody = `السلام عليكم ورحمة الله، أنا ${name} قمت بالتسجيل عبر (${providerLabel}) كـ (${roleLabel})${parentDetails} بكود الهوية [${identity_code}]. أرجو مراجعة حسابي واعتماده.`
       await messagesDb.create({
         sender_id: email,
         sender_name: name,
         sender_role: role,
         receiver_id: 'admin@thimar.org',
         receiver_name: 'إدارة منصة ثمار',
-        body: `السلام عليكم ورحمة الله، أنا ${name} قمت بالتسجيل عبر (${providerLabel}) كـ (${roleLabel}) بكود الهوية [${identity_code}]. أرجو مراجعة حسابي واعتماده.`,
+        body: starterBody,
       }).catch(() => {})
     } catch (e) {
       console.warn('Could not dispatch join notification/message:', e)

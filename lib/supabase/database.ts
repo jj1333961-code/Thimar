@@ -272,6 +272,9 @@ export interface JoinRequest {
   country: string
   identity_code: string
   age?: number
+  target_juz?: number
+  target_surah?: string
+  student_name?: string
   provider?: 'google' | 'facebook' | 'whatsapp' | 'direct' | string
   status: 'pending' | 'approved' | 'rejected' | 'banned'
   reviewed_by?: string

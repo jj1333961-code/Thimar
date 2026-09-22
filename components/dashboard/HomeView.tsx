@@ -91,12 +91,12 @@ export function AdminHome({ requests, notifications, loading, handleAction, setL
             {requests.length === 0 ? (
               <p className="text-gray-400 italic text-center py-10">{t('لا توجد طلبات حالياً')}</p>
             ) : (
-              requests.slice(0, 3).map((req: any) => (
-                <div key={req.id} className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
+              requests.slice(0, 10).map((req: any) => (
+                <div key={req.id} className="p-4 bg-gray-50 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-gray-100">
                   <div className="flex items-center gap-3 text-right">
-                    <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold">{req.name[0]}</div>
+                    <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold">{req.name?.[0] || 'ح'}</div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-gray-900 text-sm">{req.name}</span>
                         {req.provider && (
                           <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-white text-gray-600 border border-gray-200">
@@ -104,12 +104,36 @@ export function AdminHome({ requests, notifications, loading, handleAction, setL
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-gray-400">{req.role === 'student' ? t('طالب') : req.role === 'teacher' ? t('معلم') : t('ولي أمر')}</div>
+                      <div className="text-[11px] text-gray-600 font-medium">
+                        <span>{req.role === 'student' ? t('طالب') : req.role === 'teacher' ? t('معلم') : t('ولي أمر')}</span>
+                        {req.role === 'parent' && (req.student_name || req.target_juz || req.target_surah) && (
+                          <span className="text-emerald-700 font-bold mr-1">
+                            • الطالب: {req.student_name || 'طالب'} (جزء {req.target_juz || '—'} - سورة {req.target_surah || '—'})
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-gray-400 font-mono mt-0.5">
+                        هاتف: {req.phone} | هوية: {req.identity_code}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => handleAction(req.id, 'rejected')} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><X className="w-4 h-4" /></button>
-                    <button onClick={() => handleAction(req.id, 'approved')} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg"><UserCheck className="w-4 h-4" /></button>
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <button 
+                      onClick={() => handleAction(req.id, 'rejected')} 
+                      className="px-2.5 py-1.5 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold border border-red-200 flex items-center gap-1 transition-colors"
+                      title="رفض الطلب"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>رفض</span>
+                    </button>
+                    <button 
+                      onClick={() => handleAction(req.id, 'approved')} 
+                      className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1 transition-colors"
+                      title="قبول الحساب وتفعيله"
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      <span>قبول وتفعيل</span>
+                    </button>
                   </div>
                 </div>
               ))

@@ -76,6 +76,12 @@ export function getClientSession(): ClientSession | null {
 }
 
 export function clearClientSession() {
-  if (typeof window !== 'undefined') window.localStorage.removeItem('thimar_auth_token')
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem('thimar_auth_token')
+    window.localStorage.removeItem('thimar_saved_device_user')
+    window.localStorage.removeItem('thimar_current_user')
+    window.localStorage.removeItem('thimar_pending_request')
+    window.sessionStorage.clear()
+  }
 }
 
