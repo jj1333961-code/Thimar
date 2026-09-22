@@ -420,7 +420,7 @@
   }
 
   async function renderPage(n) {
-    if (!pdfDoc) return;
+    if (!pdfDoc || !mushafCanvas) return;
     n = Math.min(Math.max(1, n), pdfDoc.numPages);
     pdfPage = n;
     var myToken = ++renderToken;
@@ -428,7 +428,7 @@
     var quality = Math.min(3, Math.max(1, mushafScale));
     try {
       var page = await pdfDoc.getPage(pdfPage);
-      if (myToken !== renderToken) return;
+      if (myToken !== renderToken || !mushafCanvas) return;
       var base = page.getViewport({ scale: 1 });
       var availableWidth = Math.max(1, window.innerWidth);
       var availableHeight = Math.max(1, window.innerHeight);
@@ -1317,11 +1317,14 @@
 
   function setQibla(root, lat, lng) {
     qiblaBearing = bearingToKaaba(lat, lng);
-    var needle = root.querySelector("[data-needle]");
-    needle.style.transform = "rotate(" + qiblaBearing.toFixed(1) + "deg)";
-    root.querySelector("[data-qibla-read]").innerHTML =
-      "زاوية القبلة: <strong>" + qiblaBearing.toFixed(1) + "°</strong> من الشمال • المسافة إلى مكة " +
-      distanceToKaaba(lat, lng).toLocaleString("ar-EG") + " كم";
+    var needle = root ? root.querySelector("[data-needle]") : null;
+    if (needle) needle.style.transform = "rotate(" + qiblaBearing.toFixed(1) + "deg)";
+    var readEl = root ? root.querySelector("[data-qibla-read]") : null;
+    if (readEl) {
+      readEl.innerHTML =
+        "زاوية القبلة: <strong>" + qiblaBearing.toFixed(1) + "°</strong> من الشمال • المسافة إلى مكة " +
+        distanceToKaaba(lat, lng).toLocaleString("ar-EG") + " كم";
+    }
   }
 
   function locateQibla(root) {
@@ -1342,14 +1345,14 @@
   }
 
   function startCompass(root) {
-    var dial = root.querySelector("[data-dial]");
+    var dial = root ? root.querySelector("[data-dial]") : null;
     function attach() {
       stopCompass();
       compassHandler = function (e) {
         var heading = e.webkitCompassHeading != null ? e.webkitCompassHeading
           : (e.absolute && e.alpha != null ? 360 - e.alpha : null);
         if (heading == null) return;
-        dial.style.transform = "rotate(" + (-heading).toFixed(1) + "deg)";
+        if (dial) dial.style.transform = "rotate(" + (-heading).toFixed(1) + "deg)";
       };
       window.addEventListener("deviceorientationabsolute", compassHandler, true);
       window.addEventListener("deviceorientation", compassHandler, true);
@@ -1380,7 +1383,7 @@
       '<button type="button" class="isl-tasbeeh-tap" data-tasbeeh-tap>اضغط للتسبيح</button><p class="isl-tasbeeh-label" data-tasbeeh-label>' + esc(TASBEEH[0]) + '</p><button type="button" class="isl-tasbeeh-reset" data-tasbeeh-reset>إعادة ضبط العداد</button></div>';
     openSheet("التسبيح", html, function (root) {
       var count = 0, target = 100, countEl = root.querySelector('[data-tasbeeh-count]'), progress = root.querySelector('[data-tasbeeh-progress]'), label = root.querySelector('[data-tasbeeh-label]'), select = root.querySelector('#islTasbeehText'), input = root.querySelector('[data-target-input]');
-      function paint() { countEl.textContent = count + ' / ' + target; progress.style.width = Math.min(100, count / target * 100) + '%'; label.textContent = TASBEEH[parseInt(select.value, 10) || 0]; }
+      function paint() { if(countEl) countEl.textContent = count + ' / ' + target; if(progress) progress.style.width = Math.min(100, count / target * 100) + '%'; if(label) label.textContent = TASBEEH[parseInt(select?.value, 10) || 0]; }
       root.querySelectorAll('[data-target]').forEach(function (b) { b.addEventListener('click', function () { target = parseInt(b.dataset.target, 10); input.value = target; count = 0; paint(); }); });
       input.addEventListener('change', function () { target = Math.min(100000, Math.max(1, parseInt(input.value, 10) || 1)); input.value = target; count = 0; paint(); });
       select.addEventListener('change', paint);

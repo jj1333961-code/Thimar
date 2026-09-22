@@ -1096,7 +1096,7 @@ function roleShellPath(role) {
   if(id === 'adminReportsPage') { renderAdminReports(); }
   if(id === 'subjectsPage') renderSubjects();
   if(id === 'adminsPage') renderAdmins();
-  if(id === 'addStudent') { renderSubjectSelect(); initJuzSelect(); voiceBlob = null; voiceFingerprint = null; voiceDataUrl = null; voiceProfileGemini = null; document.getElementById('voicePreview').style.display='none'; document.getElementById('voiceRecordStatus').textContent='اضغط للتسجيل (20 ثانية)'; }
+  if(id === 'addStudent') { renderSubjectSelect(); initJuzSelect(); voiceBlob = null; voiceFingerprint = null; voiceDataUrl = null; voiceProfileGemini = null; const vp = document.getElementById('voicePreview'); if(vp) vp.style.display='none'; const vrs = document.getElementById('voiceRecordStatus'); if(vrs) vrs.textContent='اضغط للتسجيل (20 ثانية)'; }
   if(id === 'adminSettings') loadAdminSettings();
   if(id === 'studentDashboard' && currentType === 'student') { renderStudentDashboard(); updateStudentMsgBadge(); }
   if(id === 'studentInbox') { renderStudentInbox(); markStudentMessagesRead(); }
@@ -1822,26 +1822,30 @@ function startSignup() {
   syncSignupRelationshipField();
   updateSignupInternationalNumber('signupPhone','signupPhoneCountry','signupPhoneInternational');
   updateSignupInternationalNumber('signupWhats','signupWhatsCountry','signupWhatsInternational');
-  document.getElementById('signupGoogleBox').style.display = 'none';
-  document.getElementById('signupPhoneBox').style.display = 'none';
+  const sgBox = document.getElementById('signupGoogleBox'); if(sgBox) sgBox.style.display = 'none';
+  const spBox = document.getElementById('signupPhoneBox'); if(spBox) spBox.style.display = 'none';
   const gc = document.getElementById('googleBtnContainer'); if(gc) gc.innerHTML = '';
-  document.getElementById('signupVerifyBox').classList.add('hidden');
-  document.getElementById('signupStep1Alert').innerHTML = '';
-  document.getElementById('signupMethodGoogleBtn').classList.remove('btn-primary');
-  document.getElementById('signupMethodPhoneBtn').classList.remove('btn-primary');
+  const svBox = document.getElementById('signupVerifyBox'); if(svBox) svBox.classList.add('hidden');
+  const alertBox = document.getElementById('signupStep1Alert'); if(alertBox) alertBox.innerHTML = '';
+  const smg = document.getElementById('signupMethodGoogleBtn'); if(smg) smg.classList.remove('btn-primary');
+  const smp = document.getElementById('signupMethodPhoneBtn'); if(smp) smp.classList.remove('btn-primary');
   showPage('signupStep1');
 }
 function setSignupMethod(method) {
   signupState.method = method;
   const g = document.getElementById('signupMethodGoogleBtn');
   const p = document.getElementById('signupMethodPhoneBtn');
-  g.classList.toggle('btn-primary', method === 'google');
-  p.classList.toggle('btn-primary', method === 'phone');
-  document.getElementById('signupGoogleBox').style.display = method === 'google' ? 'block' : 'none';
-  document.getElementById('signupPhoneBox').style.display = method === 'phone' ? 'block' : 'none';
-  document.getElementById('signupVerifyBox').classList.add('hidden');
-  document.getElementById('signupStep1Alert').innerHTML = '';
-  if(method === 'google') renderGoogleButton();
+  if(g) g.classList.toggle('btn-primary', method === 'google');
+  if(p) p.classList.toggle('btn-primary', method === 'phone');
+  const sgBox = document.getElementById('signupGoogleBox');
+  if(sgBox) sgBox.style.display = method === 'google' ? 'block' : 'none';
+  const spBox = document.getElementById('signupPhoneBox');
+  if(spBox) spBox.style.display = method === 'phone' ? 'block' : 'none';
+  const svBox = document.getElementById('signupVerifyBox');
+  if(svBox) svBox.classList.add('hidden');
+  const alertBox = document.getElementById('signupStep1Alert');
+  if(alertBox) alertBox.innerHTML = '';
+  if(method === 'google' && typeof renderGoogleButton === 'function') renderGoogleButton();
 }
 function sendSignupCode() {
   const box = document.getElementById('signupStep1Alert');
@@ -2109,8 +2113,10 @@ async function toggleStudentIntakeRecord(){
       try{
         if(blob.size<1500)throw new Error('التسجيل قصير أو فارغ. تحدث بوضوح لعدة ثوانٍ ثم أعد المحاولة.');
         if(blob.size>2800000)throw new Error('حجم التسجيل كبير جداً للإرسال الآمن. اجعله أقصر من دقيقة ونصف ثم أعد المحاولة.');
-        if(preview.src&&preview.src.startsWith('blob:'))URL.revokeObjectURL(preview.src);
-        preview.src=URL.createObjectURL(blob);preview.style.display='block';status.textContent='جاري فهم بيانات الطالب...';result.innerHTML='';
+        if(preview && preview.src && preview.src.startsWith('blob:')) URL.revokeObjectURL(preview.src);
+        if(preview) { preview.src = URL.createObjectURL(blob); preview.style.display = 'block'; }
+        if(status) status.textContent = 'جاري فهم بيانات الطالب...';
+        if(result) result.innerHTML = '';
         const audio=await voiceAudioPayload(blob),data=await callStudentAI('student_voice_intake',{role:'admin',audioBase64:audio.audioBase64,mimeType:audio.mimeType},0.05),filled=applyStudentVoiceFields(data.fields||{});
         if(!filled.length)throw new Error('لم أتعرف على بيانات واضحة. اذكر اسم كل خانة ثم قيمتها ببطء.');
         result.innerHTML='<div class="alert alert-success">تم ملء '+filled.length+' خانة. راجع جميع البيانات قبل الحفظ.<br><small>انص المسموع: '+escapeHtml(data.transcript||'لم يُرجع تفريغاً')+'</small></div>';status.textContent='اكتمل التحلل';
@@ -3505,7 +3511,7 @@ function showQuranQuestionImageError(image){
 }
 function retryQuranQuestionImage(button,src){
   const box=button&&button.closest('.quran-question-media');if(!box)return;const separator=src.includes('?')?'&':'?';
-  box.innerHTML='<div class="quran-question-loading" role="status">جاري إعادة تحميل صورة السؤال...</div><img class="quran-question-image" src="'+src+separator+'retry='+Date.now()+'" alt="المقطع القرآني الخاص بالسؤال" loading="eager" onload="this.previousElementSibling.style.display=\'none\'" onerror="showQuranQuestionImageError(this)">';
+  box.innerHTML='<div class="quran-question-loading" role="status">جاري إعادة تحميل صورة السؤال...</div><img class="quran-question-image" src="'+src+separator+'retry='+Date.now()+'" alt="المقطع القرآني الخاص بالسؤال" loading="eager" onload="if(this.previousElementSibling)this.previousElementSibling.style.display=\'none\'" onerror="showQuranQuestionImageError(this)">';
 }
 function cleanExamQuestion(q){
   q=Object.assign({},q);q.prompt=String(q.prompt||'').replace(/(?:الإجابة|الجواب)\s*(?:الصحيحة)?\s*[:：].*$/gi,'').trim();
@@ -3865,9 +3871,16 @@ async function recordStudentExamAudio(i){
     recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
     recorder.onstop=async()=>{
       stream.getTracks().forEach(t=>t.stop());if(asr)asr.stop();await new Promise(r=>setTimeout(r,400));
-      const blob=new Blob(chunks,{type:'audio/webm'});const dataUrl=await blobToDataURL(blob);const transcript=asr?(asr.text||''):'';preview.src=URL.createObjectURL(blob);preview.style.display='block';status.textContent='🤖 جاري التحقق من البصمة والمحتوى...';
+      const blob=new Blob(chunks,{type:'audio/webm'});const dataUrl=await blobToDataURL(blob);const transcript=asr?(asr.text||''):'';
+      if(preview){ preview.src=URL.createObjectURL(blob); preview.style.display='block'; }
+      if(status) status.textContent='🤖 جاري التحقق من البصمة والمحتوى...';
       const identity=await verifyVoiceIdentity(blob,currentUser);const match=identity?identity.pct:null;
-      if(match!==null && (match<VOICE_MATCH_THRESHOLD || identity.sameSpeaker===false)){status.textContent='❌ البصمة غير مطابقة — لم يُحفظ التسجيل';aiBox.innerHTML='<div class="alert alert-danger">🚫 هذا التسجيل لا يطابق بصمة الطالب ('+match+'%). أعد التسجيل بصوت الطالب نفسه.</div>';showToast('❌ التسجيل غير مطابق للبصمة ولم يتم حفظه','error');studentExamAnswers[i]='';studentExamAudioAnswers[i]=null;btn.dataset.recording='false';btn.classList.remove('recording');return;}
+      if(match!==null && (match<VOICE_MATCH_THRESHOLD || identity.sameSpeaker===false)){
+        if(status) status.textContent='❌ البصمة غير مطابقة — لم يُحفظ التسجيل';
+        if(aiBox) aiBox.innerHTML='<div class="alert alert-danger">🚫 هذا التسجيل لا يطابق بصمة الطالب ('+match+'%). أعد التسجيل بصوت الطالب نفسه.</div>';
+        showToast('❌ التسجيل غير مطابق للبصمة ولم يتم حفظه','error');
+        studentExamAnswers[i]='';studentExamAudioAnswers[i]=null;btn.dataset.recording='false';btn.classList.remove('recording');return;
+      }
       // تحليل الصوت على الخادم (تفريغ حقيقي + تصحيح) مع احتياطي المتصفح
       let aiResult=await serverRecitationAnalysis(blob,{surah:q.surah,from:q.from,to:q.to});
       let usedTranscript=transcript;
@@ -5725,7 +5738,7 @@ async function beginStudentVoiceRecording(taskIdx) {
     recorder.onstop = async () => {
       const blob = new Blob(chunks, { type: 'audio/webm' });
       const url = URL.createObjectURL(blob);
-      preview.src = url; preview.style.display = 'block';
+      if(preview) { preview.src = url; preview.style.display = 'block'; }
       stream.getTracks().forEach(t => t.stop());
       if(asr) asr.stop();
       await new Promise(r => setTimeout(r, 600));
