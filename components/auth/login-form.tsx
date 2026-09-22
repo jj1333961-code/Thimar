@@ -33,17 +33,6 @@ export function LoginForm() {
         if (!result || !isMounted) return
         setLoading(true)
         const user = result.user
-
-        // Check if user is banned
-        try {
-          const bannedList: string[] = JSON.parse(localStorage.getItem('thimar_banned_users') || '[]')
-          if (user.email && bannedList.some(b => b.toLowerCase() === user.email?.toLowerCase().trim())) {
-            localStorage.removeItem('thimar_auth_token')
-            setError('⛔ تم حظر هذا الحساب من قبل إدارة المنصة لمخالفة السياسات والشروط. لا يمكنك تسجيل الدخول.')
-            return
-          }
-        } catch {}
-
         const credential = GoogleAuthProvider.credentialFromResult(result)
         const accessToken = credential?.accessToken || null
         if (accessToken) setGoogleAccessToken(accessToken)
@@ -79,28 +68,10 @@ export function LoginForm() {
     }
   }, [router])
 
-  const checkIsBanned = (ident?: string) => {
-    if (!ident) return false
-    try {
-      const bannedList: string[] = JSON.parse(localStorage.getItem('thimar_banned_users') || '[]')
-      const target = ident.toLowerCase().trim()
-      return bannedList.some(b => b.toLowerCase() === target)
-    } catch {
-      return false
-    }
-  }
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-
-    // Check if the entered identifier is in the banned users list
-    if (checkIsBanned(formData.identifier)) {
-      setError('⛔ تم حظر هذا الحساب من قبل إدارة المنصة لمخالفة السياسات والشروط. لا يمكنك تسجيل الدخول.')
-      setLoading(false)
-      return
-    }
 
     // Special Admin Logic
     if (formData.identifier === 'thimar' && formData.password === '0101') {
@@ -113,15 +84,6 @@ export function LoginForm() {
       // Use Firebase Client Auth if available
       const userCredential = await signInWithEmailAndPassword(auth, formData.identifier, formData.password)
       const user = userCredential.user
-
-      // Check if user is banned by email
-      if (checkIsBanned(user.email || '')) {
-        localStorage.removeItem('thimar_auth_token')
-        setError('⛔ تم حظر هذا الحساب من قبل إدارة المنصة لمخالفة السياسات والشروط. لا يمكنك تسجيل الدخول.')
-        setLoading(false)
-        return
-      }
-
       const idToken = await user.getIdToken()
       
       // Save token
@@ -130,14 +92,6 @@ export function LoginForm() {
       // Fetch profile to redirect correctly
       const userDoc = await getDoc(doc(db, 'users', user.uid))
       const userData = userDoc.exists() ? userDoc.data() : { role: 'student' }
-
-      // Check if account status in Firestore is banned or matches banned list
-      if (userData.status === 'banned' || userData.isBanned || checkIsBanned(userData.email)) {
-        localStorage.removeItem('thimar_auth_token')
-        setError('⛔ تم حظر هذا الحساب من قبل إدارة المنصة لمخالفة السياسات والشروط. لا يمكنك تسجيل الدخول.')
-        setLoading(false)
-        return
-      }
       
       router.push(`/${userData.role || 'student'}`)
     } catch (err: any) {
@@ -150,12 +104,6 @@ export function LoginForm() {
         })
         if (res.ok) {
           const data = await res.json()
-          if (data.status === 'banned' || data.isBanned || checkIsBanned(formData.identifier) || checkIsBanned(data.email)) {
-            localStorage.removeItem('thimar_auth_token')
-            setError('⛔ تم حظر هذا الحساب من قبل إدارة المنصة لمخالفة السياسات والشروط. لا يمكنك تسجيل الدخول.')
-            setLoading(false)
-            return
-          }
           if (data.token) {
             localStorage.setItem('thimar_auth_token', data.token)
           }
