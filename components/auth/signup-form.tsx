@@ -11,8 +11,7 @@ import { SocialAuthButtons } from './social-auth-buttons'
 
 export function SignupForm() {
   const router = useRouter()
-  const [step, setStep] = useState(1)
-  const [role, setRole] = useState<'teacher' | 'student' | 'parent' | null>(null)
+  const [role, setRole] = useState<'teacher' | 'student' | 'parent'>('student')
   const [country, setCountry] = useState<CountryRule | null>(null)
   const [formData, setFormData] = useState({
     name: '',
@@ -392,178 +391,152 @@ export function SignupForm() {
         )}
 
         <div className="mb-8">
+          <div className="text-center mb-3">
+            <span className="text-xs font-black text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+              ⚡ خيار 1: التسجيل والربط الفوري بحسابك
+            </span>
+          </div>
           <SocialAuthButtons onNewUserCreated={handleSocialNewUser} />
+          
           <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100"></div></div>
-            <div className="relative flex justify-center text-xs"><span className="px-4 bg-white text-gray-400 font-medium">أو التسجيل اليدوي</span></div>
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
+            <div className="relative flex justify-center text-xs">
+              <span className="px-4 bg-white text-gray-500 font-black border border-gray-100 rounded-full py-1 shadow-2xs">
+                أو خيار 2: كتابة البيانات مباشرة لإنشاء الحساب
+              </span>
+            </div>
           </div>
         </div>
 
-        <form onSubmit={handleSignup} className="space-y-8">
-          <AnimatePresence mode="wait">
-            {step === 1 && (
-              <motion.div
-                key="step1"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                <label className="block text-xl font-bold text-gray-800 mb-6 text-center">من أنت؟</label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {[
-                    { id: 'teacher', label: 'معلم', icon: GraduationCap, color: 'bg-blue-50 text-blue-600 border-blue-200' },
-                    { id: 'student', label: 'طالب', icon: User, color: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
-                    { id: 'parent', label: 'ولي أمر', icon: Users, color: 'bg-amber-50 text-amber-600 border-amber-200' },
-                  ].map((r) => (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => setRole(r.id as any)}
-                      className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all group ${
-                        role === r.id ? `${r.color} scale-105 shadow-md` : 'bg-gray-50 border-gray-100 text-gray-400 hover:border-emerald-200'
-                      }`}
-                    >
-                      <r.icon className={`w-12 h-12 mb-3 group-hover:scale-110 transition-transform`} />
-                      <span className="font-bold text-lg">{r.label}</span>
-                      {role === r.id && <Check className="absolute top-2 right-2 w-5 h-5" />}
-                    </button>
-                  ))}
-                </div>
+        <form onSubmit={handleSignup} className="space-y-6">
+          {/* Role selector pills */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">نوع الحساب *</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'student', label: 'طالب', icon: User, color: 'bg-emerald-50 text-emerald-700 border-emerald-300 ring-2 ring-emerald-500' },
+                { id: 'parent', label: 'ولي أمر', icon: Users, color: 'bg-amber-50 text-amber-700 border-amber-300 ring-2 ring-amber-500' },
+                { id: 'teacher', label: 'معلم', icon: GraduationCap, color: 'bg-blue-50 text-blue-700 border-blue-300 ring-2 ring-blue-500' },
+              ].map((r) => (
                 <button
+                  key={r.id}
                   type="button"
-                  disabled={!role}
-                  onClick={() => setStep(2)}
-                  className="w-full mt-8 py-4 bg-emerald-600 text-white rounded-2xl font-bold text-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700 transition-all shadow-lg"
+                  onClick={() => setRole(r.id as any)}
+                  className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition-all ${
+                    role === r.id ? r.color : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                  }`}
                 >
-                  التالي <ChevronRight className="w-6 h-6 rotate-180" />
+                  <r.icon className="w-4 h-4" />
+                  <span>{r.label}</span>
                 </button>
-              </motion.div>
-            )}
+              ))}
+            </div>
+          </div>
 
-            {step === 2 && (
-              <motion.div
-                key="step2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-5"
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">البلد</label>
+            <div className="relative">
+              <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <select
+                className="w-full pr-12 pl-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all appearance-none text-sm"
+                value={country?.iso2}
+                onChange={(e) => setCountry(COUNTRY_RULES.find(c => c.iso2 === e.target.value) || null)}
               >
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">البلد</label>
-                  <div className="relative">
-                    <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <select
-                      className="w-full pr-12 pl-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all appearance-none text-lg"
-                      value={country?.iso2}
-                      onChange={(e) => setCountry(COUNTRY_RULES.find(c => c.iso2 === e.target.value) || null)}
-                    >
-                      {COUNTRY_RULES.map(c => (
-                        <option key={c.iso2} value={c.iso2}>{c.nameAr}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                {COUNTRY_RULES.map(c => (
+                  <option key={c.iso2} value={c.iso2}>{c.nameAr}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">الاسم بالكامل</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="أدخل اسمك الثلاثي"
-                      className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                      value={formData.name}
-                      onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">البريد الإلكتروني</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="example@email.com"
-                      className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                      value={formData.email}
-                      onChange={e => setFormData({ ...formData, email: e.target.value })}
-                    />
-                  </div>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">الاسم بالكامل *</label>
+              <input
+                type="text"
+                required
+                placeholder="أدخل اسمك الثلاثي"
+                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm"
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">البريد الإلكتروني *</label>
+              <input
+                type="email"
+                required
+                placeholder="example@email.com"
+                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm"
+                value={formData.email}
+                onChange={e => setFormData({ ...formData, email: e.target.value })}
+              />
+            </div>
+          </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">رقم الهاتف</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      required
-                      placeholder={country?.dialCode ? `+${country.dialCode}` : ''}
-                      readOnly
-                      className="w-24 px-2 py-4 bg-gray-100 border border-gray-200 rounded-xl text-center text-gray-500"
-                    />
-                    <div className="relative flex-1">
-                      <Phone className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                      <input
-                        type="tel"
-                        required
-                        placeholder="رقم الهاتف بدون كود الدولة"
-                        className="w-full pr-12 pl-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                        value={formData.phone}
-                        onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
-                      />
-                    </div>
-                  </div>
-                </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">رقم الهاتف *</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                required
+                placeholder={country?.dialCode ? `+${country.dialCode}` : ''}
+                readOnly
+                className="w-20 px-2 py-3.5 bg-gray-100 border border-gray-200 rounded-xl text-center text-gray-500 text-xs font-mono"
+              />
+              <div className="relative flex-1">
+                <Phone className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="tel"
+                  required
+                  placeholder="رقم الهاتف بدون كود الدولة"
+                  className="w-full pr-12 pl-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm"
+                  value={formData.phone}
+                  onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
+                />
+              </div>
+            </div>
+          </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    {country?.identityHintAr || 'كود الهوية أو جواز السفر'}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder={country?.identityPlaceholderAr}
-                    className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                    value={formData.identityCode}
-                    onChange={e => setFormData({ ...formData, identityCode: e.target.value })}
-                  />
-                  <p className="mt-2 text-xs text-gray-500 italic flex items-center gap-1">
-                    <Loader2 className="w-3 h-3 animate-spin opacity-0" />
-                    مثال: {country?.identityExampleAr}
-                  </p>
-                </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              {country?.identityHintAr || 'كود الهوية أو جواز السفر'} *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder={country?.identityPlaceholderAr}
+              className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm"
+              value={formData.identityCode}
+              onChange={e => setFormData({ ...formData, identityCode: e.target.value })}
+            />
+            <p className="mt-1.5 text-xs text-gray-400 italic">
+              مثال: {country?.identityExampleAr}
+            </p>
+          </div>
 
-                {role === 'student' && (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">السن</label>
-                    <input
-                      type="number"
-                      required
-                      className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                      value={formData.age}
-                      onChange={e => setFormData({ ...formData, age: e.target.value })}
-                    />
-                  </div>
-                )}
+          {role === 'student' && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">السن (عمر الطالب)</label>
+              <input
+                type="number"
+                placeholder="مثال: 12"
+                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm"
+                value={formData.age}
+                onChange={e => setFormData({ ...formData, age: e.target.value })}
+              />
+            </div>
+          )}
 
-                <div className="flex gap-4 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="flex-1 py-4 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-all"
-                  >
-                    السابق
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="flex-[2] py-4 bg-emerald-600 text-white rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 disabled:opacity-50"
-                  >
-                    {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'إرسال طلب الانضمام'}
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div className="pt-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-base flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-200 disabled:opacity-50 active:scale-98"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : '📤 إرسال طلب إنشاء الحساب للمسؤول'}
+            </button>
+          </div>
         </form>
 
         <p className="mt-8 text-center text-gray-500">
