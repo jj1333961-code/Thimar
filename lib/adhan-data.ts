@@ -20,17 +20,17 @@ export interface AdhanVoice {
 export const FAMOUS_ADHANS: AdhanVoice[] = [
   {
     id: 'adhan_makkah_mulla',
-    title: 'أذان الحرم المكي الشريف',
-    reciter: 'الشيخ علي أحمد ملا',
+    title: 'أذان الحرم المكي الشريف (صوت 671356 التلقائي)',
+    reciter: 'الشيخ علي أحمد ملا (الصوت المعتمد)',
     country: 'المملكة العربية السعودية',
     countryKey: 'sa',
     location: 'المسجد الحرام - مكة المكرمة',
     flag: '🇸🇦',
-    url: '/audio/adhan.mp3', // The default uploaded high quality audio
+    url: '/audio/671356.mp3', // The default uploaded high quality audio 671356
     isDefault: true,
     duration: '04:19',
     fileSize: '3.9 م.ب',
-    description: 'أذان المسجد الحرام برواية وصوت شيخ المؤذنين بمكة المكرمة (الصوت الافتراضي المدمج)'
+    description: 'أذان المسجد الحرام برواية وصوت شيخ المؤذنين بمكة المكرمة (الملف 671356 التلقائي بالمشروع)'
   },
   {
     id: 'adhan_madinah_bukhari',

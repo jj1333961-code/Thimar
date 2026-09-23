@@ -1829,6 +1829,7 @@ function startSignup() {
   const alertBox = document.getElementById('signupStep1Alert'); if(alertBox) alertBox.innerHTML = '';
   const smg = document.getElementById('signupMethodGoogleBtn'); if(smg) smg.classList.remove('btn-primary');
   const smp = document.getElementById('signupMethodPhoneBtn'); if(smp) smp.classList.remove('btn-primary');
+  initSignupJuzSelect();
   showPage('signupStep1');
 }
 function setSignupMethod(method) {
@@ -1885,40 +1886,130 @@ function verifySignupCode() {
   initSignupJuzSelect();
   showPage('signupStep2');
 }
+const SURAH_TO_JUZ_TABLE = {
+  "الفاتحة": 1, "البقرة": 1, "آل عمران": 3, "النساء": 4, "المائدة": 6, "الأنعام": 7, "الأعراف": 8, "الأنفال": 9, "التوبة": 10,
+  "يونس": 11, "هود": 11, "يوسف": 12, "الرعد": 13, "إبراهيم": 13, "الحجر": 14, "النحل": 14, "الإسراء": 15, "الكهف": 15,
+  "مريم": 16, "طه": 16, "الأنبياء": 17, "الحج": 17, "المؤمنون": 18, "النور": 18, "الفرقان": 18, "الشعراء": 19, "النمل": 19,
+  "القصص": 20, "العنكبوت": 20, "الروم": 21, "لقمان": 21, "السجدة": 21, "الأحزاب": 21, "سبأ": 22, "فاطر": 22, "يس": 22,
+  "الصافات": 23, "ص": 23, "الزمر": 23, "غافر": 24, "فصلت": 24, "الشورى": 25, "الزخرف": 25, "الدخان": 25, "الجاثية": 25,
+  "الأحقاف": 26, "محمد": 26, "الفتح": 26, "الحجرات": 26, "ق": 26, "الذاريات": 26, "الطور": 27, "النجم": 27, "القمر": 27,
+  "الرحمن": 27, "الواقعة": 27, "الحديد": 27, "المجادلة": 28, "الحشر": 28, "الممتحنة": 28, "الصف": 28, "الجمعة": 28,
+  "المنافقون": 28, "التغابن": 28, "الطلاق": 28, "التحريم": 28, "الملك": 29, "القلم": 29, "الحاقة": 29, "المعارج": 29,
+  "نوح": 29, "الجن": 29, "المزمل": 29, "المدثر": 29, "القيامة": 29, "الإنسان": 29, "المرسلات": 29, "النبأ": 30, "النازعات": 30,
+  "عبس": 30, "التكوير": 30, "الانفطار": 30, "المطففين": 30, "الانشقاق": 30, "البروج": 30, "الطارق": 30, "الأعلى": 30,
+  "الغاشية": 30, "الفجر": 30, "البلد": 30, "الشمس": 30, "الليل": 30, "الضحى": 30, "الشرح": 30, "التين": 30, "العلق": 30,
+  "القدر": 30, "البينة": 30, "الزلزلة": 30, "العاديات": 30, "القارعة": 30, "التكاثر": 30, "العصر": 30, "الهمزة": 30,
+  "الفيل": 30, "قريش": 30, "الماعون": 30, "الكوثر": 30, "الكافرون": 30, "النصر": 30, "المسد": 30, "الإخلاص": 30, "الفلق": 30, "الناس": 30
+};
+
 function initSignupJuzSelect() {
-  const select = document.getElementById('signupJuz');
-  let html = '<option value="">اختر الجزء...</option>';
-  for(let i = 1; i <= 30; i++) html += '<option value="' + i + '">الجزء ' + i + '</option>';
-  select.innerHTML = html;
-  document.getElementById('signupSurah').innerHTML = '<option value="">اختر الجزء أولاً...</option>';
+  const juzSelect = document.getElementById('signupJuz');
+  const surahSelect = document.getElementById('signupSurah');
+  if(!juzSelect || !surahSelect) return;
+
+  let juzHtml = '<option value="">اختر الجزء من القرآن الكريم (من 1 إلى 30)...</option>';
+  for(let i = 1; i <= 30; i++) {
+    juzHtml += '<option value="' + i + '">الجزء ' + i + '</option>';
+  }
+  juzSelect.innerHTML = juzHtml;
+
+  let surahHtml = '<option value="">اختر السورة المستهدفة (114 سورة)...</option>';
+  ALL_SURAHS_ORDERED.forEach(function(s, idx) {
+    surahHtml += '<option value="' + s + '">' + (idx + 1) + '. سورة ' + s + '</option>';
+  });
+  surahSelect.innerHTML = surahHtml;
 }
+
 function updateSignupSurahSelect() {
-  const juz = document.getElementById('signupJuz').value;
-  const select = document.getElementById('signupSurah');
-  if(!juz || !quranData[juz]) { select.innerHTML = '<option value="">اختر الجزء أولاً...</option>'; return; }
-  let html = '<option value="">اختر السورة...</option>';
-  quranData[juz].forEach(function(s){ html += '<option value="' + s + '">' + s + '</option>'; });
-  select.innerHTML = html;
+  const juzSelect = document.getElementById('signupJuz');
+  const surahSelect = document.getElementById('signupSurah');
+  if(!juzSelect || !surahSelect) return;
+  const juz = juzSelect.value;
+  const currentSurah = surahSelect.value;
+
+  if(!juz) {
+    let surahHtml = '<option value="">اختر السورة المستهدفة (114 سورة)...</option>';
+    ALL_SURAHS_ORDERED.forEach(function(s, idx) {
+      surahHtml += '<option value="' + s + '" ' + (s === currentSurah ? 'selected' : '') + '>' + (idx + 1) + '. سورة ' + s + '</option>';
+    });
+    surahSelect.innerHTML = surahHtml;
+    return;
+  }
+
+  const juzSurahs = quranData[juz] || [];
+  let surahHtml = '<option value="">اختر سورة من الجزء ' + juz + '...</option>';
+  if(juzSurahs.length > 0) {
+    surahHtml += '<optgroup label="سور الجزء ' + juz + '">';
+    juzSurahs.forEach(function(s) {
+      const idx = ALL_SURAHS_ORDERED.indexOf(s) + 1;
+      const numLabel = idx > 0 ? (idx + '. ') : '';
+      surahHtml += '<option value="' + s + '" ' + (s === currentSurah ? 'selected' : '') + '>' + numLabel + 'سورة ' + s + '</option>';
+    });
+    surahHtml += '</optgroup>';
+  }
+  surahHtml += '<optgroup label="جميع سور القرآن الكريم (114 سورة)">';
+  ALL_SURAHS_ORDERED.forEach(function(s, idx) {
+    surahHtml += '<option value="' + s + '" ' + (s === currentSurah ? 'selected' : '') + '>' + (idx + 1) + '. سورة ' + s + '</option>';
+  });
+  surahHtml += '</optgroup>';
+  surahSelect.innerHTML = surahHtml;
+  if(juzSurahs.length > 0 && (!currentSurah || !juzSurahs.includes(currentSurah))) {
+    surahSelect.value = juzSurahs[0];
+  }
 }
+
+function updateSignupJuzFromSurah() {
+  const surahSelect = document.getElementById('signupSurah');
+  const juzSelect = document.getElementById('signupJuz');
+  if(!surahSelect || !juzSelect) return;
+  const surah = surahSelect.value;
+  if(!surah) return;
+
+  let foundJuz = SURAH_TO_JUZ_TABLE[surah];
+  if(!foundJuz) {
+    for(let j = 1; j <= 30; j++) {
+      if(quranData[j] && quranData[j].includes(surah)) {
+        foundJuz = j;
+        break;
+      }
+    }
+  }
+  if(foundJuz) {
+    juzSelect.value = String(foundJuz);
+  }
+}
+window.initSignupJuzSelect = initSignupJuzSelect;
+window.updateSignupSurahSelect = updateSignupSurahSelect;
+window.updateSignupJuzFromSurah = updateSignupJuzFromSurah;
+
 async function submitSignupRequest() {
-  const box = document.getElementById('signupStep2Alert');
-  if(!signupState.verified) { box.innerHTML = '<div class="alert alert-danger">❌ يجب التحقق من الهوية أولاً</div>'; return; }
-  const role = document.getElementById('signupRole').value;
-  const name = document.getElementById('signupName').value.trim();
-  const relationshipName = document.getElementById('signupRelationshipName').value.trim();
-  const nid = normalizeIdentityInput(document.getElementById('signupNid').value);
+  const box = document.getElementById('signupStep2Alert') || document.getElementById('signupStep1Alert');
+  const role = document.getElementById('signupRole') ? document.getElementById('signupRole').value : 'student';
+  const name = (document.getElementById('signupName')?.value || '').trim();
+  const relationshipName = (document.getElementById('signupRelationshipName')?.value || '').trim();
+  const nid = normalizeIdentityInput(document.getElementById('signupNid')?.value || '');
   const identityCountry = selectedCountryIso('signupIdentityCountry');
   const phoneCountry = selectedCountryIso('signupPhoneCountry');
   const phone = getInternationalNumber('signupPhone','signupPhoneCountry');
-  const juz = document.getElementById('signupJuz').value;
-  const surah = document.getElementById('signupSurah').value;
-  const notes = document.getElementById('signupNotes').value.trim();
-  const email = (document.getElementById('signupEmail')?.value || '').trim().toLowerCase();
+  const juz = document.getElementById('signupJuz')?.value || '';
+  const surah = document.getElementById('signupSurah')?.value || '';
+  const notes = (document.getElementById('signupNotes')?.value || '').trim();
+  const email = (document.getElementById('signupEmail')?.value || signupState.email || '').trim().toLowerCase();
   const password = document.getElementById('signupPassword')?.value || '';
-  if(!/^\S+@\S+\.\S+$/.test(email)) { box.innerHTML = '<div class="alert alert-danger">❌ أدخل بريدًا إلكترونيًا صالحًا.</div>'; return; }
-  if(password.length < 8) { box.innerHTML = '<div class="alert alert-danger">❌ يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.</div>'; return; }
+
   const signupValidation = validateCountryFields('signupIdentityCountry','signupNid','signupPhoneCountry','signupPhone');
-  if(!name || !relationshipName || !signupValidation.identityValid || !signupValidation.phoneValid) { box.innerHTML = '<div class="alert alert-danger">❌ أدخل الاسم والبيانات المطلوبة وفق صيغة الدولة المختارة.</div>'; return; }
+  if(!name || !relationshipName || !signupValidation.identityValid || !signupValidation.phoneValid) {
+    if(box) box.innerHTML = '<div class="alert alert-danger">❌ أدخل الاسم والبيانات المطلوبة (الهوية ورقم الهاتف) وفق صيغة الدولة المختارة.</div>';
+    return;
+  }
+  if(!juz || !surah) {
+    if(box) box.innerHTML = '<div class="alert alert-danger">❌ يرجى اختيار الجزء والسورة من القرآن الكريم.</div>';
+    return;
+  }
+
+  // السماح بإنشاء الحساب بدون كلمة مرور أو بريد بعد إزالتها بطلب المستخدم
+  signupState.verified = true;
+  signupState.method = signupState.method || (signupState.email ? 'google' : 'phone');
   const roleLabel = role === 'student' ? 'طالب' : 'ولي أمر';
   const time = new Date().toLocaleString('ar-EG');
   const details = '📋 طلب إنشاء حساب جديد\n'
@@ -1927,22 +2018,24 @@ async function submitSignupRequest() {
     + (role === 'student' ? 'اسم ولي الأمر: ' : 'اسم الطالب: ') + relationshipName + '\n'
     + 'الرقم القومي: ' + nid + '\n'
     + 'رقم الهاتف الدولي: +' + phone + '\n'
-    + 'طريقة التسجيل: ' + (signupState.method === 'google' ? 'جوجل (' + signupState.email + ')' : 'رقم الهاتف / واتساب') + '\n'
-    + (signupState.method === 'google' ? 'حساب جوجل المُوثّق: ' + signupState.email + '\n' : 'رقم الاتساب المُوثّق: ' + signupState.whats + '\n')
-    + 'الجزء: ' + (juz ? 'الجزء ' + juz : 'غير محدد') + '\n'
-    + 'السورة: ' + (surah || 'غير محددة') + '\n'
+    + 'طريقة التسجيل: ' + (signupState.method === 'google' ? 'جوجل (' + (signupState.email || email) + ')' : (signupState.method === 'facebook' ? 'فيسبوك' : 'رقم الهاتف')) + '\n'
+    + (signupState.email ? 'البريد المرتبط: ' + signupState.email + '\n' : '')
+    + 'الجزء: الجزء ' + juz + '\n'
+    + 'السورة: سورة ' + surah + '\n'
     + 'ملاحظات: ' + (notes || 'لا يوجد') + '\n'
     + 'وقت الطلب: ' + time;
 
-  box.innerHTML = '<div class="alert alert-info">جارٍ حفظ الطلب في قاعدة البيانات وتوثيقه...</div>';
-  try {
-    const authResponse = await fetch('/api/auth/supabase', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'signup', email:email, password:password, name:name, role:role }) });
-    const authBody = await authResponse.json().catch(function(){ return {}; });
-    if(authBody.pendingEmailConfirmation) {
-      box.innerHTML = '<div class="alert alert-success">✅ تم تسجيل الحساب في Supabase بنجاح. تحقق من بريدك الإلكتروني لتأكيد الحساب، وسيتم إخطار الإدارة.</div>';
+  if(box) box.innerHTML = '<div class="alert alert-info">جارٍ حفظ الطلب في قاعدة البيانات وتوثيقه...</div>';
+  if(email && password) {
+    try {
+      const authResponse = await fetch('/api/auth/supabase', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'signup', email:email, password:password, name:name, role:role }) });
+      const authBody = await authResponse.json().catch(function(){ return {}; });
+      if(authBody.pendingEmailConfirmation && box) {
+        box.innerHTML = '<div class="alert alert-success">✅ تم تسجيل الحساب في Supabase بنجاح.</div>';
+      }
+    } catch(error) {
+      console.warn('[v0] Supabase auth attempt note', error);
     }
-  } catch(error) {
-    console.warn('[v0] Supabase auth attempt note', error);
   }
 
   const newReq = { id: 'jr' + Date.now(), role: role, name: name, guardianName: role === 'student' ? relationshipName : '', studentName: role === 'parent' ? relationshipName : '', relationshipName: relationshipName, nid: nid, identityCountry: identityCountry, nationalCountry: identityCountry, phone: phone, phoneCountry: phoneCountry, whats: signupState.whats, whatsCountry: signupState.whatsCountry || 'EG', email: signupState.email, method: signupState.method, juz: juz, surah: surah, notes: notes, status: 'pending', time: time };

@@ -309,6 +309,20 @@ export const translations: Record<string, string> = {
   'اتجاه القبلة': 'Qibla Direction',
   'تحديد موقعي': 'Locate My Position',
   'تشغيل البوصلة': 'Start Compass',
+  'اختر حسابك المفضل ليتم ربطه تلقائياً': 'Choose your preferred account to link automatically',
+  'التسجيل بحساب Google': 'Register with Google',
+  'التسجيل بحساب Facebook': 'Register with Facebook',
+  'حساب Google': 'Google Account',
+  'حساب Facebook': 'Facebook Account',
+  'اختيار الحساب من الجهاز': 'Choose Account from Device',
+  'أو الدخول التلقائي بحسابات الجهاز المرتبطة': 'Or auto-login with linked device accounts',
+  'هذا الحساب غير مسجل في المنصة. يرجى إنشاء حساب جديد أولاً.': 'This account is not registered. Please create a new account first.',
+  'اختر الجزء...': 'Choose Juz...',
+  'اختر السورة...': 'Choose Surah...',
+  'عرض جميع السور (114 سورة)': 'View all Surahs (114 Surahs)',
+  'إرسال طلب إنشاء الحساب للمسؤول': 'Submit Account Creation Request to Admin',
+  'العودة للرئيسية': 'Return to Home',
+  'العودة لشاشة الدخول': 'Return to Login',
 }
 
 export const arabicToEnglish: Record<string, string> = { ...translations }
@@ -316,42 +330,86 @@ export const englishToArabic: Record<string, string> = Object.fromEntries(
   Object.entries(translations).map(([ar, en]) => [en, ar])
 )
 
+// Pre-sorted keys to avoid re-sorting on every single translate call
+const sortedArKeys = Object.keys(arabicToEnglish).sort((a, b) => b.length - a.length)
+const sortedEnKeys = Object.keys(englishToArabic).sort((a, b) => b.length - a.length)
+
+// In-memory cache for fast O(1) translation lookup
+const translationCache = new Map<string, string>()
+
+export function isQuranicText(text: string): boolean {
+  if (!text || typeof text !== 'string') return false
+  // Quran brackets: ﴿ ... ﴾ or ornamental quotes
+  if (text.includes('﴿') || text.includes('﴾')) return true
+  // Ayah end symbol: ۝ (\u06DD)
+  if (text.includes('\u06DD') || text.includes('۝')) return true
+  // Quranic recitation / pause symbols & Uthmani signs (\u06D6 to \u06ED)
+  if (/[\u06D6-\u06ED]/.test(text)) return true
+  // Sajdah mark ۩ (\u06E9), Rub el Hizb ۞ (\u06DE)
+  if (/[\u06DE\u06E9]/.test(text)) return true
+  return false
+}
+
 function escapeRegExp(str: string) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-// Builds regex matcher ensuring short words match boundaries only
-function buildRegex(key: string): RegExp {
-  const escaped = escapeRegExp(key)
-  // If the key has multiple words or whitespace, direct match is safe
-  if (/\s/.test(key) || key.length > 5) {
-    return new RegExp(escaped, 'g')
-  }
-  // Single short words must be word-bounded so they don't corrupt substrings (e.g. 'من' inside 'منصة' or 'of' inside 'office')
-  return new RegExp(`(^|[^\\p{L}\\p{N}_])${escaped}(?=[^\\p{L}\\p{N}_]|$)`, 'gu')
-}
-
 export function translate(value: string, locale: Locale): string {
   if (!value || typeof value !== 'string') return value
+  if (locale === 'ar') {
+    // If target is Arabic and text already has Arabic, preserve directly
+    if (/[\u0600-\u06FF]/.test(value)) return value
+  }
+
+  // Strictly NEVER translate Quranic text
+  if (isQuranicText(value)) return value
+
+  const cacheKey = `${locale}:${value}`
+  if (translationCache.has(cacheKey)) {
+    return translationCache.get(cacheKey)!
+  }
+
   const isEn = locale === 'en'
   const dictionary = isEn ? arabicToEnglish : englishToArabic
 
-  // Sort keys descending by length so longer phrases get matched before single words
-  const sortedKeys = Object.keys(dictionary).sort((a, b) => b.length - a.length)
+  const trimmed = value.trim()
+  if (!trimmed) return value
 
-  let result = value
-  for (const key of sortedKeys) {
-    if (!result.includes(key) && key.length > 3) continue
-    const target = dictionary[key]
-    if (/\s/.test(key) || key.length > 5) {
-      result = result.split(key).join(target)
-    } else {
-      // Use boundary matcher to avoid corrupting substrings
-      const regex = new RegExp(`(^|[^\\p{L}\\p{N}_])${escapeRegExp(key)}(?=[^\\p{L}\\p{N}_]|$)`, 'gu')
-      result = result.replace(regex, `$1${target}`)
+  // 1. Direct O(1) match
+  if (dictionary[trimmed]) {
+    const res = value.replace(trimmed, dictionary[trimmed])
+    translationCache.set(cacheKey, res)
+    return res
+  }
+
+  // 2. Stripped punctuation / symbol match
+  const punctMatch = trimmed.match(/^([*:•\-\s\d().،,–—\[\]]*)(.*?)([*:•\-\s\d().،,–—\[\]]*)$/)
+  if (punctMatch && punctMatch[2] && punctMatch[2] !== trimmed) {
+    const core = punctMatch[2]
+    if (dictionary[core]) {
+      const res = value.replace(trimmed, punctMatch[1] + dictionary[core] + punctMatch[3])
+      translationCache.set(cacheKey, res)
+      return res
     }
   }
 
+  // 3. Selective phrase match (only test phrases that appear in value)
+  let result = value
+  const sortedKeys = isEn ? sortedArKeys : sortedEnKeys
+  for (const key of sortedKeys) {
+    if (key.length <= 1) continue
+    if (result.includes(key)) {
+      const target = dictionary[key]
+      if (/\s/.test(key) || key.length > 5) {
+        result = result.split(key).join(target)
+      } else {
+        const regex = new RegExp(`(^|[^\\p{L}\\p{N}_])${escapeRegExp(key)}(?=[^\\p{L}\\p{N}_]|$)`, 'gu')
+        result = result.replace(regex, `$1${target}`)
+      }
+    }
+  }
+
+  translationCache.set(cacheKey, result)
   return result
 }
 

@@ -14,11 +14,11 @@
   var ADHAN_VOICES = [
     {
       id: "adhan_makkah",
-      name: "أذان الحرم المكي الشريف",
-      reciter: "مؤذنو المسجد الحرام",
+      name: "أذان الحرم المكي الشريف (671356 التلقائي)",
+      reciter: "مؤذنو المسجد الحرام (الصوت التلقائي)",
       country: "المملكة العربية السعودية",
       flag: "🇸🇦",
-      url: "https://www.islamcan.com/audio/adhan/makkah.mp3",
+      url: "/audio/671356.mp3",
       isDefault: true
     },
     {

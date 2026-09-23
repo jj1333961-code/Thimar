@@ -154,8 +154,7 @@ export function QuranReader() {
     isLongPressTriggered.current = false
     longPressTimerRef.current = setTimeout(() => {
       isLongPressTriggered.current = true
-      toggleAyahSelection(ayahNum)
-      setShowBottomCard(true)
+      handleAyahClick(ayahNum)
     }, 280) // Quick and responsive long-press
   }
 
@@ -166,30 +165,55 @@ export function QuranReader() {
     }
   }
 
+  const [consecutiveNotice, setConsecutiveNotice] = useState<string | null>(null)
+
   const handleAyahClick = (ayahNum: number) => {
     if (isLongPressTriggered.current) return
 
-    // If we already have a selection active, clicking another Ayah toggles it in/out
-    if (selectedAyahNumbers.length > 0) {
-      toggleAyahSelection(ayahNum)
+    if (selectedAyahNumbers.length === 0) {
+      setSelectedAyahNumbers([ayahNum])
+      setShowBottomCard(true)
+      return
+    }
+
+    // If already in selection
+    if (selectedAyahNumbers.includes(ayahNum)) {
+      if (selectedAyahNumbers.length === 1) {
+        clearSelection()
+        return
+      }
+      const min = Math.min(...selectedAyahNumbers)
+      const max = Math.max(...selectedAyahNumbers)
+      if (ayahNum === max) {
+        setSelectedAyahNumbers(prev => prev.filter(n => n !== max))
+        return
+      }
+      if (ayahNum === min) {
+        setSelectedAyahNumbers(prev => prev.filter(n => n !== min))
+        return
+      }
+      // If inside middle, reset to just this clicked ayah
+      setSelectedAyahNumbers([ayahNum])
+      return
+    }
+
+    // Checking if consecutive (directly adjacent to min or max)
+    const min = Math.min(...selectedAyahNumbers)
+    const max = Math.max(...selectedAyahNumbers)
+
+    if (ayahNum === max + 1) {
+      setSelectedAyahNumbers(prev => [...prev, ayahNum].sort((a, b) => a - b))
+      setShowBottomCard(true)
+    } else if (ayahNum === min - 1) {
+      setSelectedAyahNumbers(prev => [ayahNum, ...prev].sort((a, b) => a - b))
       setShowBottomCard(true)
     } else {
-      // Just select this single ayah and show floating card
+      // Non-consecutive: prompt user and reset to single clicked ayah
+      setConsecutiveNotice('تنبيه: يمكنك تحديد الآيات المتتالية فقط بالترتيب')
+      setTimeout(() => setConsecutiveNotice(null), 3000)
       setSelectedAyahNumbers([ayahNum])
       setShowBottomCard(true)
     }
-  }
-
-  const toggleAyahSelection = (ayahNum: number) => {
-    setSelectedAyahNumbers(prev => {
-      if (prev.includes(ayahNum)) {
-        const next = prev.filter(n => n !== ayahNum)
-        if (next.length === 0) setShowBottomCard(false)
-        return next
-      } else {
-        return [...prev, ayahNum].sort((a, b) => a - b)
-      }
-    })
   }
 
   const clearSelection = () => {
@@ -478,18 +502,18 @@ export function QuranReader() {
                       onTouchStart={() => handleTouchStart(ayah.number)}
                       onTouchEnd={handleTouchEnd}
                       onClick={() => handleAyahClick(ayah.number)}
-                      className={`quran-interactive-ayah inline cursor-pointer transition-all duration-200 px-1 py-0.5 rounded-2xl mx-0.5 ${
+                      className={`quran-interactive-ayah inline cursor-pointer transition-all duration-200 px-1.5 py-1 rounded-2xl mx-1 ${
                         isSelected 
-                          ? 'bg-white text-gray-950 font-black shadow-2xl ring-4 ring-black/15 border-2 border-gray-300 rounded-2xl px-2 py-1 mx-1 inline-block scale-[1.02]'
+                          ? 'bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-950 font-black shadow-xl ring-4 ring-emerald-500/60 border-2 border-emerald-400 rounded-2xl px-3 py-1.5 mx-1.5 inline-block scale-105 z-10'
                           : isCurrentlyPlaying
-                          ? 'bg-amber-100/70 text-amber-900 border border-amber-300 rounded-xl'
+                          ? 'bg-amber-100/80 text-amber-900 border border-amber-300 rounded-xl'
                           : 'hover:bg-emerald-50/60'
                       }`}
                     >
                       {ayah.text}{' '}
-                      <span className={`inline-flex items-center justify-center min-w-[2.2rem] h-[2.2rem] rounded-full border text-base font-black mx-1 align-middle ${
+                      <span className={`inline-flex items-center justify-center min-w-[2.2rem] h-[2.2rem] rounded-full border text-base font-black mx-1 align-middle transition-transform ${
                         isSelected 
-                          ? 'border-2 border-emerald-700 bg-white text-emerald-950 shadow-md ring-2 ring-emerald-500' 
+                          ? 'border-2 border-emerald-700 bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400 scale-110' 
                           : 'border-emerald-200 text-emerald-700 bg-white/80'
                       }`}>
                         {ayah.number}
@@ -503,62 +527,83 @@ export function QuranReader() {
         </div>
       )}
 
-      {/* FLOATING ACTION TOOLBAR OVER SELECTED AYAHS (when ayahs are selected) */}
+      {/* تنبيه التحديد المتتالي فقط */}
+      <AnimatePresence>
+        {consecutiveNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-amber-950/90 text-amber-200 border border-amber-400/40 px-4 py-2 rounded-full text-xs font-bold shadow-lg backdrop-blur"
+          >
+            {consecutiveNotice}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* FLOATING ACTION TOOLBAR OVER SELECTED AYAHS (3 علامات المحددة من المستخدم: 1 الصوت، 2 المشاركة، 3 الإلغاء ×) */}
       <AnimatePresence>
         {selectedAyahNumbers.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 15, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 15, scale: 0.95 }}
-            className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-emerald-900/95 text-white px-5 py-3 rounded-full shadow-2xl border border-emerald-500/40 backdrop-blur-md flex items-center gap-3 md:gap-4 text-xs font-bold"
+            className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-emerald-950/95 text-white px-5 py-2.5 rounded-full shadow-2xl border-2 border-emerald-400/50 backdrop-blur-md flex items-center gap-2 md:gap-3 text-xs font-bold"
           >
             <span className="text-amber-300 font-black pl-2 border-l border-white/20">
               {selectedAyahNumbers.length === 1 
                 ? `آية ${selectedAyahNumbers[0]}` 
-                : `${selectedAyahNumbers.length} آيات مختارة`}
+                : `${selectedAyahNumbers.length} آيات متتالية`}
             </span>
 
-            {/* 1. علامة تفسير الآية */}
+            {/* 1. علامة الصوت (تشغيل الأصوات العربية المشهورة + التحميل محلياً + التكرار) */}
+            <button
+              type="button"
+              onClick={() => {
+                if (isPlaying) {
+                  stopAudio()
+                } else {
+                  playSelectedAyahs()
+                  setIsCardMinimized(false)
+                  setShowBottomCard(true)
+                }
+              }}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-full text-white flex items-center gap-1.5 transition-all shadow-sm"
+              title="علامة الصوت: تشغيل أصوات المشايخ والتحميل والتكرار"
+            >
+              {isPlaying ? <Pause className="w-4 h-4 text-amber-300 fill-current" /> : <Volume2 className="w-4 h-4 text-amber-300" />}
+              <span>{isPlaying ? 'إيقاف' : 'تشغيل الصوت'}</span>
+            </button>
+
+            {/* 2. علامة المشاركة (مشاركة الآية المحددة) */}
+            <button
+              type="button"
+              onClick={() => setShowShareDialog(true)}
+              className="px-3 py-1.5 hover:bg-white/15 rounded-full text-emerald-100 hover:text-white flex items-center gap-1.5 transition-colors border border-white/20"
+              title="علامة المشاركة: مشاركة الآيات المحددة"
+            >
+              <Share2 className="w-4 h-4 text-teal-300" />
+              <span>مشاركة</span>
+            </button>
+
+            {/* زر التفسير الإضافي */}
             <button
               type="button"
               onClick={() => setShowTafsirDialog(true)}
               className="p-2 hover:bg-white/15 rounded-full text-emerald-100 hover:text-white flex items-center gap-1.5 transition-colors"
-              title="تفسير الآيات (اختر الشيخ أو المذهب وحمل محلياً)"
+              title="تفسير الآيات"
             >
               <BookOpen className="w-4 h-4 text-amber-300" />
-              <span className="hidden sm:inline">التفسير</span>
             </button>
 
-            {/* 2. علامة مشاركة الآية (صورة فاخرة بالاسم والوصف) */}
-            <button
-              type="button"
-              onClick={() => setShowShareDialog(true)}
-              className="p-2 hover:bg-white/15 rounded-full text-emerald-100 hover:text-white flex items-center gap-1.5 transition-colors"
-              title="مشاركة بطاقة الآية بصورة فاخرة مع اسم المنصة"
-            >
-              <Share2 className="w-4 h-4 text-teal-300" />
-              <span className="hidden sm:inline">مشاركة</span>
-            </button>
-
-            {/* 3. علامة تشغيل الصوت */}
-            <button
-              type="button"
-              onClick={playSelectedAyahs}
-              className="p-2 hover:bg-white/15 rounded-full text-emerald-100 hover:text-white flex items-center gap-1.5 transition-colors"
-              title="تشغيل صوت الآيات المختارة مع التكرار"
-            >
-              {isPlaying ? <Pause className="w-4 h-4 text-amber-300 fill-current" /> : <Play className="w-4 h-4 text-emerald-300 fill-current" />}
-              <span className="hidden sm:inline">{isPlaying ? 'إيقاف' : 'تشغيل'}</span>
-            </button>
-
-            {/* 4. علامة × لإلغاء التعليم أو المعاينة */}
+            {/* 3. علامة × (إلغاء التحديد) */}
             <button
               type="button"
               onClick={clearSelection}
-              className="p-2 hover:bg-red-500/30 rounded-full text-red-200 hover:text-white transition-colors mr-1 border-r border-white/20 pr-3"
-              title="إلغاء التحديد (×)"
+              className="p-1.5 hover:bg-red-500/40 rounded-full text-red-200 hover:text-white transition-colors mr-1 border-r border-white/25 pr-2.5"
+              title="علامة ×: إلغاء التحديد"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </motion.div>
         )}

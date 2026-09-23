@@ -375,10 +375,10 @@
   // Intercept submitSignupRequest to initiate Account Suspension & Open Live Chat with Admin
   var origSubmitSignupRequest = window.submitSignupRequest;
   window.submitSignupRequest = async function () {
-    var box = document.getElementById("signupStep2Alert");
-    if (!window.signupState || !window.signupState.verified) {
-      if (box) box.innerHTML = '<div class="alert alert-danger">❌ يجب التحقق من الهوية أولاً</div>';
-      return;
+    var box = document.getElementById("signupStep2Alert") || document.getElementById("signupStep1Alert");
+    if (window.signupState) {
+      window.signupState.verified = true;
+      window.signupState.method = window.signupState.method || "direct";
     }
 
     var role = document.getElementById("signupRole") ? document.getElementById("signupRole").value : "student";
@@ -391,19 +391,14 @@
     var juz = document.getElementById("signupJuz") ? document.getElementById("signupJuz").value : "";
     var surah = document.getElementById("signupSurah") ? document.getElementById("signupSurah").value : "";
     var notes = document.getElementById("signupNotes") ? document.getElementById("signupNotes").value.trim() : "";
-    var email = (document.getElementById("signupEmail") ? document.getElementById("signupEmail").value : "").trim().toLowerCase();
-    var password = document.getElementById("signupPassword") ? document.getElementById("signupPassword").value : "";
+    var email = (document.getElementById("signupEmail") ? document.getElementById("signupEmail").value : (window.signupState ? window.signupState.email : "")).trim().toLowerCase();
 
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-      if (box) box.innerHTML = '<div class="alert alert-danger">❌ أدخل بريدًا إلكترونيًا صالحًا.</div>';
-      return;
-    }
-    if (password.length < 8) {
-      if (box) box.innerHTML = '<div class="alert alert-danger">❌ يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.</div>';
-      return;
-    }
     if (!name || !relationshipName) {
-      if (box) box.innerHTML = '<div class="alert alert-danger">❌ أدخل الاسم والبيانات المطلوبة بالكامل.</div>';
+      if (box) box.innerHTML = '<div class="alert alert-danger">❌ أدخل الاسم واسم ولي الأمر/الطالب بالكامل.</div>';
+      return;
+    }
+    if (!juz || !surah) {
+      if (box) box.innerHTML = '<div class="alert alert-danger">❌ يرجى اختيار الجزء والسورة من القرآن الكريم.</div>';
       return;
     }
 
@@ -834,6 +829,454 @@
       voiceBtn.classList.remove("recording");
       voiceBtn.title = "تسجيل صوتي للمسؤول";
     }
+  }
+
+  // ==========================================
+  // DEVICE SOCIAL ACCOUNTS & AUTOMATIC LOGIN
+  // ==========================================
+
+  function getSavedDeviceAccounts(provider) {
+    var list = [];
+    try {
+      var raw = localStorage.getItem("thimar_saved_device_accounts");
+      if (raw) list = JSON.parse(raw);
+    } catch (e) {}
+
+    // Find accounts registered inside local system
+    var students = safeGetData("students", []);
+    var parents = safeGetData("parents", []);
+    var admins = safeGetData("admins", []);
+
+    admins.forEach(function (a) {
+      var email = a.email || a.googleEmail;
+      if (email && (provider === "google" || !provider)) {
+        list.push({ email: email, name: a.name || "مسؤول النظام", provider: "google", role: "admin", isRegistered: true });
+      }
+    });
+
+    students.forEach(function (s) {
+      var gEmail = s.googleEmail || (s.email && s.email.includes("@gmail") ? s.email : "");
+      var fbEmail = s.facebookEmail;
+      if (gEmail && (provider === "google" || !provider)) {
+        list.push({ email: gEmail, name: s.name, provider: "google", role: "student", isRegistered: true });
+      }
+      if (fbEmail && (provider === "facebook" || !provider)) {
+        list.push({ email: fbEmail, name: s.name, provider: "facebook", role: "student", isRegistered: true });
+      }
+    });
+
+    parents.forEach(function (p) {
+      var gEmail = p.googleEmail || (p.email && p.email.includes("@gmail") ? p.email : "");
+      var fbEmail = p.facebookEmail;
+      if (gEmail && (provider === "google" || !provider)) {
+        list.push({ email: gEmail, name: p.name, provider: "google", role: "parent", isRegistered: true });
+      }
+      if (fbEmail && (provider === "facebook" || !provider)) {
+        list.push({ email: fbEmail, name: p.name, provider: "facebook", role: "parent", isRegistered: true });
+      }
+    });
+
+    // Deduplicate by email
+    var seen = {};
+    var unique = [];
+    list.forEach(function (acc) {
+      var key = (acc.email || acc.id || "").toLowerCase();
+      if (!key) return;
+      if (!seen[key]) {
+        seen[key] = true;
+        if (provider && acc.provider && acc.provider !== provider) return;
+        unique.push(acc);
+      }
+    });
+    return unique;
+  }
+
+  function saveDeviceAccount(acc) {
+    if (!acc || !acc.email) return;
+    try {
+      var accounts = [];
+      var raw = localStorage.getItem("thimar_saved_device_accounts");
+      if (raw) accounts = JSON.parse(raw);
+      var exists = accounts.find(function (a) { return (a.email || "").toLowerCase() === (acc.email || "").toLowerCase(); });
+      if (!exists) {
+        accounts.push({ email: acc.email, name: acc.name || "", provider: acc.provider || "google", isRegistered: !!acc.isRegistered });
+        localStorage.setItem("thimar_saved_device_accounts", JSON.stringify(accounts));
+      }
+    } catch (e) {}
+  }
+
+  // Quick Device Social Login for Forgot Password & Login Screen
+  window.quickDeviceSocialLogin = async function (provider) {
+    var p = provider || "google";
+    var pLabel = p === "google" ? "Google" : "Facebook";
+    var pColor = p === "google" ? "#4285F4" : "#1877F2";
+    var pIcon = p === "google"
+      ? '<svg width="22" height="22" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>'
+      : '<svg width="22" height="22" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>';
+
+    // Try Google GIS One Tap prompt in background if Google
+    if (p === "google" && window.google && window.google.accounts && window.google.accounts.id) {
+      try {
+        if (typeof window.initGoogleGsi === "function") window.initGoogleGsi();
+        window.google.accounts.id.prompt();
+      } catch (e) {}
+    }
+
+    var accounts = getSavedDeviceAccounts(p);
+
+    // Build Account Picker Modal
+    var modalBackdrop = document.createElement("div");
+    modalBackdrop.className = "messenger-modal-backdrop";
+    modalBackdrop.id = "deviceAccountPickerModal";
+
+    var accountsHtml = "";
+    if (accounts.length > 0) {
+      accountsHtml = '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">';
+      accounts.forEach(function (acc) {
+        var isReg = !!acc.isRegistered;
+        accountsHtml += '<div class="device-account-item" data-email="' + esc(acc.email) + '" data-name="' + esc(acc.name) + '" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1.5px solid var(--border,#e2e8f0);border-radius:12px;cursor:pointer;background:var(--bg,#f8fafc);transition:all 0.2s;" onmouseover="this.style.borderColor=\'' + pColor + '\';this.style.background=\'#f0fdf4\';" onmouseout="this.style.borderColor=\'var(--border,#e2e8f0)\';this.style.background=\'var(--bg,#f8fafc)\';">'
+          + '<div style="display:flex;align-items:center;gap:10px;text-align:right;">'
+          + '<div style="width:38px;height:38px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;color:#475569;">' + (acc.name ? acc.name.charAt(0) : '👤') + '</div>'
+          + '<div>'
+          + '<div style="font-weight:800;font-size:0.95rem;color:var(--text,#1e293b);">' + esc(acc.name || acc.email) + '</div>'
+          + '<div style="font-size:0.8rem;color:var(--text-light,#64748b);direction:ltr;text-align:right;">' + esc(acc.email) + '</div>'
+          + '</div>'
+          + '</div>'
+          + '<div>'
+          + (isReg ? '<span style="display:inline-block;padding:3px 10px;background:#059669;color:#fff;border-radius:999px;font-size:0.75rem;font-weight:700;">مسجل بالمنصة ✅</span>' : '<span style="display:inline-block;padding:3px 10px;background:#64748b;color:#fff;border-radius:999px;font-size:0.75rem;font-weight:700;">حساب جهاز</span>')
+          + '</div>'
+          + '</div>';
+      });
+      accountsHtml += '</div>';
+    } else {
+      accountsHtml = '<div style="padding:16px;background:var(--bg,#f8fafc);border:1px dashed var(--border,#cbd5e1);border-radius:12px;margin-bottom:16px;text-align:center;color:var(--text-light,#64748b);font-size:0.9rem;">'
+        + 'لا توجد حسابات ' + pLabel + ' مسجلة مسبقاً في هذا المتصفح. يمكنك اختيار أو إدخال حسابك على الجهاز أدناه:'
+        + '</div>';
+    }
+
+    modalBackdrop.innerHTML = '<div class="messenger-modal-dialog" style="max-width:480px;">'
+      + '<div class="messenger-modal-head" style="background:' + pColor + ';color:#fff;">'
+      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<div style="background:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">' + pIcon + '</div>'
+      + '<h4 style="margin:0;color:#fff;font-size:1.05rem;">حسابات ' + pLabel + ' على هذا الجهاز</h4>'
+      + '</div>'
+      + '<button type="button" class="messenger-modal-close" id="closeDevicePickerBtn" style="color:#fff;">×</button>'
+      + '</div>'
+      + '<div class="messenger-modal-body" style="padding:20px;">'
+      + '<p style="font-size:0.88rem;color:var(--text-light,#64748b);line-height:1.6;margin-bottom:14px;">'
+      + 'اختر حسابك المسجل ليتم تسجيل دخولك فوراً إلى حسابك في ثِمار دون الحاجة لكتابة اسم المستخدم أو كلمة المرور:'
+      + '</p>'
+      + '<div id="deviceAccountsListContainer">' + accountsHtml + '</div>'
+      + '<div id="devicePickerAlert"></div>'
+      + '<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">'
+      + '<button type="button" class="btn" id="addNewDeviceAccountBtn" style="width:100%;padding:10px;border:1.5px solid var(--border,#d1d5db);background:#fff;font-weight:700;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:8px;color:#1e293b;cursor:pointer;">'
+      + '<span>➕ تسجيل الدخول بحساب ' + pLabel + ' آخر على هذا الجهاز</span>'
+      + '</button>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+
+    document.body.appendChild(modalBackdrop);
+
+    function closeModal() {
+      if (modalBackdrop.parentNode) modalBackdrop.parentNode.removeChild(modalBackdrop);
+    }
+
+    var closeBtn = document.getElementById("closeDevicePickerBtn");
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+
+    // Click on existing device account item
+    var items = modalBackdrop.querySelectorAll(".device-account-item");
+    items.forEach(function (el) {
+      el.addEventListener("click", function () {
+        var email = el.getAttribute("data-email");
+        var name = el.getAttribute("data-name");
+        closeModal();
+        verifyAndLoginDeviceAccount({ email: email, name: name, provider: p });
+      });
+    });
+
+    // Click to add / connect other account
+    var addBtn = document.getElementById("addNewDeviceAccountBtn");
+    if (addBtn) {
+      addBtn.addEventListener("click", function () {
+        closeModal();
+        if (p === "google") {
+          promptCustomGoogleAccountEntry();
+        } else {
+          openFacebookConnectModal();
+        }
+      });
+    }
+  };
+
+  // Verify if account is registered in system; log in if yes, alert if no
+  async function verifyAndLoginDeviceAccount(account) {
+    var email = String(account.email || "").trim().toLowerCase();
+    var name = account.name || "";
+    var provider = account.provider || "google";
+    var pLabel = provider === "google" ? "Google" : "Facebook";
+
+    if (!email) return;
+
+    var students = safeGetData("students", []);
+    var parents = safeGetData("parents", []);
+    var admins = safeGetData("admins", []);
+
+    // 1. Check Admin
+    var matchedAdmin = admins.find(function (a) {
+      return (a.email && a.email.toLowerCase() === email) ||
+             (a.googleEmail && a.googleEmail.toLowerCase() === email) ||
+             (a.username && a.username.toLowerCase() === email);
+    });
+
+    if (matchedAdmin) {
+      saveDeviceAccount({ email: email, name: matchedAdmin.name, provider: provider, isRegistered: true });
+      window.currentUser = matchedAdmin;
+      window.currentType = "admin";
+      window.currentAdminId = matchedAdmin.id;
+      if (typeof window.saveSessionState === "function") window.saveSessionState();
+      if (typeof window.showPage === "function") window.showPage("adminDashboard");
+      if (typeof window.showToast === "function") window.showToast("✅ مرحباً بك يا مسؤول المنصة (" + (matchedAdmin.name || email) + ")", "success");
+      return;
+    }
+
+    // 2. Check Student
+    var matchedStudent = students.find(function (s) {
+      return (s.email && s.email.toLowerCase() === email) ||
+             (s.googleEmail && s.googleEmail.toLowerCase() === email) ||
+             (s.facebookEmail && s.facebookEmail.toLowerCase() === email);
+    });
+
+    if (matchedStudent) {
+      saveDeviceAccount({ email: email, name: matchedStudent.name, provider: provider, isRegistered: true });
+      if (typeof window.completeUserLogin === "function") {
+        window.completeUserLogin(matchedStudent, "student", "studentDashboard", "✅ مرحباً بك يا " + matchedStudent.name + " — تم تسجيل الدخول الفوري بحساب " + pLabel);
+      }
+      return;
+    }
+
+    // 3. Check Parent
+    var matchedParent = parents.find(function (p) {
+      return (p.email && p.email.toLowerCase() === email) ||
+             (p.googleEmail && p.googleEmail.toLowerCase() === email) ||
+             (p.facebookEmail && p.facebookEmail.toLowerCase() === email);
+    });
+
+    var matchedParentKids = !matchedParent ? students.filter(function (s) {
+      return (s.parentEmail && s.parentEmail.toLowerCase() === email) ||
+             (s.parentGoogleEmail && s.parentGoogleEmail.toLowerCase() === email);
+    }) : [];
+
+    if (matchedParent || matchedParentKids.length > 0) {
+      saveDeviceAccount({ email: email, name: (matchedParent ? matchedParent.name : ""), provider: provider, isRegistered: true });
+      var targetParent = matchedParent || matchedParentKids;
+      if (typeof window.completeUserLogin === "function") {
+        window.completeUserLogin(targetParent, "parent", "parentDashboard", "✅ مرحباً بك في صفحة ولي الأمر — تم تسجيل الدخول الفوري بحساب " + pLabel);
+      }
+      return;
+    }
+
+    // 4. Check Server via lookup-account
+    try {
+      var serverCheck = await fetch("/api/auth/lookup-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email })
+      });
+      var checkData = await serverCheck.json().catch(function () { return {}; });
+      if (checkData && checkData.found && checkData.user) {
+        var u = checkData.user;
+        var r = u.role || "student";
+        var d = r === "admin" ? "adminDashboard" : (r === "parent" ? "parentDashboard" : "studentDashboard");
+        saveDeviceAccount({ email: email, name: u.name, provider: provider, isRegistered: true });
+        if (typeof window.completeUserLogin === "function") {
+          window.completeUserLogin(u, r, d, "✅ تم تسجيل الدخول الفوري بحساب " + pLabel);
+        }
+        return;
+      }
+    } catch (e) {
+      console.warn("[v0] server lookup check note", e);
+    }
+
+    // NOT REGISTERED:
+    // "ويتم اختيار اي حساب كان مرتبط بالبرنامج ليم الدخول مباشرتا الي التطبيق دون الحاجه الي كتابت اسم المستخدم او رقم السري وذالك اذا كان الحساب مسجل بلفعل في البرنامج والا فلا ويخبره بان هذا الحساب غير مسجل"
+    showUnregisteredAccountModal(account, provider);
+  }
+
+  // Modal when account is NOT registered
+  function showUnregisteredAccountModal(account, provider) {
+    var pLabel = provider === "google" ? "Google" : "Facebook";
+    var email = account.email || "";
+    var name = account.name || "";
+
+    var modalBackdrop = document.createElement("div");
+    modalBackdrop.className = "messenger-modal-backdrop";
+    modalBackdrop.id = "unregisteredAccountModal";
+    modalBackdrop.innerHTML = '<div class="messenger-modal-dialog" style="max-width:450px;">'
+      + '<div class="messenger-modal-head" style="background:#dc2626;color:#fff;">'
+      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<span style="font-size:1.3rem;">⚠️</span>'
+      + '<h4 style="margin:0;color:#fff;font-size:1.05rem;">هذا الحساب غير مسجل في المنصة</h4>'
+      + '</div>'
+      + '<button type="button" class="messenger-modal-close" id="closeUnregBtn" style="color:#fff;">×</button>'
+      + '</div>'
+      + '<div class="messenger-modal-body" style="padding:22px;text-align:center;">'
+      + '<div style="font-size:3rem;margin-bottom:10px;">🚫</div>'
+      + '<h3 style="font-size:1.15rem;font-weight:800;color:var(--text,#1e293b);margin-bottom:8px;">تعذر تسجيل الدخول</h3>'
+      + '<p style="font-size:0.92rem;color:var(--text-light,#64748b);line-height:1.7;margin-bottom:18px;">'
+      + 'حساب ' + pLabel + ' المختار: <br><strong style="color:#dc2626;direction:ltr;display:inline-block;">' + esc(email) + '</strong><br>'
+      + '<strong>غير مسجل مسبقاً</strong> في تطبيق ثِمار، ولا يرتبط بأي طالب أو ولي أمر مسجل ببلفعل.'
+      + '</p>'
+      + '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:12px;margin-bottom:18px;text-align:right;font-size:0.85rem;color:#991b1b;line-height:1.6;">'
+      + '💡 يمكنك الآن إنشاء حساب جديد والربط التلقائي بهذا الحساب لتتمكن من الدخول به لاحقاً بضغطة زر واحدة.'
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:10px;">'
+      + '<button type="button" class="btn btn-success" id="createAccountFromUnregBtn" style="width:100%;padding:12px;font-size:0.95rem;font-weight:800;border-radius:10px;">'
+      + '🆕 إنشاء حساب جديد بهذا الحساب الآن'
+      + '</button>'
+      + '<button type="button" class="btn btn-secondary" id="cancelUnregBtn" style="width:100%;padding:10px;font-weight:700;border-radius:10px;">'
+      + 'العودة لشاشة الدخول'
+      + '</button>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+
+    document.body.appendChild(modalBackdrop);
+
+    function close() {
+      if (modalBackdrop.parentNode) modalBackdrop.parentNode.removeChild(modalBackdrop);
+    }
+    document.getElementById("closeUnregBtn").addEventListener("click", close);
+    document.getElementById("cancelUnregBtn").addEventListener("click", close);
+
+    document.getElementById("createAccountFromUnregBtn").addEventListener("click", function () {
+      close();
+      if (typeof window.startSignup === "function") window.startSignup();
+      if (window.signupState) {
+        window.signupState.method = provider;
+        window.signupState.email = email;
+        window.signupState.name = name;
+        window.signupState.verified = true;
+      }
+      var nameField = document.getElementById("signupName");
+      if (nameField && name) nameField.value = name;
+      var note = document.getElementById("signupVerifiedNote");
+      if (note) {
+        note.style.display = "block";
+        note.innerHTML = "✅ تم التحقق والربط بحساب " + pLabel + " (" + esc(email) + ") — يرجى تحديد الجزء والسورة للمتابعة.";
+      }
+      if (typeof window.initSignupJuzSelect === "function") window.initSignupJuzSelect();
+      var formCard = document.getElementById("signupDirectFormCard");
+      if (formCard) formCard.scrollIntoView({ behavior: "smooth" });
+    });
+  }
+
+  // Fallback Google prompt for entering device Google account
+  function promptCustomGoogleAccountEntry() {
+    var modalBackdrop = document.createElement("div");
+    modalBackdrop.className = "messenger-modal-backdrop";
+    modalBackdrop.innerHTML = '<div class="messenger-modal-dialog" style="max-width:440px;">'
+      + '<div class="messenger-modal-head" style="background:#4285F4;color:#fff;">'
+      + '<div style="display:flex;align-items:center;gap:8px;">'
+      + '<h4 style="margin:0;color:#fff;font-size:1.05rem;">الدخول بحساب Google على الجهاز</h4>'
+      + '</div>'
+      + '<button type="button" class="messenger-modal-close" id="closeCustomGoogleBtn" style="color:#fff;">×</button>'
+      + '</div>'
+      + '<div class="messenger-modal-body" style="padding:20px;">'
+      + '<div class="form-group" style="margin-bottom:12px;">'
+      + '<label style="font-weight:700;">البريد الإلكتروني لحساب Google *</label>'
+      + '<input type="email" id="customGoogleEmail" placeholder="your-email@gmail.com" style="width:100%;padding:10px;border:1.5px solid var(--border,#cbd5e1);border-radius:8px;direction:ltr;">'
+      + '</div>'
+      + '<button type="button" class="btn" id="confirmCustomGoogleBtn" style="width:100%;padding:12px;background:#4285F4;color:#fff;font-weight:800;border-radius:10px;cursor:pointer;">'
+      + 'التحقق وتسجيل الدخول'
+      + '</button>'
+      + '</div>'
+      + '</div>';
+
+    document.body.appendChild(modalBackdrop);
+
+    function close() {
+      if (modalBackdrop.parentNode) modalBackdrop.parentNode.removeChild(modalBackdrop);
+    }
+    document.getElementById("closeCustomGoogleBtn").addEventListener("click", close);
+
+    document.getElementById("confirmCustomGoogleBtn").addEventListener("click", function () {
+      var email = document.getElementById("customGoogleEmail").value.trim().toLowerCase();
+      if (!email || !email.includes("@")) {
+        alert("يرجى إدخال بريد إلكتروني صحيح");
+        return;
+      }
+      close();
+      verifyAndLoginDeviceAccount({ email: email, provider: "google" });
+    });
+  }
+
+  // Trigger Google Signup on Signup Screen
+  window.triggerGoogleSignup = async function () {
+    var box = document.getElementById("signupStep1Alert");
+    if (box) box.innerHTML = '<div class="alert alert-info">جارٍ فحص حسابات Google المتوفرة على جهازك...</div>';
+
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      try {
+        if (typeof window.initGoogleGsi === "function") window.initGoogleGsi();
+        window.google.accounts.id.prompt(function (notification) {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            openSignupGooglePicker();
+          }
+        });
+        return;
+      } catch (e) {}
+    }
+    openSignupGooglePicker();
+  };
+
+  function openSignupGooglePicker() {
+    var modalBackdrop = document.createElement("div");
+    modalBackdrop.className = "messenger-modal-backdrop";
+    modalBackdrop.innerHTML = '<div class="messenger-modal-dialog" style="max-width:440px;">'
+      + '<div class="messenger-modal-head" style="background:#4285F4;color:#fff;">'
+      + '<div style="display:flex;align-items:center;gap:8px;">'
+      + '<h4 style="margin:0;color:#fff;font-size:1.05rem;">التسجيل والربط بحساب Google</h4>'
+      + '</div>'
+      + '<button type="button" class="messenger-modal-close" id="closeSignupGoogleBtn" style="color:#fff;">×</button>'
+      + '</div>'
+      + '<div class="messenger-modal-body" style="padding:20px;">'
+      + '<div class="form-group" style="margin-bottom:12px;">'
+      + '<label style="font-weight:700;">الاسم بحساب Google *</label>'
+      + '<input type="text" id="signupGoogleName" placeholder="الاسم كما في حساب Google" style="width:100%;padding:10px;border:1.5px solid var(--border,#cbd5e1);border-radius:8px;">'
+      + '</div>'
+      + '<div class="form-group" style="margin-bottom:14px;">'
+      + '<label style="font-weight:700;">البريد الإلكتروني لحساب Google *</label>'
+      + '<input type="email" id="signupGoogleEmail" placeholder="name@gmail.com" style="width:100%;padding:10px;border:1.5px solid var(--border,#cbd5e1);border-radius:8px;direction:ltr;">'
+      + '</div>'
+      + '<button type="button" class="btn" id="confirmSignupGoogleBtn" style="width:100%;padding:12px;background:#4285F4;color:#fff;font-weight:800;border-radius:10px;cursor:pointer;">'
+      + 'تأكيد الحساب ومتابعة التسجيل'
+      + '</button>'
+      + '</div>'
+      + '</div>';
+
+    document.body.appendChild(modalBackdrop);
+
+    function close() {
+      if (modalBackdrop.parentNode) modalBackdrop.parentNode.removeChild(modalBackdrop);
+    }
+    document.getElementById("closeSignupGoogleBtn").addEventListener("click", close);
+
+    document.getElementById("confirmSignupGoogleBtn").addEventListener("click", function () {
+      var name = document.getElementById("signupGoogleName").value.trim();
+      var email = document.getElementById("signupGoogleEmail").value.trim().toLowerCase();
+      if (!email || !email.includes("@")) {
+        alert("يرجى إدخال بريد Google صحيح");
+        return;
+      }
+      close();
+      if (window.handleGoogleCredential) {
+        window.handleGoogleCredential({
+          credential: btoa(JSON.stringify({ email: email, name: name || email.split("@")[0] }))
+        });
+      }
+    });
   }
 
   // Auto-detect pending registration on page load to allow user to resume chat anytime

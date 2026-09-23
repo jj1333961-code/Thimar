@@ -1,10 +1,19 @@
 'use client'
 
 import { useEffect } from 'react'
-import { translate, type Locale } from '@/lib/i18n'
+import { translate, isQuranicText, type Locale } from '@/lib/i18n'
 
 const TRANSLATABLE_ATTRIBUTES = ['placeholder', 'title', 'aria-label', 'aria-description', 'alt', 'value'] as const
-const PROTECTED_SELECTOR = 'script,style,noscript,code,pre,[data-no-translate],.quran-text,.ayah,.hadith,.dhikr,.thimar-ayah-frame,.thimar-ayah-ref,.thimar-footer .ayah,.thimar-footer .ref,.thimar-footer-sidq'
+const PROTECTED_SELECTOR = [
+  'script', 'style', 'noscript', 'code', 'pre',
+  '[data-no-translate]', '[data-quran]',
+  '.quran-text', '.ayah', '.ayah-text', '.ayah-box', '.ayah-card',
+  '.surah-ayahs', '.quran-reader', '.quran-page', '.quran-container',
+  '.quran-verse', '.mushaf', '.uthmani', '.tajweed', '.hadith', '.dhikr',
+  '.thimar-ayah-frame', '.thimar-ayah-ref', '.thimar-footer .ayah',
+  '.thimar-footer .ref', '.thimar-footer-sidq', '.tuhfa-bayt',
+  '.arabic-font', '[dir="rtl"].font-quran'
+].join(',')
 
 export function LanguageRuntime() {
   useEffect(() => {
@@ -16,7 +25,9 @@ export function LanguageRuntime() {
 
     const isProtected = (node: Node) => {
       const element = node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as Element)
-      return !element || element.closest(PROTECTED_SELECTOR) !== null
+      if (!element || element.closest(PROTECTED_SELECTOR) !== null) return true
+      if (node.nodeType === Node.TEXT_NODE && isQuranicText(node.nodeValue || '')) return true
+      return false
     }
 
     const apply = (root: ParentNode = document.body, full = false) => {

@@ -1224,7 +1224,26 @@
   "رقم هاتف المدرس غير صالح؛ يجب أن يطابق أرقام الدولة المختارة (بين 6 و 16 رقماً).": "Teacher phone number is invalid; must match selected country digits (between 6 and 16 digits).",
   "هل تريد تعيين هذا المعلم كمسؤول في النظام؟": "Do you want to assign this teacher as an admin in the system?",
   "يجب إدخال رقم سري": "Password must be entered",
-  "هل أنت متأكد من حذف هذه المادة والمدرس؟": "Are you sure you want to delete this subject and teacher?"
+  "هل أنت متأكد من حذف هذه المادة والمدرس؟": "Are you sure you want to delete this subject and teacher?",
+  "اختر حسابك المفضل ليتم ربطه تلقائياً": "Choose your preferred account to link automatically",
+  "التسجيل بحساب Google": "Register with Google",
+  "التسجيل بحساب Facebook": "Register with Facebook",
+  "حساب Google": "Google Account",
+  "حساب Facebook": "Facebook Account",
+  "اختيار الحساب من الجهاز": "Choose Account from Device",
+  "أو الدخول التلقائي بحسابات الجهاز المرتبطة:": "Or auto-login with linked device accounts:",
+  "أو الدخول التلقائي بحسابات الجهاز المرتبطة": "Or auto-login with linked device accounts",
+  "هذا الحساب غير مسجل في المنصة. يرجى إنشاء حساب جديد أولاً.": "This account is not registered. Please create a new account first.",
+  "الجزء": "Juz",
+  "السورة": "Surah",
+  "اختر الجزء...": "Choose Juz...",
+  "اختر السورة...": "Choose Surah...",
+  "عرض جميع السور (114 سورة)": "View all Surahs (114 Surahs)",
+  "بيانات طلب الانضمام": "Join Application Details",
+  "إرسال طلب إنشاء الحساب للمسؤول": "Submit Account Creation Request to Admin",
+  "العودة للرئيسية": "Return to Home",
+  "العودة لشاشة الدخول": "Return to Login",
+  "تم التعرف على حسابك بنجاح! جاري الدخول...": "Account recognized successfully! Logging in..."
 }
   };
 
@@ -1233,6 +1252,32 @@
   var attributeNames = ['placeholder', 'title', 'aria-label', 'aria-description', 'alt', 'value'];
   var protectedTags = ['SCRIPT', 'STYLE', 'CODE', 'PRE', 'NOSCRIPT'];
   var arabicDigits = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+
+  var QURAN_PROTECTED_SELECTOR = [
+    'script', 'style', 'noscript', 'code', 'pre',
+    '[data-no-translate]', '[data-quran]',
+    '.quran-text', '.ayah', '.ayah-text', '.ayah-box', '.ayah-card',
+    '.surah-ayahs', '.quran-reader', '.quran-page', '.quran-container',
+    '.quran-verse', '.mushaf', '.uthmani', '.tajweed', '.hadith', '.dhikr',
+    '.thimar-ayah-frame', '.thimar-ayah-ref', '.thimar-footer .ayah',
+    '.thimar-footer .ref', '.thimar-footer-sidq', '.tuhfa-bayt',
+    '.arabic-font', '[dir="rtl"].font-quran'
+  ].join(',');
+
+  // Strictly identify any Quranic scripture text or marks
+  function isQuranicContent(text) {
+    if (!text || typeof text !== 'string') return false;
+    // Quran brackets ﴿ ... ﴾
+    if (text.indexOf('﴿') !== -1 || text.indexOf('﴾') !== -1) return true;
+    // Ayah end glyph: ۝ (\u06DD)
+    if (text.indexOf('\u06DD') !== -1 || text.indexOf('۝') !== -1) return true;
+    // Recitation marks and pause symbols (\u06D6 to \u06ED):
+    // ۖ ۗ ۚ ۛ ۜ ۞ ۟ ۠ ۡ ۢ ۣ ۤ ۥ ۦ ۧ ۨ ۩ ۪ ۫ ۬ ۭ
+    if (/[\u06D6-\u06ED]/.test(text)) return true;
+    // Rub el Hizb ۞ or Sajdah ۩
+    if (/[\u06DE\u06E9]/.test(text)) return true;
+    return false;
+  }
 
   function convertArabicDigits(str) {
     if (!str || typeof str !== 'string') return str;
@@ -1247,6 +1292,8 @@
     var el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
     if (!el) return false;
     if (protectedTags.indexOf(el.tagName) !== -1) return true;
+    if (el.closest && el.closest(QURAN_PROTECTED_SELECTOR)) return true;
+    if (node.nodeType === Node.TEXT_NODE && isQuranicContent(node.nodeValue)) return true;
     return false;
   }
 
@@ -1266,6 +1313,7 @@
   }
 
   var sortedEnKeys = null;
+  var sortedArKeys = null;
   function getSortedKeys(target) {
     if (target === 'en') {
       if (!sortedEnKeys) {
@@ -1273,53 +1321,83 @@
       }
       return sortedEnKeys;
     }
-    var dict = dictionaryFor(target);
-    return Object.keys(dict).sort(function (a, b) { return b.length - a.length; });
+    if (!sortedArKeys) {
+      var dict = dictionaryFor(target);
+      sortedArKeys = Object.keys(dict).sort(function (a, b) { return b.length - a.length; });
+    }
+    return sortedArKeys;
   }
+
+  // Fast translation cache
+  var translationCache = Object.create(null);
 
   function translate(value, target) {
     if (!value || typeof value !== 'string') return value;
     var targetLocale = target || locale;
-    var dict = dictionaryFor(targetLocale);
+    if (targetLocale === 'ar') {
+      if (/[\u0600-\u06FF]/.test(value)) return value;
+    }
 
+    // Never translate Quranic Verses!
+    if (isQuranicContent(value)) return value;
+
+    var cacheKey = targetLocale + ':' + value;
+    if (translationCache[cacheKey] !== undefined) {
+      return translationCache[cacheKey];
+    }
+
+    var dict = dictionaryFor(targetLocale);
     var text = value;
     if (targetLocale === 'en') {
       text = convertArabicDigits(text);
     }
 
     var trimmed = text.trim();
-    if (!trimmed) return text;
-
-    if (dict[trimmed]) {
-      return text.replace(trimmed, dict[trimmed]);
+    if (!trimmed) {
+      translationCache[cacheKey] = value;
+      return value;
     }
 
-    // Try stripping leading/trailing asterisks, colons, brackets
-    var punctMatch = trimmed.match(/^([*:•\-\s]*)(.*?)([*:•\-\s]*)$/);
+    // 1. Direct O(1) exact match
+    if (dict[trimmed]) {
+      var exactRes = text.replace(trimmed, dict[trimmed]);
+      translationCache[cacheKey] = exactRes;
+      return exactRes;
+    }
+
+    // 2. Strip surrounding punctuation/symbols/numbers/spaces
+    var punctMatch = trimmed.match(/^([*:•\-\s\d().،,–—\[\]]*)(.*?)([*:•\-\s\d().،,–—\[\]]*)$/);
     if (punctMatch && punctMatch[2] && punctMatch[2] !== trimmed) {
       var core = punctMatch[2];
       if (dict[core]) {
-        return text.replace(trimmed, punctMatch[1] + dict[core] + punctMatch[3]);
+        var punctRes = text.replace(trimmed, punctMatch[1] + dict[core] + punctMatch[3]);
+        translationCache[cacheKey] = punctRes;
+        return punctRes;
       }
     }
 
+    // 3. Selective phrase search (only check keys present in string)
     var result = text;
     var keys = getSortedKeys(targetLocale);
     for (var i = 0; i < keys.length; i++) {
       var key = keys[i];
-      if (result.indexOf(key) === -1) continue;
-      var repl = dict[key];
-      if (key.indexOf(' ') !== -1 || key.length > 4) {
-        result = result.split(key).join(repl);
-      } else {
-        try {
-          var re = new RegExp('(^|[^a-zA-Z0-9_؀-ۿ])' + escapeRegex(key) + '(?=[^a-zA-Z0-9_؀-ۿ]|$)', 'g');
-          result = result.replace(re, '$1' + repl);
-        } catch (e) {
+      if (key.length <= 1) continue;
+      if (result.indexOf(key) !== -1) {
+        var repl = dict[key];
+        if (key.indexOf(' ') !== -1 || key.length > 5) {
           result = result.split(key).join(repl);
+        } else {
+          try {
+            var re = new RegExp('(^|[^a-zA-Z0-9_؀-ۿ])' + escapeRegex(key) + '(?=[^a-zA-Z0-9_؀-ۿ]|$)', 'g');
+            result = result.replace(re, '$1' + repl);
+          } catch (e) {
+            result = result.split(key).join(repl);
+          }
         }
       }
     }
+
+    translationCache[cacheKey] = result;
     return result;
   }
 
@@ -1385,22 +1463,28 @@
 
   function apply(root) {
     if (!root) return;
-    document.documentElement.lang = locale;
-    document.documentElement.dir = locale === 'en' ? 'ltr' : 'rtl';
-    document.title = (locale === 'en') ? 'Thimar - Quran Memorization Platform' : 'ثمار - منصة حفظ القرآن الكريم';
+    if (isApplying) return;
+    isApplying = true;
+    try {
+      document.documentElement.lang = locale;
+      document.documentElement.dir = locale === 'en' ? 'ltr' : 'rtl';
+      document.title = (locale === 'en') ? 'Thimar - Quran Memorization Platform' : 'ثمار - منصة حفظ القرآن الكريم';
 
-    applyText(root);
-    applyAttributes(root);
+      applyText(root);
+      applyAttributes(root);
 
-    var button = document.getElementById('langToggleBtn');
-    if (button) {
-      button.textContent = locale === 'en' ? 'ع' : 'EN';
-      button.setAttribute('aria-label', locale === 'en' ? 'التبديل إلى العربية' : 'Switch to English');
+      var button = document.getElementById('langToggleBtn');
+      if (button) {
+        button.textContent = locale === 'en' ? 'ع' : 'EN';
+        button.setAttribute('aria-label', locale === 'en' ? 'التبديل إلى العربية' : 'Switch to English');
+      }
+      document.querySelectorAll('.country-search').forEach(function (search) {
+        search.placeholder = locale === 'en' ? 'Search countries' : 'بحث عن الدولة';
+        search.setAttribute('aria-label', locale === 'en' ? 'Search countries' : 'بحث عن الدولة');
+      });
+    } finally {
+      isApplying = false;
     }
-    document.querySelectorAll('.country-search').forEach(function (search) {
-      search.placeholder = locale === 'en' ? 'Search countries' : 'بحث عن الدولة';
-      search.setAttribute('aria-label', locale === 'en' ? 'Search countries' : 'بحث عن الدولة');
-    });
   }
 
   // Intercept window.alert, window.confirm, window.prompt
@@ -1500,11 +1584,16 @@
     var observer = new MutationObserver(function (records) {
       if (isApplying || locale === 'ar') return;
       records.forEach(function (record) {
+        if (isProtected(record.target)) return;
         if (record.type === 'characterData') {
-          scheduleApply(record.target.parentElement || document.body);
+          if (!isQuranicContent(record.target.nodeValue)) {
+            scheduleApply(record.target.parentElement || document.body);
+          }
         } else if (record.type === 'childList') {
           Array.prototype.forEach.call(record.addedNodes, function (added) {
+            if (isProtected(added)) return;
             if (added.nodeType === Node.ELEMENT_NODE || added.nodeType === Node.TEXT_NODE) {
+              if (added.nodeType === Node.TEXT_NODE && isQuranicContent(added.nodeValue)) return;
               scheduleApply(added.nodeType === Node.TEXT_NODE ? added.parentElement : added);
             }
           });

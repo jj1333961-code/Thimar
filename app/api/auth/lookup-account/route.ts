@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { joinRequestsDb, JoinRequest } from '@/lib/supabase/database'
+import { joinRequestsDb, JoinRequest, studentsDb, adminsDb } from '@/lib/supabase/database'
 import { adminDb } from '@/lib/firebase-admin'
 
 export const dynamic = 'force-dynamic'
@@ -11,6 +11,61 @@ export async function POST(request: NextRequest) {
 
     const cleanEmail = email ? String(email).trim().toLowerCase() : ''
     const cleanPhone = phone ? String(phone).replace(/\D/g, '') : ''
+
+    // 0. Check in studentsDb
+    try {
+      const allStudents = await studentsDb.getAll()
+      const studentMatch = allStudents.find((s: any) => {
+        const sEmail = (s.email || s.googleEmail || s.facebookEmail || '').trim().toLowerCase()
+        const sPhone = (s.phone || '').replace(/\D/g, '')
+        const pEmail = (s.parentEmail || s.parentGoogleEmail || '').trim().toLowerCase()
+        return (cleanEmail && (sEmail === cleanEmail || pEmail === cleanEmail)) ||
+               (cleanPhone && sPhone === cleanPhone)
+      })
+
+      if (studentMatch) {
+        return NextResponse.json({
+          found: true,
+          user: {
+            id: studentMatch.id,
+            name: studentMatch.name,
+            email: studentMatch.email,
+            phone: studentMatch.phone,
+            role: 'student',
+            status: 'approved',
+            identityCode: (studentMatch as any).nid || (studentMatch as any).identity_code || studentMatch.id,
+            provider: (studentMatch as any).provider || 'device',
+          }
+        })
+      }
+    } catch (e) {
+      console.warn('Error querying studentsDb:', e)
+    }
+
+    // 0.1 Check in adminsDb
+    try {
+      const allAdmins = await adminsDb.getAll()
+      const adminMatch = allAdmins.find((a: any) => {
+        const aEmail = (a.email || a.googleEmail || '').trim().toLowerCase()
+        return (cleanEmail && aEmail === cleanEmail)
+      })
+
+      if (adminMatch) {
+        return NextResponse.json({
+          found: true,
+          user: {
+            id: adminMatch.id,
+            name: adminMatch.name || 'مسؤول النظام',
+            email: adminMatch.email,
+            role: 'admin',
+            status: 'approved',
+            provider: 'device'
+          }
+        })
+      }
+    } catch (e) {
+      console.warn('Error querying adminsDb:', e)
+    }
 
     // 1. Check in join_requests via database abstraction
     try {
