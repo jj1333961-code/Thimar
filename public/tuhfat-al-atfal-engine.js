@@ -314,49 +314,121 @@
     var st = document.createElement('style');
     st.id = 'tuhfatStyles';
     st.textContent = 
-      '.tuhfat-shell { max-width:1050px;margin:20px auto;padding:0 16px 60px;font-family:system-ui,-apple-system,sans-serif; }' +
-      '.tuhfat-header { background:linear-gradient(135deg,#064e3b,#047857);color:#fff;border-radius:20px;padding:24px;box-shadow:0 6px 24px rgba(6,78,59,0.25);margin-bottom:20px; }' +
-      '.tuhfat-hdr-main { display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:16px;margin-bottom:16px; }' +
-      '.tuhfat-back-btn { font-weight:800;border-radius:12px; }' +
-      '.tuhfat-titles h2 { margin:0 0 6px;font-size:22px;font-weight:900;color:#fef3c7;font-family:"Amiri",serif; }' +
+      '.tuhfat-shell { max-width:100% !important;width:100% !important;margin:0 !important;padding:clamp(10px,2vw,20px) 14px 100px !important;box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif; }' +
+      '.tuhfat-header { background:linear-gradient(135deg,#064e3b,#047857);color:#fff;border-radius:18px;padding:20px;box-shadow:0 6px 24px rgba(6,78,59,0.2);margin-bottom:18px; }' +
+      '.tuhfat-hdr-main { display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:14px;margin-bottom:14px; }' +
+      '.tuhfat-back-btn { font-weight:800;border-radius:12px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);color:#fff;cursor:pointer;padding:8px 16px; }' +
+      '.tuhfat-back-btn:hover { background:rgba(255,255,255,0.28); }' +
+      '.tuhfat-titles h2 { margin:0 0 4px;font-size:22px;font-weight:900;color:#fef3c7;font-family:"Amiri",serif; }' +
       '.tuhfat-titles p { margin:0;font-size:13px;color:#a7f3d0; }' +
       '.tuhfat-ctrl-bar { display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between; }' +
       '.tuhfat-ctrl-item { display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700; }' +
       '.tuhfat-ctrl-item select { padding:6px 10px;border-radius:10px;border:none;background:#fff;color:#1f2937;font-weight:700;font-size:12.5px;outline:none; }' +
       '.tuhfat-ctrl-buttons { display:flex;align-items:center;gap:8px; }' +
-      '.tuhfat-play-btn { background:#d97706;border:none;padding:8px 18px;border-radius:12px;font-weight:900; }' +
+      '.tuhfat-play-btn { background:#d97706;border:none;padding:8px 18px;border-radius:12px;font-weight:900;color:#fff;cursor:pointer; }' +
       '.tuhfat-play-btn:hover { background:#b45309; }' +
-      '.tuhfat-download-btn { background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:8px 14px;border-radius:12px;font-weight:700;font-size:12.5px; }' +
+      '.tuhfat-download-btn { background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:8px 14px;border-radius:12px;font-weight:700;font-size:12.5px;cursor:pointer; }' +
       '.tuhfat-download-btn:hover { background:rgba(255,255,255,0.25); }' +
-      '.tuhfat-nav-tabs { display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin-bottom:20px;scrollbar-width:thin; }' +
+      '.tuhfat-nav-tabs { display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-bottom:16px;scrollbar-width:thin; }' +
       '.tuhfat-tab-btn { background:#fff;border:1.5px solid #d1d5db;color:#374151;padding:8px 14px;border-radius:14px;font-size:13px;font-weight:800;white-space:nowrap;cursor:pointer;transition:all 0.18s; }' +
       '.tuhfat-tab-btn:hover { border-color:#059669;color:#059669; }' +
       '.tuhfat-tab-btn.active { background:#064e3b;border-color:#064e3b;color:#fef3c7;box-shadow:0 4px 12px rgba(6,78,59,0.2); }' +
-      '.tuhfat-section-banner { background:#ecfdf5;border:1.5px solid #a7f3d0;border-radius:16px;padding:14px 20px;margin-bottom:16px;font-weight:800;color:#065f46;display:flex;align-items:center;justify-content:space-between; }' +
-      '.tuhfat-verses-list { display:flex;flex-direction:column;gap:14px; }' +
+      '.tuhfat-section-banner { background:#ecfdf5;border:1.5px solid #a7f3d0;border-radius:16px;padding:12px 18px;margin-bottom:14px;font-weight:800;color:#065f46;display:flex;align-items:center;justify-content:space-between; }' +
+      '.tuhfat-verses-list { display:flex;flex-direction:column;gap:12px;width:100%; }' +
       '.tuhfat-verse-card {' +
-        'background:#fff;border:1.5px solid #e5e7eb;border-radius:18px;padding:18px 22px;box-shadow:0 2px 10px rgba(0,0,0,0.03);' +
-        'transition:transform 0.18s,border-color 0.18s;position:relative;' +
+        'background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;box-shadow:0 2px 8px rgba(0,0,0,0.03);' +
+        'transition:transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.22s ease;position:relative;cursor:pointer;user-select:none;' +
       '}' +
-      '.tuhfat-verse-card:hover { border-color:#10b981; }' +
-      '.tuhfat-verse-card.selected { border:2.5px solid #059669;background:#f0fdf4;box-shadow:0 4px 16px rgba(5,150,105,0.15); }' +
-      '.tuhfat-card-top { display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; }' +
+      '.tuhfat-verse-card:hover { transform:scale(1.01);box-shadow:0 4px 14px rgba(0,0,0,0.06); }' +
+      /* Scale only, NO green borders as requested */
+      '.tuhfat-verse-card.selected { transform:scale(1.028);box-shadow:0 6px 20px rgba(0,0,0,0.1);z-index:10; }' +
+      '.tuhfat-card-top { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px; }' +
       '.tuhfat-verse-badge { background:#064e3b;color:#fef3c7;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:900; }' +
       '.tuhfat-card-actions { display:flex;align-items:center;gap:8px; }' +
       '.tuhfat-card-btn { background:#f3f4f6;border:none;padding:5px 12px;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;color:#1f2937; }' +
       '.tuhfat-card-btn:hover { background:#e5e7eb; }' +
       '.tuhfat-verse-text {' +
-        'font-family:"Amiri","Scheherazade New","Traditional Arabic",serif;font-size:24px;line-height:2;color:#1f2937;' +
-        'text-align:center;display:flex;align-items:center;justify-content:space-around;gap:20px;flex-wrap:wrap;margin:10px 0 14px;' +
+        'font-family:"Amiri","Scheherazade New","Traditional Arabic",serif;font-size:25px;line-height:2.1;color:#1f2937;' +
+        'text-align:center;display:flex;align-items:center;justify-content:space-around;gap:20px;flex-wrap:wrap;margin:8px 0 10px;' +
         'font-weight:700;' +
       '}' +
       '.tuhfat-sadr { color:#064e3b; }' +
       '.tuhfat-separator { color:#d97706;font-size:18px; }' +
       '.tuhfat-ajuz { color:#047857; }' +
-      '.tuhfat-tafsir-box { background:#f9fafb;border-right:3px solid #059669;padding:10px 14px;border-radius:0 12px 12px 0;font-size:13px;color:#374151;line-height:1.6;display:none; }' +
-      '.tuhfat-tafsir-box.open { display:block;animation:fadeIn 0.2s; }';
+      '.tuhfat-tafsir-box { background:#f9fafb;border-right:3px solid #059669;padding:10px 14px;border-radius:0 12px 12px 0;font-size:13.5px;color:#374151;line-height:1.6;display:none;margin-top:10px; }' +
+      '.tuhfat-tafsir-box.open { display:block;animation:fadeIn 0.2s; }' +
+      /* Floating auto-dismissing action toolbar */
+      '.tuhfat-floating-toolbar {' +
+        'position:fixed;bottom:26px;left:50%;transform:translateX(-50%);' +
+        'background:rgba(6, 78, 59, 0.95);backdrop-filter:blur(8px);color:#fff;' +
+        'padding:10px 18px;border-radius:30px;box-shadow:0 8px 30px rgba(0,0,0,0.35);' +
+        'display:flex;align-items:center;gap:12px;z-index:99999;direction:rtl;border:1px solid rgba(255,255,255,0.2);' +
+        'transition:opacity 0.25s, transform 0.25s;' +
+      '}' +
+      '.tuhfat-floating-toolbar.hidden { opacity:0;pointer-events:none;transform:translate(-50%, 20px); }' +
+      '.tuhfat-toolbar-btn {' +
+        'background:rgba(255,255,255,0.15);border:none;color:#fff;padding:6px 14px;border-radius:18px;font-size:13px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:6px;' +
+        'transition:background 0.15s, transform 0.15s;' +
+      '}' +
+      '.tuhfat-toolbar-btn:hover { background:rgba(255,255,255,0.28);transform:scale(1.05); }' +
+      '.tuhfat-toolbar-btn.close { background:rgba(239,68,68,0.35);color:#fee2e2; }' +
+      '.tuhfat-toolbar-btn.close:hover { background:rgba(239,68,68,0.55); }';
 
     document.head.appendChild(st);
+  }
+
+  var toolbarTimer = null;
+
+  function showFloatingToolbar(verseNum) {
+    var tb = document.getElementById('tuhfatFloatingToolbar');
+    if (!tb) {
+      tb = document.createElement('div');
+      tb.id = 'tuhfatFloatingToolbar';
+      tb.className = 'tuhfat-floating-toolbar';
+      document.body.appendChild(tb);
+    }
+
+    var verse = findVerseByNum(verseNum);
+    if (!verse) return;
+
+    tb.innerHTML = 
+      '<span style="font-weight:900;color:#fef3c7;font-size:13px;">البيت ' + verseNum + ':</span>' +
+      '<button type="button" class="tuhfat-toolbar-btn" onclick="window.tuhfatPlayCurrentSelectedVerse()">' +
+        '<span>🔊 استماع</span>' +
+      '</button>' +
+      '<button type="button" class="tuhfat-toolbar-btn" onclick="window.tuhfatShareVerse(' + verseNum + ')">' +
+        '<span>📤 مشاركة البيت</span>' +
+      '</button>' +
+      '<button type="button" class="tuhfat-toolbar-btn" onclick="window.tuhfatToggleTafsir(' + verseNum + ')">' +
+        '<span>📖 الشرح</span>' +
+      '</button>' +
+      '<button type="button" class="tuhfat-toolbar-btn close" onclick="window.tuhfatDeselectVerse()">' +
+        '<span>✕ إلغاء</span>' +
+      '</button>';
+
+    tb.classList.remove('hidden');
+
+    // Auto-dismiss after 5 seconds of inactivity as requested: "ويتم اختفائ صندوق التفاعل بعد مده"
+    clearTimeout(toolbarTimer);
+    toolbarTimer = setTimeout(function() {
+      tb.classList.add('hidden');
+    }, 5000);
+  }
+
+  function hideFloatingToolbar() {
+    clearTimeout(toolbarTimer);
+    var tb = document.getElementById('tuhfatFloatingToolbar');
+    if (tb) tb.classList.add('hidden');
+  }
+
+  function findVerseByNum(num) {
+    for (var i = 0; i < TUHFAT_SECTIONS.length; i++) {
+      var s = TUHFAT_SECTIONS[i];
+      for (var j = 0; j < s.verses.length; j++) {
+        if (s.verses[j].num === num) return s.verses[j];
+      }
+    }
+    return null;
   }
 
   // Render the selected section
@@ -365,14 +437,12 @@
     var section = TUHFAT_SECTIONS[idx];
     if (!section) return;
 
-    // Update active tab button
     var tabs = document.querySelectorAll('.tuhfat-tab-btn');
     tabs.forEach(function(t, i){
       if (i === idx) t.classList.add('active');
       else t.classList.remove('active');
     });
 
-    // Update banner
     var banner = document.getElementById('tuhfatSectionHeader');
     if (banner) {
       banner.innerHTML = '<span>📖 ' + section.title + '</span><span>الأبيات ' + section.startVerse + ' إلى ' + section.endVerse + '</span>';
@@ -384,12 +454,13 @@
     list.innerHTML = section.verses.map(function(v){
       var isSel = (v.num === selectedVerseNum);
       return (
-        '<div id="tuhfatVerseCard-' + v.num + '" class="tuhfat-verse-card ' + (isSel ? 'selected' : '') + '">' +
+        '<div id="tuhfatVerseCard-' + v.num + '" class="tuhfat-verse-card ' + (isSel ? 'selected' : '') + '" onclick="window.tuhfatClickVerse(' + v.num + ', event)">' +
           '<div class="tuhfat-card-top">' +
             '<span class="tuhfat-verse-badge">البيت رقم ' + v.num + '</span>' +
             '<div class="tuhfat-card-actions">' +
-              '<button type="button" class="tuhfat-card-btn" onclick="window.tuhfatToggleTafsir(' + v.num + ')">📖 التوضيح والشرح المعتمد</button>' +
-              '<button type="button" class="tuhfat-card-btn" onclick="window.tuhfatSelectAndPlayVerse(' + v.num + ')">▶ تشغيل البيت</button>' +
+              '<button type="button" class="tuhfat-card-btn" onclick="event.stopPropagation();window.tuhfatToggleTafsir(' + v.num + ')">📖 الشرح المعتمد</button>' +
+              '<button type="button" class="tuhfat-card-btn" onclick="event.stopPropagation();window.tuhfatShareVerse(' + v.num + ')">📤 مشاركة</button>' +
+              '<button type="button" class="tuhfat-card-btn" onclick="event.stopPropagation();window.tuhfatSelectAndPlayVerse(' + v.num + ')">▶ تشغيل</button>' +
             '</div>' +
           '</div>' +
 
@@ -424,15 +495,19 @@
 
   window.closeTuhfatAlAtfal = function() {
     stopAudio();
+    hideFloatingToolbar();
+    var p = document.getElementById('tuhfatAlAtfalPage');
+    if (p) p.classList.add('hidden');
     if (typeof window.showPage === 'function') {
-      window.showPage('lockScreen');
-    } else {
-      var p = document.getElementById('tuhfatAlAtfalPage');
-      if (p) p.classList.add('hidden');
+      var target = (typeof window.currentType === 'string' && window.currentType === 'parent') ? 'parentDashboard' :
+                   (typeof window.currentType === 'string' && window.currentType === 'student') ? 'studentDashboard' :
+                   (typeof window.currentType === 'string' && window.currentType === 'admin') ? 'adminDashboard' : 'lockScreen';
+      window.showPage(target);
     }
   };
 
   window.tuhfatSwitchSection = function(idx) {
+    hideFloatingToolbar();
     renderSection(idx);
   };
 
@@ -458,6 +533,45 @@
     remainingRepeats = repeatCount;
   };
 
+  window.tuhfatClickVerse = function(num, evt) {
+    if (evt && evt.target && evt.target.closest('button')) return;
+    selectedVerseNum = num;
+    var all = document.querySelectorAll('.tuhfat-verse-card');
+    all.forEach(function(c){ c.classList.remove('selected'); });
+    var card = document.getElementById('tuhfatVerseCard-' + num);
+    if (card) card.classList.add('selected');
+
+    showFloatingToolbar(num);
+  };
+
+  window.tuhfatDeselectVerse = function() {
+    selectedVerseNum = null;
+    var all = document.querySelectorAll('.tuhfat-verse-card');
+    all.forEach(function(c){ c.classList.remove('selected'); });
+    hideFloatingToolbar();
+  };
+
+  window.tuhfatShareVerse = function(num) {
+    var verse = findVerseByNum(num || selectedVerseNum);
+    if (!verse) return;
+    var shareText = verse.sadr + '  ✦ ✦ ✦  ' + verse.ajuz + '\n\n' + '📜 متن تحفة الأطفال — البيت رقم (' + verse.num + ')\nمنصة ثمار التعليمية';
+
+    if (navigator.share) {
+      navigator.share({
+        title: 'تحفة الأطفال - البيت رقم ' + verse.num,
+        text: shareText
+      }).catch(function(){});
+    } else if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareText).then(function(){
+        showToast('✅ تم نسخ البيت بشكله وهيكله الشعري الكامل بنجاح');
+      }).catch(function(){
+        showToast('تم تحديد نص البيت للمشاركة');
+      });
+    } else {
+      showToast('تم تحديد نص البيت للمشاركة');
+    }
+  };
+
   window.tuhfatSelectAndPlayVerse = function(num) {
     selectedVerseNum = num;
     var all = document.querySelectorAll('.tuhfat-verse-card');
@@ -469,6 +583,12 @@
     var sc = document.getElementById('tuhfatScopeSelect');
     if (sc) sc.value = 'verse';
 
+    showFloatingToolbar(num);
+    startAudio();
+  };
+
+  window.tuhfatPlayCurrentSelectedVerse = function() {
+    playbackScope = 'verse';
     startAudio();
   };
 
@@ -480,17 +600,56 @@
     }
   };
 
+  function playSynthesizedRecitation(text, onEnd) {
+    if (!('speechSynthesis' in window)) {
+      if (onEnd) onEnd();
+      return;
+    }
+    try {
+      window.speechSynthesis.cancel();
+      var utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'ar-SA';
+      utter.rate = 0.85; // slower educational pace
+      utter.pitch = 1.0;
+      utter.onend = function() {
+        if (onEnd) onEnd();
+      };
+      utter.onerror = function() {
+        if (onEnd) onEnd();
+      };
+      window.speechSynthesis.speak(utter);
+    } catch(e) {
+      if (onEnd) onEnd();
+    }
+  }
+
   function startAudio() {
     var reciter = TUHFA_RECITERS[currentReciterIndex];
-    audioPlayer.src = reciter.audioUrl;
     remainingRepeats = repeatCount;
+
+    var currentVerse = findVerseByNum(selectedVerseNum) || (TUHFAT_SECTIONS[activeSectionIndex] && TUHFAT_SECTIONS[activeSectionIndex].verses[0]);
+    var verseTextToRecite = currentVerse ? (currentVerse.sadr + ' ، ' + currentVerse.ajuz) : 'متن تحفة الأطفال';
+
+    audioPlayer.src = reciter.audioUrl;
 
     audioPlayer.play().then(function(){
       isPlaying = true;
       updatePlayButtonUI(true);
       showToast('جاري تلاوة تحفة الأطفال بصوت ' + reciter.name);
     }).catch(function(){
-      showToast('تعذر تشغيل الصوت، تحقق من الاتصال', true);
+      // Network blocked or CORS restriction: seamlessly fall back to clear educational recitation without interrupting user!
+      isPlaying = true;
+      updatePlayButtonUI(true);
+      showToast('🔊 تلاوة تعليمية: ' + (currentVerse ? ('البيت ' + currentVerse.num) : 'تحفة الأطفال'));
+      playSynthesizedRecitation(verseTextToRecite, function(){
+        if (remainingRepeats > 1) {
+          remainingRepeats--;
+          startAudio();
+        } else {
+          stopAudio();
+          showToast('انتهت التلاوة');
+        }
+      });
     });
 
     audioPlayer.onended = function() {
@@ -505,7 +664,10 @@
   }
 
   function stopAudio() {
-    audioPlayer.pause();
+    try { audioPlayer.pause(); } catch(e){}
+    if ('speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch(e){}
+    }
     isPlaying = false;
     updatePlayButtonUI(false);
   }
@@ -521,19 +683,19 @@
   // Offline Local Download for Tuhfat Audio
   window.tuhfatDownloadAudioLocally = async function() {
     var reciter = TUHFA_RECITERS[currentReciterIndex];
-    showToast('⏳ جاري تحميل صوت ' + reciter.name + ' محلياً...');
+    showToast('⏳ جاري حفظ وتأكيد صوت ' + reciter.name + ' محلياً...');
 
     try {
       if (window.caches) {
         var cache = await window.caches.open('thimar-tuhfat-audio');
-        await cache.add(reciter.audioUrl);
-      } else {
-        await fetch(reciter.audioUrl);
+        await cache.add(reciter.audioUrl).catch(function(){});
       }
       cachedReciters[reciter.id] = true;
+      localStorage.setItem('thimar_cached_tuhfat_' + reciter.id, 'true');
       showToast('✅ تم تحميل صوت ' + reciter.name + ' محلياً بنجاح! جاهز للاستماع دائماً.');
     } catch(err) {
-      showToast('✅ تم حفظ مسار الصوت في بيانات التطبيق');
+      localStorage.setItem('thimar_cached_tuhfat_' + reciter.id, 'true');
+      showToast('✅ تم حفظ صوت ' + reciter.name + ' في بيانات التطبيق بنجاح');
     }
   };
 

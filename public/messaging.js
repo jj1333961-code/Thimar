@@ -354,15 +354,8 @@
       return '<article class="messenger-bubble '+(sent ? 'sent' : 'received')+'">'+senderLabel+(message.text ? '<p>'+esc(message.text)+'</p>' : '')+voiceAudioHTML(message)+attachmentHTML(message, role)+'<time>'+esc(message.time || "")+'</time></article>';
     }).join("") : '<div class="messenger-empty">لا توجد رسائل بعد. ابدأ المحادثة الآن.</div>';
 
-    // Group Header Controls
+    // Group Creator Check
     var isCreator = contact.isGroup && (contact.creatorId === me.id || (me.ids && me.ids.indexOf(String(contact.creatorId)) >= 0));
-    var groupHeaderActions = "";
-    if (contact.isGroup) {
-      groupHeaderActions = '<div class="messenger-group-actions-bar">' +
-        (isCreator ? '<button type="button" class="messenger-group-btn" style="background:#059669;color:#fff;" data-group-action="add-member" data-group-id="'+esc(contact.id)+'" title="إضافة عضو للجروب">➕ إضافة عضو</button><button type="button" class="messenger-group-btn" style="background:#dc2626;color:#fff;" data-group-action="delete-group" data-group-id="'+esc(contact.id)+'" title="حذف الجروب بالكامل">🗑️ حذف</button>' : '') +
-        '<button type="button" class="messenger-group-btn" style="background:#d97706;color:#fff;" data-group-action="leave-group" data-group-id="'+esc(contact.id)+'" title="مغادرة الجروب">🚪 مغادرة</button>' +
-        '</div>';
-    }
 
     // Applicant Status Banner for Admin
     var applicantBanner = "";
@@ -379,11 +372,44 @@
     var avatarIcon = contact.isGroup ? "👥" : (contact.role === "applicant" ? "⏳" : esc(contact.name.charAt(0)));
     var avatarStyle = contact.isGroup ? ' style="background:#4f46e5;"' : (contact.role === "applicant" ? ' style="background:#d97706;"' : '');
 
+    var groupMenuHtml = "";
+    if (contact.isGroup) {
+      groupMenuHtml = 
+        '<div class="messenger-group-menu-wrap">' +
+          '<button type="button" class="messenger-dots-btn" id="groupMenuTriggerBtn" title="خيارات المجموعة">' +
+            '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">' +
+              '<circle cx="12" cy="5" r="2.2"></circle>' +
+              '<circle cx="12" cy="12" r="2.2"></circle>' +
+              '<circle cx="12" cy="19" r="2.2"></circle>' +
+            '</svg>' +
+          '</button>' +
+          '<div class="messenger-dots-dropdown" id="groupMenuDropdown">' +
+            '<button type="button" class="messenger-dots-item" data-group-action="info" data-group-id="'+esc(contact.id)+'">' +
+              '<span>👥</span><span>معلومات المجموعة ('+((contact.members || []).length)+' أعضاء)</span>' +
+            '</button>' +
+            '<button type="button" class="messenger-dots-item" data-group-action="add-member" data-group-id="'+esc(contact.id)+'">' +
+              '<span>➕</span><span>إضافة أعضاء للمجموعة</span>' +
+            '</button>' +
+            '<button type="button" class="messenger-dots-item" data-group-action="clear-chat" data-group-id="'+esc(contact.id)+'">' +
+              '<span>🧹</span><span>مسح محتوى المحادثة</span>' +
+            '</button>' +
+            '<div class="messenger-dots-divider"></div>' +
+            '<button type="button" class="messenger-dots-item text-warning" data-group-action="leave-group" data-group-id="'+esc(contact.id)+'">' +
+              '<span>🚪</span><span>مغادرة المجموعة</span>' +
+            '</button>' +
+            (isCreator ? 
+              '<button type="button" class="messenger-dots-item text-danger" data-group-action="delete-group" data-group-id="'+esc(contact.id)+'">' +
+                '<span>🗑️</span><span>حذف المجموعة نهائياً</span>' +
+              '</button>' : '') +
+          '</div>' +
+        '</div>';
+    }
+
     return '<header class="messenger-chat-head">' +
       '<div class="messenger-chat-head-user">' +
         '<button type="button" class="messenger-back" aria-label="العودة إلى المحادثات">رجوع</button>' +
         '<span class="messenger-avatar"'+avatarStyle+' aria-hidden="true">'+avatarIcon+'</span>' +
-        '<div><strong>'+esc(contact.name)+'</strong><div class="messenger-contact-role">'+esc(contact.subtitle)+'</div>'+groupHeaderActions+'</div>' +
+        '<div><strong>'+esc(contact.name)+'</strong><div class="messenger-contact-role">'+esc(contact.subtitle)+'</div></div>' +
       '</div>' +
       '<div class="messenger-call-tools">' +
         '<button type="button" class="messenger-call-btn" data-call-type="video" title="بدء مكالمة فيديو">' +
@@ -392,6 +418,7 @@
         '<button type="button" class="messenger-call-btn" data-call-type="audio" title="بدء مكالمة هاتفية">' +
           '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>' +
         '</button>' +
+        groupMenuHtml +
       '</div>' +
       '</header>' +
       applicantBanner +
@@ -445,14 +472,63 @@
 
     var callDurationSeconds = 0;
     var timerInterval = null;
+    var ringInterval = null;
+    var noAnswerTimeout = null;
+    var ringingTimeout = null;
     var localStream = null;
     var isMuted = false;
     var isCameraOff = false;
+    var callState = "calling"; // 'calling', 'ringing', 'connected', 'busy', 'no_answer', 'ended'
+
+    // Web Audio Tone Generator for Ringing / Busy sounds
+    var audioCtx = null;
+    try {
+      var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) audioCtx = new AudioContextClass();
+    } catch(e){}
+
+    function playTone(freq, duration, type) {
+      if (!audioCtx) return;
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.type = type || 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(err){}
+    }
+
+    function startRingingSound() {
+      // Ring tone every 3 seconds (two gentle chimes)
+      playTone(440, 0.4);
+      setTimeout(function(){ playTone(480, 0.6); }, 200);
+      ringInterval = setInterval(function(){
+        if (callState !== 'calling' && callState !== 'ringing') {
+          clearInterval(ringInterval);
+          return;
+        }
+        playTone(440, 0.4);
+        setTimeout(function(){ playTone(480, 0.6); }, 200);
+      }, 3000);
+    }
+
+    function playBusySound() {
+      if (ringInterval) clearInterval(ringInterval);
+      for (var i = 0; i < 3; i++) {
+        setTimeout(function(){ playTone(480, 0.25, 'triangle'); }, i * 350);
+      }
+    }
 
     modalBackdrop.innerHTML = '<div class="messenger-call-screen">' +
       '<div style="font-size:0.9rem;opacity:0.85;margin-bottom:8px;">' + (isVideo ? '📹 مكالمة فيديو' : '📞 مكالمة صوتية') + '</div>' +
       '<h3 style="margin:0 0 4px;font-size:1.3rem;">' + esc(contact.name) + '</h3>' +
-      '<div id="callStatusText" style="font-size:0.88rem;color:#6ee7b7;margin-bottom:14px;">جارٍ الاتصال...</div>' +
+      '<div id="callStatusText" style="font-size:0.9rem;color:#6ee7b7;margin-bottom:14px;font-weight:700;">جارٍ الاتصال بالشبكة...</div>' +
       (isVideo ?
         '<div class="messenger-call-video-container">' +
           '<div style="width:100%;height:100%;display:grid;place-items:center;background:#062319;">' +
@@ -463,6 +539,11 @@
         :
         '<div class="messenger-call-avatar">' + esc(contact.name.charAt(0)) + '</div>'
       ) +
+      '<div id="callSimulateBox" style="margin:12px 0 16px;">' +
+        '<button type="button" id="callAnswerSimBtn" style="background:#059669;color:#fff;border:none;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;">' +
+          '📞 محاكاة رد ' + esc(contact.name) + ' (بدء التحدث)' +
+        '</button>' +
+      '</div>' +
       '<div class="messenger-call-controls">' +
         '<button type="button" class="messenger-call-action-btn" id="callMuteBtn" style="background:#1e3a30;color:#fff;" title="كتم الصوت">🎙️</button>' +
         (isVideo ? '<button type="button" class="messenger-call-action-btn" id="callCamBtn" style="background:#1e3a30;color:#fff;" title="إيقاف الكاميرا">📷</button>' : '') +
@@ -478,7 +559,7 @@
       return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec;
     }
 
-    // Try camera access
+    // Try camera/audio access
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true }).then(function (stream) {
         localStream = stream;
@@ -489,22 +570,73 @@
       }).catch(function () {});
     }
 
-    // Simulate connection after 2 seconds
-    var connectTimeout = setTimeout(function () {
+    // Progression: calling -> ringing -> no-answer
+    startRingingSound();
+
+    ringingTimeout = setTimeout(function () {
+      if (callState === "calling") {
+        callState = "ringing";
+        var statusEl = document.getElementById("callStatusText");
+        if (statusEl) {
+          statusEl.textContent = "🔔 يرن الآن لدى " + contact.name + "...";
+          statusEl.style.color = "#a7f3d0";
+        }
+      }
+    }, 1800);
+
+    // If 14 seconds pass without answer: marked as No Answer (فائتة)
+    noAnswerTimeout = setTimeout(function () {
+      if (callState === "calling" || callState === "ringing") {
+        callState = "no_answer";
+        if (ringInterval) clearInterval(ringInterval);
+        playBusySound();
+        var statusEl = document.getElementById("callStatusText");
+        if (statusEl) {
+          statusEl.textContent = "📵 لم يتم الرد — المستخدم غير متاح حالياً";
+          statusEl.style.color = "#f87171";
+        }
+        var simBox = document.getElementById("callSimulateBox");
+        if (simBox) simBox.style.display = "none";
+
+        setTimeout(function(){
+          closeAndLogCall("لم يتم الرد (مكالمة فائتة)");
+        }, 2200);
+      }
+    }, 14000);
+
+    // Simulate answering the call
+    function connectCall() {
+      if (callState === "connected" || callState === "busy" || callState === "no_answer") return;
+      callState = "connected";
+      clearTimeout(noAnswerTimeout);
+      clearTimeout(ringingTimeout);
+      if (ringInterval) clearInterval(ringInterval);
+
+      var simBox = document.getElementById("callSimulateBox");
+      if (simBox) simBox.style.display = "none";
+
       var statusEl = document.getElementById("callStatusText");
       if (statusEl) {
-        statusEl.textContent = "متصل — 00:00";
+        statusEl.textContent = "متصل الآن — 00:00";
         statusEl.style.color = "#34d399";
       }
+
       timerInterval = setInterval(function () {
         callDurationSeconds++;
         var el = document.getElementById("callStatusText");
-        if (el) el.textContent = "متصل — " + formatTime(callDurationSeconds);
+        if (el) el.textContent = "متصل الآن — " + formatTime(callDurationSeconds);
       }, 1000);
-    }, 2000);
+    }
 
-    function cleanupCall() {
-      clearTimeout(connectTimeout);
+    var answerBtn = document.getElementById("callAnswerSimBtn");
+    if (answerBtn) {
+      answerBtn.addEventListener("click", connectCall);
+    }
+
+    function closeAndLogCall(customReason) {
+      clearTimeout(noAnswerTimeout);
+      clearTimeout(ringingTimeout);
+      if (ringInterval) clearInterval(ringInterval);
       if (timerInterval) clearInterval(timerInterval);
       if (localStream) {
         localStream.getTracks().forEach(function (t) { t.stop(); });
@@ -513,7 +645,15 @@
 
       // Log call into messages thread
       var me = actor(role);
-      var durationMsg = callDurationSeconds > 0 ? " (المدة: " + formatTime(callDurationSeconds) + ")" : " (لم يتم الرد)";
+      var textDetail = "";
+      if (customReason) {
+        textDetail = customReason;
+      } else if (callDurationSeconds > 0) {
+        textDetail = "(المدة: " + formatTime(callDurationSeconds) + ")";
+      } else {
+        textDetail = "لم يُرد عليها (الطرف الآخر مشغول)";
+      }
+
       var callLog = {
         id: "call-" + Date.now(),
         senderRole: me.role,
@@ -522,7 +662,7 @@
         recipientRole: contact.role,
         recipientId: contact.id,
         groupId: contact.isGroup ? contact.id : undefined,
-        text: (isVideo ? "📹 مكالمة فيديو " : "📞 مكالمة صوتية ") + durationMsg,
+        text: (isVideo ? "📹 مكالمة فيديو " : "📞 مكالمة صوتية ") + textDetail,
         time: new Date().toLocaleString("ar-EG"),
         read: true
       };
@@ -532,7 +672,32 @@
       render(role);
     }
 
-    document.getElementById("callEndBtn").addEventListener("click", cleanupCall);
+    function handleEndCallClick() {
+      if (callState === "calling" || callState === "ringing") {
+        // User hung up while ringing: play busy tone and show busy state as requested!
+        callState = "busy";
+        clearTimeout(noAnswerTimeout);
+        clearTimeout(ringingTimeout);
+        if (ringInterval) clearInterval(ringInterval);
+        playBusySound();
+
+        var statusEl = document.getElementById("callStatusText");
+        if (statusEl) {
+          statusEl.textContent = "📵 تم إنهاء المكالمة — الطرف الآخر مشغول";
+          statusEl.style.color = "#fbbf24";
+        }
+        var simBox = document.getElementById("callSimulateBox");
+        if (simBox) simBox.style.display = "none";
+
+        setTimeout(function(){
+          closeAndLogCall("لم يُرد عليها (الطرف الآخر مشغول)");
+        }, 1500);
+      } else {
+        closeAndLogCall();
+      }
+    }
+
+    document.getElementById("callEndBtn").addEventListener("click", handleEndCallClick);
 
     var muteBtn = document.getElementById("callMuteBtn");
     if (muteBtn) {
@@ -740,39 +905,83 @@
       }
 
       var students = getData("students") || [];
-      var found = students.find(function (s) {
-        return (s.username && s.username.toLowerCase() === val.toLowerCase()) ||
-               (s.national && s.national === val) ||
-               (s.name && s.name.toLowerCase() === val.toLowerCase());
+      var parents = getData("parents") || [];
+      var allRegisteredUsers = [];
+
+      students.forEach(function(s) {
+        allRegisteredUsers.push({
+          id: String(s.id),
+          role: "student",
+          name: s.name,
+          username: s.username || "",
+          national: s.national || "",
+          subtitle: "طالب مسجل"
+        });
       });
 
-      var friendData = null;
-      if (found) {
-        friendData = {
-          id: String(found.id),
-          role: "student",
-          name: found.name,
-          username: found.username || found.national || found.name,
-          national: found.national || "",
-          ownerId: me.id
-        };
-      } else {
-        // Direct addition with entered handle
-        friendData = {
-          id: "usr-" + val.replace(/\s+/g, "_"),
-          role: "student",
-          name: val,
-          username: val,
-          national: val,
-          ownerId: me.id
-        };
+      parents.forEach(function(p) {
+        allRegisteredUsers.push({
+          id: String(p.id),
+          role: "parent",
+          name: p.name,
+          username: p.username || "",
+          national: p.national || "",
+          subtitle: "ولي أمر مسجل"
+        });
+      });
+
+      var q = val.toLowerCase();
+      var found = allRegisteredUsers.find(function (u) {
+        return (u.username && u.username.toLowerCase() === q) ||
+               (u.national && u.national === val) ||
+               (u.name && u.name.toLowerCase() === q) ||
+               (u.id === val);
+      });
+
+      if (!found) {
+        showToast("❌ هذا المستخدم غير مسجل في تطبيق ثمار", "error");
+        var fb = document.getElementById("addFriendFeedback");
+        if (fb) {
+          fb.innerHTML = '<div style="color:#ef4444;font-size:0.86rem;margin-top:10px;padding:8px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-weight:700;">' +
+            '❌ هذا المستخدم غير مسجل في تطبيق ثمار. يرجى التأكد من اسم المستخدم أو رقم الهوية المسجل به في التطبيق.' +
+          '</div>';
+        }
+        return;
       }
 
-      var custom = getData("custom_contacts") || [];
-      if (!custom.some(function (c) { return c.ownerId === me.id && String(c.id) === String(friendData.id); })) {
-        custom.push(friendData);
-        setData("custom_contacts", custom);
+      if (String(found.id) === String(me.id) || (me.ids && me.ids.indexOf(String(found.id)) >= 0)) {
+        showToast("⚠️ لا يمكنك إضافة حسابك الخاص كصديق في المحادثات", "error");
+        return;
       }
+
+      var friendData = {
+        id: String(found.id),
+        role: found.role,
+        name: found.name,
+        username: found.username || found.national || found.name,
+        national: found.national || "",
+        subtitle: found.subtitle,
+        ownerId: String(me.id)
+      };
+
+      var custom = getData("custom_contacts") || [];
+      // Add for me
+      if (!custom.some(function (c) { return String(c.ownerId) === String(me.id) && String(c.id) === String(friendData.id); })) {
+        custom.push(friendData);
+      }
+      // Add for the other user (bidirectional real chat relation)
+      if (!custom.some(function (c) { return String(c.ownerId) === String(friendData.id) && String(c.id) === String(me.id); })) {
+        custom.push({
+          id: String(me.id),
+          role: me.role,
+          name: me.name,
+          username: me.username || me.name,
+          national: me.national || "",
+          subtitle: "صديق مسجل (" + me.name + ")",
+          ownerId: String(friendData.id)
+        });
+      }
+      setData("custom_contacts", custom);
 
       close();
       activeContact[role] = {
@@ -782,7 +991,7 @@
         subtitle: "صديق (" + friendData.username + ")"
       };
       render(role);
-      showToast("تمت إضافة الصديق بنجاح إلى قائمة المحادثات", "success");
+      showToast("✅ تم العثور على الصديق المسجل بنجاح وإضافته للمحادثات", "success");
     });
   }
 
@@ -867,6 +1076,49 @@
       }
       render(role);
       showToast("تمت إضافة الأعضاء بنجاح!", "success");
+    });
+  }
+
+  // Modal: Group Info & Members List
+  function openGroupInfoModal(group) {
+    var modalBackdrop = document.createElement("div");
+    modalBackdrop.className = "messenger-modal-backdrop";
+
+    var membersListHtml = (group.members || []).map(function (m) {
+      var isAdm = (String(m.id) === String(group.creatorId));
+      return '<li style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);">' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<span style="width:34px;height:34px;border-radius:50%;background:#e0e7ff;color:#4338ca;display:inline-grid;place-items:center;font-weight:800;font-size:14px;">' + esc(m.name.charAt(0)) + '</span>' +
+          '<div><strong>' + esc(m.name) + '</strong><div style="font-size:0.75rem;color:var(--text-light);">' + (m.role === 'admin' ? 'إدارة' : (m.role === 'parent' ? 'ولي أمر' : 'طالب')) + '</div></div>' +
+        '</div>' +
+        (isAdm ? '<span style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:2px 8px;border-radius:12px;font-size:0.75rem;font-weight:700;">مشرف المجموعة</span>' : '') +
+      '</li>';
+    }).join("");
+
+    modalBackdrop.innerHTML = '<div class="messenger-modal-dialog">' +
+      '<div class="messenger-modal-head">' +
+        '<h4>👥 معلومات المجموعة</h4>' +
+        '<button type="button" class="messenger-modal-close" id="closeGroupInfo">×</button>' +
+      '</div>' +
+      '<div class="messenger-modal-body">' +
+        '<div style="text-align:center;padding:12px 0 16px;border-bottom:1px solid var(--border);">' +
+          '<div style="width:64px;height:64px;border-radius:50%;background:#4f46e5;color:#fff;display:inline-grid;place-items:center;font-size:26px;margin-bottom:8px;">👥</div>' +
+          '<h3 style="margin:0 0 4px;font-size:1.2rem;">' + esc(group.name) + '</h3>' +
+          '<p style="margin:0;font-size:0.85rem;color:var(--text-light);">' + esc(group.desc || "مجموعة تواصل تفاعلية") + '</p>' +
+          '<div style="font-size:0.8rem;color:var(--text-light);margin-top:6px;">تم الإنشاء بتاريخ: ' + esc(group.createdAt || "حديثاً") + '</div>' +
+        '</div>' +
+        '<div style="margin-top:14px;">' +
+          '<h5 style="margin:0 0 8px;font-size:0.9rem;">قائمة الأعضاء (' + ((group.members || []).length) + ' عضو):</h5>' +
+          '<ul style="list-style:none;padding:0;margin:0;max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;">' +
+            membersListHtml +
+          '</ul>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+    document.body.appendChild(modalBackdrop);
+    modalBackdrop.querySelector("#closeGroupInfo").addEventListener("click", function () {
+      if (modalBackdrop.parentNode) modalBackdrop.parentNode.removeChild(modalBackdrop);
     });
   }
 
@@ -1002,9 +1254,25 @@
       });
     });
 
-    // Group action buttons
+    // WhatsApp 3-dots dropdown menu for groups
+    var groupMenuTrigger = host.querySelector("#groupMenuTriggerBtn");
+    var groupMenuDropdown = host.querySelector("#groupMenuDropdown");
+    if (groupMenuTrigger && groupMenuDropdown) {
+      groupMenuTrigger.addEventListener("click", function (e) {
+        e.stopPropagation();
+        groupMenuDropdown.classList.toggle("show");
+      });
+      document.addEventListener("click", function (e) {
+        if (!e.target.closest(".messenger-group-menu-wrap")) {
+          groupMenuDropdown.classList.remove("show");
+        }
+      });
+    }
+
+    // Group action items from 3-dots menu
     host.querySelectorAll("[data-group-action]").forEach(function (btn) {
       btn.addEventListener("click", function () {
+        if (groupMenuDropdown) groupMenuDropdown.classList.remove("show");
         var action = btn.dataset.groupAction;
         var groupId = btn.dataset.groupId;
         var me = actor(role);
@@ -1012,27 +1280,45 @@
         var group = groups.find(function (g) { return String(g.id) === String(groupId); });
         if (!group) return;
 
-        if (action === "add-member") {
+        if (action === "info") {
+          openGroupInfoModal(group);
+        } else if (action === "add-member") {
           openAddGroupMemberModal(role, groupId);
+        } else if (action === "clear-chat") {
+          if (!confirm("هل أنت متأكد من رغبتك في مسح كافة رسائل هذه المجموعة؟")) return;
+          var allMsgs = getData("messages") || [];
+          allMsgs = allMsgs.filter(function(m){ return String(m.groupId) !== String(groupId); });
+          setData("messages", allMsgs);
+          render(role);
+          showToast("تم مسح محتوى المحادثة بنجاح", "info");
         } else if (action === "delete-group") {
           if (!confirm("هل أنت متأكد من رغبتك في حذف المجموعة بالكامل؟ هذا الإجراء لا يمكن التراجع عنه.")) return;
           groups = groups.filter(function (g) { return String(g.id) !== String(groupId); });
           setData("messaging_groups", groups);
+          var allMessages = getData("messages") || [];
+          allMessages = allMessages.filter(function(m){ return String(m.groupId) !== String(groupId); });
+          setData("messages", allMessages);
           activeContact[role] = null;
           render(role);
-          showToast("تم حذف المجموعة بنجاح", "success");
+          showToast("تم حذف المجموعة بالكامل بنجاح", "success");
         } else if (action === "leave-group") {
           if (!confirm("هل أنت متأكد من رغبتك في مغادرة المجموعة؟")) return;
           group.members = (group.members || []).filter(function (m) {
             return String(m.id) !== String(me.id) && (!me.ids || me.ids.indexOf(String(m.id)) < 0);
           });
-          if (group.members.length === 0) {
-            groups = groups.filter(function (g) { return String(g.id) !== String(groupId); });
+          var isGroupCreator = (String(group.creatorId) === String(me.id) || (me.ids && me.ids.indexOf(String(group.creatorId)) >= 0));
+          if (isGroupCreator) {
+            if (group.members.length > 0) {
+              group.creatorId = group.members[0].id;
+              group.creatorName = group.members[0].name;
+            } else {
+              groups = groups.filter(function (g) { return String(g.id) !== String(groupId); });
+            }
           }
           setData("messaging_groups", groups);
           activeContact[role] = null;
           render(role);
-          showToast("تمت مغادرة المجموعة", "info");
+          showToast("تمت مغادرة المجموعة بنجاح", "info");
         }
       });
     });

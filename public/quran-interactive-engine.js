@@ -26,6 +26,7 @@
   var audioPlayer = new Audio();
   var fontSizePx = 28; // Default comfortable reading size
   var viewMode = 'interactive'; // 'interactive' or 'pdf'
+  var toolbarAutoDismissTimer = null;
 
   // Famous Arab Reciters with EveryAyah MP3 endpoints
   var FAMOUS_RECITERS = [
@@ -442,37 +443,35 @@
       '.quran-zoom-indicator { font-size:11px;padding:0 6px;color:#fef3c7;font-family:system-ui,sans-serif;font-weight:700; }' +
       '.quran-mode-btn { background:#d97706;color:#fff;border:none;padding:6px 12px;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer; }' +
       '.quran-mode-btn:hover { background:#b45309; }' +
-      '.quran-interactive-viewport { flex:1;overflow-y:auto;padding:20px 24px;max-width:900px;margin:0 auto;width:100%;box-sizing:border-box; }' +
-      '.quran-surah-banner { text-align:center;margin-bottom:24px; }' +
+      '.quran-interactive-viewport { flex:1;overflow-y:auto;padding:clamp(10px,2vw,22px);max-width:100% !important;width:100% !important;box-sizing:border-box; }' +
+      '.quran-surah-banner { text-align:center;margin-bottom:20px; }' +
       '.quran-surah-frame { display:inline-flex;align-items:center;justify-content:center;gap:16px;background:linear-gradient(135deg,#064e3b,#047857);color:#fef3c7;padding:10px 32px;border-radius:16px;box-shadow:0 4px 15px rgba(6,78,59,0.25);border:2px solid #d97706; }' +
       '.quran-surah-frame h3 { margin:0;font-size:24px;font-weight:900;letter-spacing:1px; }' +
       '.quran-surah-deco { font-size:20px;color:#fbbf24; }' +
       '.quran-bismillah { font-size:26px;color:#064e3b;font-weight:800;margin-top:16px;letter-spacing:1px; }' +
       '.quran-verses-container {' +
         'text-align:justify;line-height:2.6;font-size:28px;direction:rtl;word-break:keep-all;' +
-        'background:#fff;padding:28px 32px;border-radius:18px;border:1.5px solid #e7e5e4;box-shadow:0 4px 20px rgba(0,0,0,0.03);' +
+        'background:#fff;padding:clamp(16px, 2.5vw, 32px);border-radius:18px;border:1.5px solid #e7e5e4;box-shadow:0 4px 20px rgba(0,0,0,0.03);width:100% !important;max-width:100% !important;box-sizing:border-box;' +
       '}' +
       '.quran-interactive-ayah {' +
-        'display:inline;cursor:pointer;padding:2px 4px;border-radius:8px;transition:all 0.18s ease-in-out;' +
+        'display:inline;cursor:pointer;padding:0 2px;transition:font-size 0.2s ease, font-weight 0.2s ease;' +
       '}' +
-      '.quran-interactive-ayah:hover { background:rgba(16,185,129,0.12); }' +
-      // Selected Ayah subtle enlargement (scale 1.05) & distinct emerald/gold highlight as requested:
+      '.quran-interactive-ayah:hover { color:#047857; }' +
+      // Selected Ayah ONLY enlarges in size in its natural place without ANY green border, line, or outline:
       '.quran-ayah-selected {' +
-        'background:linear-gradient(135deg,rgba(5,150,105,0.18),rgba(16,185,129,0.26)) !important;' +
-        'color:#064e3b !important;font-weight:900 !important;display:inline-block !important;' +
-        'transform:scale(1.05) !important;box-shadow:0 0 0 2.5px #059669, 0 4px 12px rgba(5,150,105,0.3) !important;' +
-        'border-radius:10px !important;padding:2px 8px !important;margin:2px !important;z-index:5 !important;' +
+        'font-size:1.16em !important;font-weight:bold !important;color:#064e3b !important;display:inline !important;' +
+        'background:transparent !important;border:none !important;box-shadow:none !important;outline:none !important;' +
       '}' +
       '.quran-ayah-playing {' +
-        'background:rgba(251,191,36,0.3) !important;color:#78350f !important;border-radius:8px;' +
+        'background:rgba(251,191,36,0.3) !important;color:#78350f !important;border-radius:6px;' +
       '}' +
       '.quran-ayah-number-badge {' +
-        'display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;' +
-        'border:1.5px solid #059669;color:#047857;font-size:14px;font-weight:900;margin:0 4px;vertical-align:middle;' +
-        'background:#f0fdf4;font-family:system-ui,sans-serif;' +
+        'display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;' +
+        'border:1px solid #9ca3af;color:#047857;font-size:13px;font-weight:800;margin:0 4px;vertical-align:middle;' +
+        'background:#f8fafc;font-family:system-ui,sans-serif;' +
       '}' +
       '.quran-ayah-selected .quran-ayah-number-badge {' +
-        'background:#059669;color:#fff;border-color:#047857;transform:scale(1.1);' +
+        'transform:scale(1.15);font-weight:900;color:#064e3b;border-color:#064e3b;' +
       '}' +
       // The 3 Requested Badges Floating Action Bar
       '.quran-floating-toolbar {' +
@@ -647,19 +646,38 @@
     var toolbar = document.getElementById('quranFloatingActionBar');
     var badgeCount = document.getElementById('quranSelectedCountBadge');
 
+    if (toolbarAutoDismissTimer) {
+      clearTimeout(toolbarAutoDismissTimer);
+      toolbarAutoDismissTimer = null;
+    }
+
     if (selectedAyahs.length === 0) {
       if (toolbar) toolbar.style.display = 'none';
       return;
     }
 
-    // Highlight and scale each selected ayah
+    // Highlight and scale each selected ayah in place
     selectedAyahs.forEach(function(num){
       var el = document.getElementById('ayah-' + num);
       if (el) el.classList.add('quran-ayah-selected');
     });
 
     if (toolbar) {
+      toolbar.style.opacity = '1';
       toolbar.style.display = 'block';
+
+      // Auto dismiss interaction box after 5 seconds of inactivity
+      toolbarAutoDismissTimer = setTimeout(function() {
+        if (toolbar) {
+          toolbar.style.transition = 'opacity 0.5s ease';
+          toolbar.style.opacity = '0';
+          setTimeout(function() {
+            if (toolbar && toolbar.style.opacity === '0') {
+              toolbar.style.display = 'none';
+            }
+          }, 500);
+        }
+      }, 5000);
     }
 
     if (badgeCount) {

@@ -21,16 +21,16 @@ html, body {
   padding: 0;
 }
 .container {
-  width: 100%;
-  max-width: 1360px;
-  margin: 0 auto;
-  padding: clamp(10px, 2.5vw, 24px);
-  padding-bottom: 120px;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: clamp(8px, 1.5vw, 16px) !important;
+  padding-bottom: 120px !important;
   box-sizing: border-box;
 }
 .page {
-  width: 100%;
-  max-width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
   box-sizing: border-box;
   overflow-wrap: break-word;
   word-break: normal;
@@ -503,7 +503,7 @@ button, .card, .page, input, select, textarea { transition:transform .18s ease, 
 button:hover, .card:hover { transform:translateY(-2px); }
 button:active { transform:scale(.98); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; scroll-behavior:auto !important; } }
-.container { max-width:1400px; margin:0 auto; padding:20px; padding-bottom:100px; }
+.container { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: clamp(8px, 1.5vw, 16px) !important; padding-bottom: 110px !important; box-sizing: border-box !important; }
   .hidden { display:none !important; }
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
  .display-controls {
@@ -546,8 +546,70 @@ button:active { transform:scale(.98); }
 .card .icon svg .icon-accent { color:var(--warning); }
 .card h3 { font-size:1.4rem; color: var(--primary); margin-bottom:6px; }
 .card p { color: var(--text-light); font-size:0.95rem; margin:0; }
-.page { background: color-mix(in srgb, var(--card-bg) 94%, transparent); border:1px solid var(--border); border-radius:22px; padding:30px; margin-top:20px; box-shadow:var(--shadow); position:relative; }
-#lockScreen { margin-top: clamp(28px, 9vh, 90px) !important; padding:clamp(24px, 4vw, 42px); }
+.page { background: color-mix(in srgb, var(--card-bg) 94%, transparent); border:1px solid var(--border); border-radius:14px; padding:clamp(14px, 2vw, 24px); margin-top:8px; width:100% !important; max-width:100% !important; box-shadow:var(--shadow); position:relative; box-sizing:border-box; }
+#lockScreen { max-width: 520px !important; margin: clamp(20px, 6vh, 60px) auto !important; padding:clamp(22px, 3.5vw, 36px); }
+
+/* Quick Cards Banner for Quran & Tuhfat Al-Atfal in Student & Parent Dashboards */
+.thimar-dashboard-quick-banner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  margin: 18px 0 20px 0;
+  width: 100%;
+}
+.dashboard-quick-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  text-align: right;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+}
+.dashboard-quick-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+.dashboard-quick-card.quran-bg {
+  background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
+  color: #ffffff;
+  border-color: #34d399;
+}
+.dashboard-quick-card.tuhfat-bg {
+  background: linear-gradient(135deg, #854d0e 0%, #b45309 100%);
+  color: #ffffff;
+  border-color: #fde047;
+}
+.dashboard-quick-card .card-icon {
+  font-size: 2.2rem;
+  background: rgba(255, 255, 255, 0.18);
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.dashboard-quick-card .card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dashboard-quick-card .card-meta strong {
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: -0.2px;
+}
+.dashboard-quick-card .card-meta span {
+  font-size: 0.84rem;
+  opacity: 0.92;
+  line-height: 1.4;
+}
 #lockScreen .page-header { align-items:flex-start; }
 #lockScreen .page-header h2 { font-size:clamp(1.35rem, 3vw, 1.8rem); letter-spacing:-.02em; }
 #lockScreen::before { content:'ثمار'; display:block; color:var(--primary); font-size:clamp(2rem, 6vw, 3.2rem); font-weight:800; letter-spacing:.04em; margin-bottom:8px; }
@@ -1409,28 +1471,9 @@ window.goBack = function() {
       <span class="thimar-cloud thimar-cloud-right" aria-hidden="true"></span>
     </div>
 
-    <!-- خانة القرآن الكريم وخانة تحفة الأطفال بجوارها مباشرة -->
-    <div class="thimar-main-quran-tuhfat-bar" dir="rtl">
-      <button type="button" class="thimar-hero-quick-btn thimar-quran-btn" onclick="window.openQuranReader()" title="فتح المصحف الشريف التفاعلي">
-        <span class="btn-icon">📖</span>
-        <div class="btn-info">
-          <strong>القرآن الكريم</strong>
-          <span>المصحف التفاعلي • تكبير وتدوير وتحديد الآيات والأصوات</span>
-        </div>
-      </button>
-
-      <button type="button" class="thimar-hero-quick-btn thimar-tuhfat-btn" onclick="window.openTuhfatAlAtfal()" title="فتح متن تحفة الأطفال كاملاً">
-        <span class="btn-icon">📜</span>
-        <div class="btn-info">
-          <strong>تحفة الأطفال</strong>
-          <span>متن التجويد ٦١ بيتاً • أصوات الشيوخ والشرح المعتمد والتكرار</span>
-        </div>
-      </button>
-    </div>
-
     <div id="unifiedLoginAlert"></div>
 
-    <!-- شاشة تسجيل الدخول (نفس الحقول والوظائف السابقة) -->
+    <!-- شاشة تسجيل الدخول -->
     <div class="thimar-actions" id="thimarLoginForm">
       <div class="thimar-login-fields">
         <div class="thimar-field">
@@ -1443,18 +1486,8 @@ window.goBack = function() {
   <input type="password" id="unifiedPass" placeholder="الرقم السري" autocomplete="current-password" onkeypress="if(event.key==='Enter'&&!event.nativeEvent?.isComposing&&event.keyCode!==229)unifiedLogin()">
   <button type="button" id="unifiedPassToggle" class="thimar-password-toggle" onclick="toggleUnifiedPassword()" aria-label="Show password" data-ar-aria-label="إظهار الرقم السري" aria-pressed="false"><span class="thimar-eye-icon" aria-hidden="true"></span></button>
   </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:6px;">
+        <div style="display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:8px;margin-top:6px;">
           <button type="button" class="thimar-forgot" onclick="openAccountRecovery()">هل نسيت الرقم السري؟</button>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <button type="button" class="btn" onclick="quickDeviceSocialLogin('google')" title="الدخول التلقائي بحساب Google المسجل بالجهاز" style="background:#fff;border:1px solid #d1d5db;padding:6px 12px;border-radius:10px;font-size:0.8rem;font-weight:800;display:flex;align-items:center;gap:6px;cursor:pointer;color:#374151;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-              <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
-              <span>Google</span>
-            </button>
-            <button type="button" class="btn" onclick="quickDeviceSocialLogin('facebook')" title="الدخول التلقائي بحساب Facebook المسجل بالجهاز" style="background:#1877F2;color:#fff;border:none;padding:6px 12px;border-radius:10px;font-size:0.8rem;font-weight:800;display:flex;align-items:center;gap:6px;cursor:pointer;box-shadow:0 1px 3px rgba(24,119,242,0.3);">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-              <span>Facebook</span>
-            </button>
-          </div>
         </div>
       </div>
       <button class="btn btn-primary thimar-btn thimar-btn-gold" onclick="unifiedLogin()">تسجيل الدخول</button>
@@ -2207,6 +2240,25 @@ window.goBack = function() {
   </div>
   <div id="studentInfo"></div>
   <div id="studentWelcome"></div>
+
+  <!-- خانة القرآن الكريم وتحفة الأطفال في واجهة الطالب بجوار بعضهما -->
+  <div class="thimar-dashboard-quick-banner" dir="rtl">
+    <button type="button" class="dashboard-quick-card quran-bg" onclick="window.openQuranReader()" title="فتح المصحف الشريف بالكامل">
+      <span class="card-icon">📖</span>
+      <div class="card-meta">
+        <strong>المصحف الشريف (القرآن الكريم)</strong>
+        <span>القراءة التفاعلية • ملء الشاشة • تكبير وتلاوة الآيات المحددة بالأصوات وتكرارها</span>
+      </div>
+    </button>
+    <button type="button" class="dashboard-quick-card tuhfat-bg" onclick="window.openTuhfatAlAtfal()" title="فتح متن تحفة الأطفال كاملاً">
+      <span class="card-icon">📜</span>
+      <div class="card-meta">
+        <strong>متن تحفة الأطفال (٦١ بيتاً)</strong>
+        <span>أحكام التجويد المعتمدة • الاستماع لأصوات الشيوخ مع الشرح والتكرار والمشاركة</span>
+      </div>
+    </button>
+  </div>
+
   <section id="studentIslamicHub" data-isl-hub aria-label="القسم الإسلامي"></section>
   <div id="studentHomeSummary" class="student-home-summary-grid"></div>
 </div>
@@ -2392,6 +2444,25 @@ window.goBack = function() {
     </aside>
   </div>
   <div id="parentWelcome"></div>
+
+  <!-- خانة القرآن الكريم وتحفة الأطفال في واجهة ولي الأمر بجوار بعضهما -->
+  <div class="thimar-dashboard-quick-banner" dir="rtl">
+    <button type="button" class="dashboard-quick-card quran-bg" onclick="window.openQuranReader()" title="فتح المصحف الشريف بالكامل">
+      <span class="card-icon">📖</span>
+      <div class="card-meta">
+        <strong>المصحف الشريف (القرآن الكريم)</strong>
+        <span>القراءة التفاعلية • ملء الشاشة • تكبير وتلاوة الآيات المحددة وتكرارها</span>
+      </div>
+    </button>
+    <button type="button" class="dashboard-quick-card tuhfat-bg" onclick="window.openTuhfatAlAtfal()" title="فتح متن تحفة الأطفال كاملاً">
+      <span class="card-icon">📜</span>
+      <div class="card-meta">
+        <strong>متن تحفة الأطفال (٦١ بيتاً)</strong>
+        <span>أحكام التجويد المعتمدة • الاستماع لأصوات الشيوخ مع الشرح والتكرار والمشاركة</span>
+      </div>
+    </button>
+  </div>
+
   <section id="parentIslamicHub" data-isl-hub aria-label="القسم الإسلامي"></section>
   <div id="parentInfo"></div>
 </div>

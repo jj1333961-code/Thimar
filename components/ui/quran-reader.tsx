@@ -502,19 +502,19 @@ export function QuranReader() {
                       onTouchStart={() => handleTouchStart(ayah.number)}
                       onTouchEnd={handleTouchEnd}
                       onClick={() => handleAyahClick(ayah.number)}
-                      className={`quran-interactive-ayah inline cursor-pointer transition-all duration-200 px-1.5 py-1 rounded-2xl mx-1 ${
+                      className={`quran-interactive-ayah inline cursor-pointer transition-all duration-200 px-0.5 ${
                         isSelected 
-                          ? 'bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-950 font-black shadow-xl ring-4 ring-emerald-500/60 border-2 border-emerald-400 rounded-2xl px-3 py-1.5 mx-1.5 inline-block scale-105 z-10'
+                          ? 'text-emerald-950 font-extrabold text-[1.16em] inline'
                           : isCurrentlyPlaying
-                          ? 'bg-amber-100/80 text-amber-900 border border-amber-300 rounded-xl'
-                          : 'hover:bg-emerald-50/60'
+                          ? 'bg-amber-100/80 text-amber-900 rounded-lg px-1'
+                          : 'hover:text-emerald-700'
                       }`}
                     >
                       {ayah.text}{' '}
-                      <span className={`inline-flex items-center justify-center min-w-[2.2rem] h-[2.2rem] rounded-full border text-base font-black mx-1 align-middle transition-transform ${
+                      <span className={`inline-flex items-center justify-center min-w-[2rem] h-[2rem] rounded-full border text-sm font-bold mx-1 align-middle transition-transform ${
                         isSelected 
-                          ? 'border-2 border-emerald-700 bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400 scale-110' 
-                          : 'border-emerald-200 text-emerald-700 bg-white/80'
+                          ? 'border-emerald-700 text-emerald-900 font-black scale-110 bg-emerald-50' 
+                          : 'border-stone-300 text-stone-600 bg-white/80'
                       }`}>
                         {ayah.number}
                       </span>{' '}
