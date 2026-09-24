@@ -342,10 +342,13 @@
           '<div class="quran-toolbar-inner">' +
             '<span id="quranSelectedCountBadge" class="quran-badge-count">آية ١</span>' +
 
-            // 1. علامة الصوت (تشغيل الأصوات المشهورة + التحميل محلياً + التكرار)
-            '<button type="button" class="quran-action-btn quran-btn-audio" onclick="window.quranOpenAudioPanel()" title="علامة الصوت: تشغيل أصوات المشايخ والتحميل والتكرار">' +
+            // 1. علامة الصوت: تشغيل صوت الآية المحددة مباشرة
+            '<button type="button" class="quran-action-btn quran-btn-audio" onclick="window.quranTogglePlayAudio()" title="علامة الصوت: تشغيل صوت الآية المحددة فوراً">' +
               '<span class="quran-btn-icon">🔊</span>' +
-              '<span id="quranPlayBtnText">الصوت</span>' +
+              '<span id="quranPlayBtnText">تشغيل الصوت</span>' +
+            '</button>' +
+            '<button type="button" class="quran-action-btn" style="background:rgba(255,255,255,0.2);color:#fff;padding:6px 10px;" onclick="window.quranOpenAudioPanel()" title="خيارات القارئ والتكرار">' +
+              '<span>⚙ خيارات</span>' +
             '</button>' +
 
             // 2. علامة المشاركة (مشاركة الآية المحددة)
@@ -443,24 +446,25 @@
       '.quran-zoom-indicator { font-size:11px;padding:0 6px;color:#fef3c7;font-family:system-ui,sans-serif;font-weight:700; }' +
       '.quran-mode-btn { background:#d97706;color:#fff;border:none;padding:6px 12px;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer; }' +
       '.quran-mode-btn:hover { background:#b45309; }' +
-      '.quran-interactive-viewport { flex:1;overflow-y:auto;padding:clamp(10px,2vw,22px);max-width:100% !important;width:100% !important;box-sizing:border-box; }' +
-      '.quran-surah-banner { text-align:center;margin-bottom:20px; }' +
+      '.quran-interactive-viewport { flex:1;overflow-y:auto;padding:0 !important;max-width:100% !important;width:100% !important;box-sizing:border-box;background:#fdfcf7; }' +
+      '.quran-surah-banner { text-align:center;padding:16px 12px 10px;margin:0 auto;max-width:900px; }' +
       '.quran-surah-frame { display:inline-flex;align-items:center;justify-content:center;gap:16px;background:linear-gradient(135deg,#064e3b,#047857);color:#fef3c7;padding:10px 32px;border-radius:16px;box-shadow:0 4px 15px rgba(6,78,59,0.25);border:2px solid #d97706; }' +
       '.quran-surah-frame h3 { margin:0;font-size:24px;font-weight:900;letter-spacing:1px; }' +
       '.quran-surah-deco { font-size:20px;color:#fbbf24; }' +
-      '.quran-bismillah { font-size:26px;color:#064e3b;font-weight:800;margin-top:16px;letter-spacing:1px; }' +
+      '.quran-bismillah { font-size:26px;color:#064e3b;font-weight:800;margin-top:14px;letter-spacing:1px; }' +
       '.quran-verses-container {' +
         'text-align:justify;line-height:2.6;font-size:28px;direction:rtl;word-break:keep-all;' +
-        'background:#fff;padding:clamp(16px, 2.5vw, 32px);border-radius:18px;border:1.5px solid #e7e5e4;box-shadow:0 4px 20px rgba(0,0,0,0.03);width:100% !important;max-width:100% !important;box-sizing:border-box;' +
+        'background:#fdfcf7;padding:clamp(12px, 3vw, 36px);border:none;border-radius:0;box-shadow:none;width:100% !important;max-width:100% !important;box-sizing:border-box;min-height:80vh;' +
       '}' +
       '.quran-interactive-ayah {' +
         'display:inline;cursor:pointer;padding:0 2px;transition:font-size 0.2s ease, font-weight 0.2s ease;' +
       '}' +
       '.quran-interactive-ayah:hover { color:#047857; }' +
-      // Selected Ayah ONLY enlarges in size in its natural place without ANY green border, line, or outline:
+      // Selected Ayah with clear blue highlight only, no green borders or lines:
       '.quran-ayah-selected {' +
-        'font-size:1.16em !important;font-weight:bold !important;color:#064e3b !important;display:inline !important;' +
-        'background:transparent !important;border:none !important;box-shadow:none !important;outline:none !important;' +
+        'font-size:1.14em !important;font-weight:bold !important;color:#1e40af !important;display:inline !important;' +
+        'background:rgba(59, 130, 246, 0.18) !important;border:none !important;box-shadow:none !important;outline:none !important;' +
+        'border-radius:6px !important;padding:2px 4px !important;' +
       '}' +
       '.quran-ayah-playing {' +
         'background:rgba(251,191,36,0.3) !important;color:#78350f !important;border-radius:6px;' +
@@ -471,7 +475,7 @@
         'background:#f8fafc;font-family:system-ui,sans-serif;' +
       '}' +
       '.quran-ayah-selected .quran-ayah-number-badge {' +
-        'transform:scale(1.15);font-weight:900;color:#064e3b;border-color:#064e3b;' +
+        'transform:scale(1.15);font-weight:900;color:#1d4ed8;border-color:#3b82f6;background:#eff6ff;' +
       '}' +
       // The 3 Requested Badges Floating Action Bar
       '.quran-floating-toolbar {' +
@@ -583,56 +587,14 @@
     window.quranClearSelection();
   }
 
-  // Handle Ayah click with Consecutive-Only Selection Rule
+  // Handle Ayah click (Single Ayah Selection Only as requested)
   function handleAyahClick(ayahNum) {
-    if (selectedAyahs.length === 0) {
-      selectedAyahs = [ayahNum];
-      updateSelectionUI();
+    if (selectedAyahs.length === 1 && selectedAyahs[0] === ayahNum) {
+      window.quranClearSelection();
       return;
     }
-
-    // If clicking an already selected ayah
-    if (selectedAyahs.indexOf(ayahNum) !== -1) {
-      if (selectedAyahs.length === 1) {
-        window.quranClearSelection();
-        return;
-      }
-      var min = Math.min.apply(null, selectedAyahs);
-      var max = Math.max.apply(null, selectedAyahs);
-      if (ayahNum === max) {
-        selectedAyahs = selectedAyahs.filter(function(n){ return n !== max; });
-        updateSelectionUI();
-        return;
-      }
-      if (ayahNum === min) {
-        selectedAyahs = selectedAyahs.filter(function(n){ return n !== min; });
-        updateSelectionUI();
-        return;
-      }
-      // If clicking inside the middle, reset selection to this single clicked ayah
-      selectedAyahs = [ayahNum];
-      updateSelectionUI();
-      return;
-    }
-
-    // Consecutive Check: must be adjacent to current selection edges (min-1 or max+1)
-    var curMin = Math.min.apply(null, selectedAyahs);
-    var curMax = Math.max.apply(null, selectedAyahs);
-
-    if (ayahNum === curMax + 1) {
-      selectedAyahs.push(ayahNum);
-      selectedAyahs.sort(function(a,b){ return a - b; });
-      updateSelectionUI();
-    } else if (ayahNum === curMin - 1) {
-      selectedAyahs.unshift(ayahNum);
-      selectedAyahs.sort(function(a,b){ return a - b; });
-      updateSelectionUI();
-    } else {
-      // User clicked non-consecutive ayah: alert and select clicked ayah alone
-      showToast('💡 تنبيه: يمكنك تحديد الآيات المتتالية فقط بالتسلسل', true);
-      selectedAyahs = [ayahNum];
-      updateSelectionUI();
-    }
+    selectedAyahs = [ayahNum];
+    updateSelectionUI();
   }
 
   // Update Visual Highlights for selected Ayahs & Toolbar

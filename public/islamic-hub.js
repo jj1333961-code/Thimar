@@ -110,7 +110,8 @@
   ];
 
   var TILES = [
-    { id: "quran", label: "القرآن الكريم", icon: ICONS.quran },
+    { id: "quran", label: "المصحف الشريف", icon: ICONS.quran },
+    { id: "tuhfat", label: "تحفة الأطفال", icon: ICONS.quran },
     { id: "tafsir", label: "التفسير والتلاوة", icon: ICONS.quran },
     { id: "tasbeeh", label: "التسبيح", icon: ICONS.adhkar },
     { id: "dua", label: "الدعاء", icon: ICONS.dua },
@@ -1395,6 +1396,9 @@
 
   function openSection(id) {
     ensureLayers();
+    if (id === "tuhfat") {
+      if (typeof window.openTuhfatAlAtfal === "function") return window.openTuhfatAlAtfal();
+    }
     if (id === "tafsir") return openTafsirExplorer();
     if (id === "tasbeeh") return openTasbeeh();
     if (id === "quran") return openQuran();

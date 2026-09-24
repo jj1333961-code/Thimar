@@ -340,8 +340,11 @@
         'transition:transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.22s ease;position:relative;cursor:pointer;user-select:none;' +
       '}' +
       '.tuhfat-verse-card:hover { transform:scale(1.01);box-shadow:0 4px 14px rgba(0,0,0,0.06); }' +
-      /* Scale only, NO green borders as requested */
-      '.tuhfat-verse-card.selected { transform:scale(1.028);box-shadow:0 6px 20px rgba(0,0,0,0.1);z-index:10; }' +
+      /* Blue highlight only, NO green borders as requested */
+      '.tuhfat-verse-card.selected { transform:scale(1.025);box-shadow:0 6px 20px rgba(59,130,246,0.18);z-index:10;background:rgba(239,246,255,0.92) !important;border-color:#3b82f6 !important; }' +
+      '.tuhfat-verse-card.selected .tuhfat-sadr { color:#1d4ed8 !important; }' +
+      '.tuhfat-verse-card.selected .tuhfat-ajuz { color:#1e40af !important; }' +
+      '.tuhfat-verse-card.selected .tuhfat-verse-badge { background:#2563eb !important;color:#fff !important; }' +
       '.tuhfat-card-top { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px; }' +
       '.tuhfat-verse-badge { background:#064e3b;color:#fef3c7;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:900; }' +
       '.tuhfat-card-actions { display:flex;align-items:center;gap:8px; }' +
