@@ -5,27 +5,26 @@ import { motion, AnimatePresence } from 'motion/react'
 import { 
   Play, 
   Pause, 
-  SkipForward, 
-  SkipBack, 
-  Music, 
+  ChevronLeft, 
+  ChevronRight, 
   Volume2, 
-  Sparkles, 
-  BookOpen, 
   Download, 
-  CheckCircle2, 
-  RotateCcw, 
-  Repeat, 
-  Headphones, 
-  WifiOff, 
-  ListOrdered,
-  Layers,
-  ChevronDown,
+  Share2, 
+  BookOpen,
   X,
-  Check
+  Repeat,
+  CheckCircle2,
+  Bookmark,
+  SkipForward,
+  SkipBack,
+  Trash2,
+  ZoomIn,
+  ZoomOut,
+  Copy,
+  Info
 } from 'lucide-react'
 import { downloadAndCacheAsset, isAssetCached, getAssetPlayableUrl, removeCachedAsset } from '@/lib/offline-storage'
 import { t } from '@/lib/i18n'
-import { Trash2 } from 'lucide-react'
 
 export interface TuhfaSection {
   id: number
@@ -142,7 +141,7 @@ export const TUHFAT_SECTIONS: TuhfaSection[] = [
       'لِلْمَدِّ أَحْكَامٌ ثَلاَثَةٌ تَدُومْ ** وَهْيَ الْوُجُوبُ وَالْجَوَازُ وَاللُّزُومْ',
       'فَوَاجِبٌ إِنْ جَاءَ هَمْزٌ بَعْدَ مَدّْ ** فِي كِلْمَةٍ وَذَا بِمُتَّصِلٍ يُعَدّْ',
       'وَجَائِزٌ مَدٌّ وَقَصْرٌ إِنْ فُصِلْ ** كُلٌّ بِكِلْمَةٍ وَهَذَا المُنْفَصِلْ',
-      'وَمِثْلُ ذَا إِنْ عَرَضَ السُّكُونُ ** وَقْفًا كَتَعْلَمُونَ نَسْتَعِينُ',
+      'Wَمِثْلُ ذَا إِنْ عَرَضَ السُّكُونُ ** وَقْفًا كَتَعْلَمُونَ نَسْتَعِينُ',
       'أَوْ قُدِّمَ الْهَمْزُ عَلَى المَدِّ وَذَا ** بَدَلْ كَآمَنُوا وَإِيمَانًا خُذَا',
       'وَلاَزِمٌ إِنِ السُّكُونُ أُصِّلاَ ** وَصْلاً وَوَقْفًا بَعْدَ مَدٍّ طُوِّلاَ'
     ]
@@ -159,7 +158,7 @@ export const TUHFAT_SECTIONS: TuhfaSection[] = [
       'أَوْ فِي ثُلاَثِيِّ الحُرُوفِ وُجِدَا ** وَالْمَدُّ وَسْطُهُ فَحَرْفِيٌّ بَدَا',
       'كِلاَهُمَا مُثَقَّلٌ إِنْ أُدْغِمَا ** مَخَفَّفٌ كُلٌّ إِذَا لَمْ يُدْغَمَا',
       'وَاللاَّزِمُ الحَرْفِيُّ أَوَّلَ السُّوَرْ ** وُجُودُهُ وَفِي ثَمَانٍ انْحَصَرْ',
-      'يَجْمَعُهَا حُرُوفُ كَمْ عَسَلْ نَقَصْ ** وَعَيْنُ ذُو وَجْهَيْنِ وَالطُّولُ أَخَصّْ',
+      'يَجْمَعُهَا حُرُوفُ كَمْ عَسَلْ نَقاصْ ** وَعَيْنُ ذُو وَجْهَيْنِ وَالطُّولُ أَخَصّْ',
       'وَمَا سِوَى الحَرْفِ الثُّلاَثِي لاَ أَلِفْ ** فَمَدُّهُ مَدًّا طَبِيعِيًّا أُلِفْ',
       'وَذَاكَ أَيْضًا فِي فَوَاتِحِ السُّوَرْ ** فِي لَفْظِ حَيٍّ طَاهِرٍ قَدِ انْحَصَرْ',
       'وَيَجْمَعُ الْفَوَاتِحَ الأَرْبَعْ عَشَرْ ** صِلْهُ سُحَيْرًا مَنْ قَطَعْكَ ذَا اشْتَهَرْ'
@@ -225,671 +224,663 @@ export const TUHFA_RECITERS: TuhfaReciter[] = [
     audioUrl: 'https://archive.org/download/Tohfat_Al-Atfal_Husary/Tohfat_Al-Atfal.mp3',
     fileSize: '4.1 م.ب',
     avatarText: 'مح',
-  },
-  {
-    id: 'ibrahim_akhdar',
-    name: 'الشيخ إبراهيم الأخضر',
-    country: 'المملكة العربية السعودية',
-    info: 'شيخ قراء المسجد النبوي الشريف برواية حفص',
-    audioUrl: 'https://archive.org/download/Tohfat-Al-Atfal-Ghamidi/Tohfat-Al-Atfal.mp3',
-    fileSize: '3.9 م.ب',
-    avatarText: 'أخ',
-  },
-  {
-    id: 'mishary_afasy',
-    name: 'الشيخ مشاري بن راشد العفاسي',
-    country: 'الكويت',
-    info: 'أداء ملحن ومنغم لتحفيظ الصغار والناشئة',
-    audioUrl: 'https://archive.org/download/Tohfat_Al-Atfal_Dr.Ayman_Swaid/Tohfat_Al-Atfal_Dr.Ayman_Swaid.mp3',
-    fileSize: '3.7 م.ب',
-    avatarText: 'مع',
   }
 ]
 
+// Flattened verses mapping helper
+const ALL_VERSES_FLAT: { num: number; text: string; sadr: string; ajuz: string }[] = []
+TUHFAT_SECTIONS.forEach(s => {
+  s.verses.forEach((vText, idx) => {
+    const vNum = s.startVerse + idx
+    const [sadr, ajuz] = vText.split('**')
+    ALL_VERSES_FLAT.push({
+      num: vNum,
+      text: vText.replace(/\*\*/g, ' '),
+      sadr: sadr?.trim() || '',
+      ajuz: ajuz?.trim() || ''
+    })
+  })
+})
+
 export function TuhfatAlAtfal() {
-  const [activeSectionIdx, setActiveSectionIdx] = useState(0)
+  const [pageNumber, setPageNumber] = useState<number>(4) // child.pdf starts text at page 4 usually
   const [selectedReciterId, setSelectedReciterId] = useState(TUHFA_RECITERS[0].id)
+  const [zoomMultiplier, setZoomMultiplier] = useState<number>(1.0)
+  const [fitToScreen, setFitToScreen] = useState<boolean>(true)
+  
+  // PDF.js State
+  const [pdfjs, setPdfjs] = useState<any>(null)
+  const [loadingPdf, setLoadingPdf] = useState<boolean>(true)
+  const [textItems, setTextItems] = useState<any[]>([])
+  
+  // Selection state
+  const [selectedVerseNum, setSelectedVerseNum] = useState<number | null>(null)
+  const [clickCoords, setClickCoords] = useState<{ x: number; y: number } | null>(null)
+  const [showCircularMenu, setShowFloatingMenu] = useState<boolean>(false)
+
+  // Playback & Audio
   const [isPlaying, setIsPlaying] = useState(false)
-  const [activeVerseIndex, setActiveVerseIndex] = useState(0)
-  const [selectedVerseNumbers, setSelectedVerseNumbers] = useState<number[]>([1, 2, 3])
-  const [selectionActiveIdx, setSelectionActiveIdx] = useState(0)
+  const [currentlyPlayingVerse, setCurrentlyPlayingVerse] = useState<number | null>(null)
   const [repeatMode, setRepeatMode] = useState<'1' | '3' | '5' | 'all'>('1')
-  const [repeatCountRemaining, setRepeatCountRemaining] = useState(1)
-  const [scopeMode, setScopeMode] = useState<'verse' | 'selection' | 'section' | 'all'>('section')
-  const [isCached, setIsCached] = useState(false)
+  const [continuousRecitation, setContinuousRecitation] = useState<boolean>(true)
+  const [isAudioDownloaded, setIsAudioDownloaded] = useState(false)
   const [downloading, setDownloading] = useState(false)
-  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1)
-  const [showRecitersModal, setShowRecitersModal] = useState(false)
 
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const currentSection = TUHFAT_SECTIONS[activeSectionIdx]
-  const currentReciter = TUHFA_RECITERS.find(r => r.id === selectedReciterId) || TUHFA_RECITERS[0]
 
-  // Load saved repeat mode on mount
+  const currentReciter = TUHFA_RECITERS.find(r => r.id === selectedReciterId) || TUHFA_RECITERS[0]
+  const currentSelectedVerse = selectedVerseNum ? ALL_VERSES_FLAT.find(v => v.num === selectedVerseNum) : null
+
+  // Dynamic import of PDF.js
   useEffect(() => {
-    try {
-      const savedRepeat = localStorage.getItem('thimar_tuhfa_repeat')
-      if (savedRepeat && ['1', '3', '5', 'all'].includes(savedRepeat)) {
-        setRepeatMode(savedRepeat as any)
-        setRepeatCountRemaining(savedRepeat === 'all' ? 999 : Number(savedRepeat))
-      }
-    } catch {}
+    if (typeof window !== 'undefined') {
+      setLoadingPdf(true)
+      import('pdfjs-dist').then((mod) => {
+        mod.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.mjs'
+        setPdfjs(mod)
+        setLoadingPdf(false)
+      }).catch(err => {
+        console.error('[PDFJS-Tuhfa] Error loading PDFJS dist:', err)
+        setLoadingPdf(false)
+      })
+    }
   }, [])
 
+  // Check cached audio status
   useEffect(() => {
-    // Check if current reciter audio is cached locally
-    async function checkLocalCache() {
+    async function checkCache() {
       const cached = await isAssetCached(`tuhfa_${selectedReciterId}`)
       setIsCached(cached)
     }
-    checkLocalCache()
+    checkCache()
   }, [selectedReciterId])
 
-  const handleDownload = async () => {
+  const [isCached, setIsCached] = useState(false)
+
+  // Render Tuhfat PDF page on canvas
+  useEffect(() => {
+    if (!pdfjs || !canvasRef.current) return
+
+    let active = true
+    let renderTask: any = null
+
+    async function renderPage() {
+      try {
+        const loadingTask = pdfjs.getDocument('/child.pdf')
+        const pdf = await loadingTask.promise
+        if (!active) return
+
+        // child.pdf has 11 pages
+        const pageCount = pdf.numPages
+        const currentPage = Math.max(1, Math.min(pageCount, pageNumber))
+
+        const page = await pdf.getPage(currentPage)
+        if (!active) return
+
+        const textContent = await page.getTextContent()
+        if (!active) return
+
+        const canvas = canvasRef.current!
+        const context = canvas.getContext('2d')!
+
+        const viewportOne = page.getViewport({ scale: 1.0 })
+        const parent = canvas.parentElement!
+        const parentWidth = parent.clientWidth || 800
+        const parentHeight = parent.clientHeight || 900
+
+        let computedScale = 1.0
+        if (fitToScreen) {
+          const scaleWidth = parentWidth / viewportOne.width
+          const scaleHeight = parentHeight / viewportOne.height
+          computedScale = Math.min(scaleWidth, scaleHeight) * 0.96
+        } else {
+          computedScale = 1.4
+        }
+
+        const scale = computedScale * zoomMultiplier
+        const viewport = page.getViewport({ scale })
+
+        canvas.width = viewport.width * window.devicePixelRatio
+        canvas.height = viewport.height * window.devicePixelRatio
+        canvas.style.width = `${viewport.width}px`
+        canvas.style.height = `${viewport.height}px`
+        context.scale(window.devicePixelRatio, window.devicePixelRatio)
+
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport
+        }
+
+        renderTask = page.render(renderContext)
+        await renderTask.promise
+
+        const items = textContent.items.map((item: any, idx: number) => {
+          const [scaleX, skewY, skewX, scaleY, tx, ty] = item.transform
+          const [x, y] = viewport.convertToViewportPoint(tx, ty)
+          const itemHeight = item.height * scale
+          const itemWidth = item.width * scale
+
+          return {
+            text: item.str,
+            left: x,
+            top: y - itemHeight,
+            width: itemWidth,
+            height: itemHeight,
+            index: idx
+          }
+        })
+
+        if (active) {
+          setTextItems(items)
+        }
+      } catch (err) {
+        console.error('[TuhfatCanvas] Render failed:', err)
+      }
+    }
+
+    renderPage()
+
+    return () => {
+      active = false
+      if (renderTask) renderTask.cancel()
+    }
+  }, [pdfjs, pageNumber, zoomMultiplier, fitToScreen])
+
+  // Normalization helper
+  function normalizeText(str: string): string {
+    return str
+      .normalize('NFKD')
+      .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, '') // remove diacritics
+      .replace(/[إأآٱ]/g, 'ا')
+      .replace(/ى/g, 'ي')
+      .replace(/ة/g, 'ه')
+      .replace(/[^\u0621-\u064A0-9]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  // Map text items to verses dynamically
+  const mappedItems = React.useMemo(() => {
+    if (textItems.length === 0) return []
+
+    return textItems.map((item, idx) => {
+      let matchedVerse: typeof ALL_VERSES_FLAT[0] | null = null
+
+      for (let winSize = 5; winSize >= 1; winSize--) {
+        const start = Math.max(0, idx - Math.floor(winSize / 2))
+        const end = Math.min(textItems.length, start + winSize)
+        const phrase = textItems.slice(start, end).map(i => i.text).join(' ')
+        const normPhrase = normalizeText(phrase)
+        if (!normPhrase) continue
+
+        const found = ALL_VERSES_FLAT.find(v => normalizeText(v.text).includes(normPhrase))
+        if (found) {
+          matchedVerse = found
+          break
+        }
+      }
+
+      return {
+        ...item,
+        verse: matchedVerse
+      }
+    })
+  }, [textItems])
+
+  // Download full audio locally
+  const handleDownloadAudio = async () => {
     if (downloading) return
     setDownloading(true)
-    const ok = await downloadAndCacheAsset(`tuhfa_${selectedReciterId}`, currentReciter.audioUrl, {
-      title: `تحفة الأطفال - ${currentReciter.name}`,
+    const success = await downloadAndCacheAsset(`tuhfa_${selectedReciterId}`, currentReciter.audioUrl, {
+      title: `متن تحفة الأطفال - ${currentReciter.name}`,
       category: 'tuhfa',
       reciter: currentReciter.name,
     })
-    if (ok) setIsCached(true)
+    if (success) setIsCached(true)
     setDownloading(false)
   }
 
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current = null
+    }
+    setIsPlaying(false)
+    setCurrentlyPlayingVerse(null)
+  }
+
   const handleDeleteAudio = async () => {
-    if (isPlaying) {
-      if (audioRef.current) audioRef.current.pause()
-      setIsPlaying(false)
-    }
-    const ok = await removeCachedAsset(`tuhfa_${selectedReciterId}`)
-    if (ok) {
-      setIsCached(false)
-    }
+    stopAudio()
+    await removeCachedAsset(`tuhfa_${selectedReciterId}`)
+    setIsCached(false)
   }
 
-  const toggleVerseSelection = (verseNum: number) => {
-    setSelectedVerseNumbers(prev => {
-      if (prev.includes(verseNum)) {
-        if (prev.length === 1) return prev // keep at least 1
-        return prev.filter(v => v !== verseNum)
-      } else {
-        return [...prev, verseNum].sort((a, b) => a - b)
-      }
-    })
+
+  // Playback Control Engine (using continuous track timestamp offsets)
+  // Dr. Ayman Suwaid total duration ~ 270s, so each verse is approx 4.4 seconds
+  const getVerseTimeRange = (vNum: number) => {
+    const verseDuration = 4.4
+    const start = (vNum - 1) * verseDuration
+    const end = vNum * verseDuration
+    return { start, end }
   }
 
-  const togglePlay = async () => {
+  const playSequence = async (startVerseNum?: number) => {
     if (isPlaying) {
-      if (audioRef.current) audioRef.current.pause()
-      setIsPlaying(false)
+      stopAudio()
       return
     }
 
-    // Try offline URL
+    let currentVerseNum = startVerseNum || selectedVerseNum || 1
+    let currentRepeat = repeatMode === 'all' ? 999 : Number(repeatMode)
+
+    // Try offline cached audio URL
     let src = currentReciter.audioUrl
     if (isCached) {
       const local = await getAssetPlayableUrl(`tuhfa_${selectedReciterId}`, currentReciter.audioUrl)
       if (local) src = local
     }
 
-    if (!audioRef.current) {
-      audioRef.current = new Audio(src)
-    } else {
-      if (audioRef.current.src !== src) {
-        audioRef.current.src = src
-      }
-    }
-
-    audioRef.current.playbackRate = playbackSpeed
-
-    audioRef.current.onended = () => {
-      // 1. Single verse mode: NEVER advance to another verse; repeat single verse if remaining
-      if (scopeMode === 'verse') {
-        if (repeatMode !== '1' && repeatCountRemaining > 1) {
-          if (repeatMode !== 'all') {
-            setRepeatCountRemaining(prev => prev - 1)
-          }
-          audioRef.current?.play().catch(() => {})
-          return
-        }
-        setIsPlaying(false)
+    const playVerseNode = () => {
+      if (currentVerseNum > 61) {
+        stopAudio()
         return
       }
 
-      // 2. Selection group mode: plays through chosen verses, then repeats the group
-      if (scopeMode === 'selection') {
-        if (selectionActiveIdx < selectedVerseNumbers.length - 1) {
-          setSelectionActiveIdx(prev => prev + 1)
-          audioRef.current?.play().catch(() => {})
-          return
-        } else {
-          // Finished the group
-          if (repeatMode !== '1' && repeatCountRemaining > 1) {
-            if (repeatMode !== 'all') {
-              setRepeatCountRemaining(prev => prev - 1)
-            }
-            setSelectionActiveIdx(0)
-            audioRef.current?.play().catch(() => {})
-            return
-          }
-          setIsPlaying(false)
-          return
-        }
+      setCurrentlyPlayingVerse(currentVerseNum)
+
+      const audio = new Audio(src)
+      audioRef.current = audio
+
+      const { start, end } = getVerseTimeRange(currentVerseNum)
+      audio.currentTime = start
+
+      // Set lock screen media session metadata
+      if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: `تحفة الأطفال - بيت ${currentVerseNum}`,
+          artist: currentReciter.name,
+          album: 'متن تجويد القرآن الكريم',
+          artwork: [{ src: '/apple-icon.png', sizes: '192x192', type: 'image/png' }]
+        })
       }
 
-      // 3. Section mode
-      if (scopeMode === 'section') {
-        if (activeVerseIndex < currentSection.verses.length - 1) {
-          setActiveVerseIndex(prev => prev + 1)
-          audioRef.current?.play().catch(() => {})
-          return
-        } else {
-          if (repeatMode !== '1' && repeatCountRemaining > 1) {
-            if (repeatMode !== 'all') {
-              setRepeatCountRemaining(prev => prev - 1)
-            }
-            setActiveVerseIndex(0)
-            audioRef.current?.play().catch(() => {})
+      audio.play().catch(() => {})
+
+      const timeCheckInterval = setInterval(() => {
+        if (audio.currentTime >= end) {
+          clearInterval(timeCheckInterval)
+          audio.pause()
+
+          if (currentRepeat > 1) {
+            currentRepeat--
+            playVerseNode()
             return
           }
-        }
-      }
 
-      // 4. All 61 verses mode
-      if (scopeMode === 'all') {
-        if (activeVerseIndex < currentSection.verses.length - 1) {
-          setActiveVerseIndex(prev => prev + 1)
-          audioRef.current?.play().catch(() => {})
-          return
-        } else if (activeSectionIdx < TUHFAT_SECTIONS.length - 1) {
-          setActiveSectionIdx(prev => prev + 1)
-          setActiveVerseIndex(0)
-          audioRef.current?.play().catch(() => {})
-          return
-        } else {
-          // Reached verse 61
-          if (repeatMode !== '1' && repeatCountRemaining > 1) {
-            if (repeatMode !== 'all') {
-              setRepeatCountRemaining(prev => prev - 1)
-            }
-            setActiveSectionIdx(0)
-            setActiveVerseIndex(0)
-            audioRef.current?.play().catch(() => {})
-            return
+          currentRepeat = repeatMode === 'all' ? 999 : Number(repeatMode)
+
+          if (continuousRecitation) {
+            currentVerseNum++
+            // Auto flip child.pdf pages proportionally based on verse number
+            // 61 verses distributed over page 4 to page 8 (approx 12 verses per page)
+            const approxPage = 4 + Math.floor((currentVerseNum - 1) / 12.5)
+            setPageNumber(Math.min(8, approxPage))
+            playVerseNode()
+          } else {
+            stopAudio()
           }
         }
-      }
+      }, 100)
 
-      setIsPlaying(false)
+      audio.onerror = () => {
+        clearInterval(timeCheckInterval)
+        stopAudio()
+      }
     }
 
-    try {
-      await audioRef.current.play()
-      setIsPlaying(true)
-    } catch {
-      // If network audio error, fallback to speech synthesis
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        const verseText = currentSection.verses[activeVerseIndex]
-        const utt = new SpeechSynthesisUtterance(verseText)
-        utt.lang = 'ar-SA'
-        utt.rate = 0.85
-        utt.onend = () => setIsPlaying(false)
-        window.speechSynthesis.speak(utt)
-        setIsPlaying(true)
-      } else {
-        setIsPlaying(false)
-      }
+    setIsPlaying(true)
+    playVerseNode()
+  }
+
+  const handleNextPage = () => {
+    if (pageNumber < 11) {
+      stopAudio()
+      setPageNumber(prev => prev + 1)
+      setSelectedVerseNum(null)
+      setShowFloatingMenu(false)
     }
   }
 
-
-  const handleNextVerse = () => {
-    if (activeVerseIndex < currentSection.verses.length - 1) {
-      setActiveVerseIndex(prev => prev + 1)
-    } else if (activeSectionIdx < TUHFAT_SECTIONS.length - 1) {
-      setActiveSectionIdx(prev => prev + 1)
-      setActiveVerseIndex(0)
-    }
-  }
-
-  const handlePrevVerse = () => {
-    if (activeVerseIndex > 0) {
-      setActiveVerseIndex(prev => prev - 1)
-    } else if (activeSectionIdx > 0) {
-      setActiveSectionIdx(prev => prev - 1)
-      setActiveVerseIndex(TUHFAT_SECTIONS[activeSectionIdx - 1].verses.length - 1)
+  const handlePrevPage = () => {
+    if (pageNumber > 1) {
+      stopAudio()
+      setPageNumber(prev => prev - 1)
+      setSelectedVerseNum(null)
+      setShowFloatingMenu(false)
     }
   }
 
   return (
-    <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xl overflow-hidden flex flex-col h-full min-h-[720px]" dir="rtl">
-      {/* Header */}
-      <div className="p-6 md:p-8 bg-gradient-to-l from-emerald-800 via-emerald-700 to-teal-800 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-inner">
-            <BookOpen className="w-7 h-7 text-amber-300" />
+    <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xl overflow-hidden flex flex-col h-[calc(100vh-80px)] relative" dir="rtl">
+      {/* Tuhfa Header Toolbar */}
+      <div className="p-4 md:p-6 border-b border-gray-100 flex flex-wrap items-center justify-between bg-emerald-50/40 gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <h3 className="text-xl md:text-2xl font-black text-emerald-950">مَتْنُ تُحْفَةِ الأَطْفَالِ</h3>
+            <span className="bg-amber-400 text-emerald-950 text-[10px] font-black px-2.5 py-0.5 rounded-full">
+              PDF التفاعلي
+            </span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-2xl md:text-3xl font-black italic">تحفة الأطفال والغلمان</h3>
-              <span className="bg-amber-400 text-emerald-950 text-[10px] font-black px-2.5 py-0.5 rounded-full">
-                ٦١ بيتاً كاملاً
-              </span>
-            </div>
-            <p className="text-xs md:text-sm text-emerald-100 font-bold mt-1">
-              متن الشيخ سليمان الجمزوري في علم تجويد القرآن الكريم
-            </p>
+
+          <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-2xl p-1 shadow-sm text-xs font-bold">
+            <button 
+              onClick={handlePrevPage}
+              disabled={pageNumber <= 1}
+              className="p-1.5 hover:bg-gray-100 rounded-xl disabled:opacity-30"
+              title="الصفحة السابقة"
+            >
+              <ChevronRight className="w-4 h-4 text-emerald-800" />
+            </button>
+            <span className="px-2 text-emerald-800">
+              صفحة {pageNumber} / ١١
+            </span>
+            <button 
+              onClick={handleNextPage}
+              disabled={pageNumber >= 11}
+              className="p-1.5 hover:bg-gray-100 rounded-xl disabled:opacity-30"
+              title="الصفحة التالية"
+            >
+              <ChevronLeft className="w-4 h-4 text-emerald-800" />
+            </button>
           </div>
         </div>
 
-        {/* Offline Badge & Download Button */}
-        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+        {/* Zoom Controls */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setFitToScreen(prev => !prev)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${
+              fitToScreen 
+                ? 'bg-emerald-600 text-white border-emerald-600' 
+                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            {fitToScreen ? 'الحجم الملائم' : 'تكبير يدوي'}
+          </button>
+
+          <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 text-xs">
+            <button
+              onClick={() => setZoomMultiplier(prev => Math.max(0.6, prev - 0.1))}
+              className="p-1 hover:bg-gray-100 rounded-lg"
+            >
+              <ZoomOut className="w-4 h-4 text-gray-500" />
+            </button>
+            <span className="px-2 font-bold text-gray-700">{Math.round(zoomMultiplier * 100)}%</span>
+            <button
+              onClick={() => setZoomMultiplier(prev => Math.min(2.5, prev + 0.1))}
+              className="p-1 hover:bg-gray-100 rounded-lg"
+            >
+              <ZoomIn className="w-4 h-4 text-gray-500" />
+            </button>
+          </div>
+        </div>
+
+        {/* Reciters & Caching */}
+        <div className="flex items-center gap-3">
+          <select 
+            value={selectedReciterId}
+            onChange={(e) => setSelectedReciterId(e.target.value)}
+            className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-bold text-gray-700 outline-none text-xs focus:ring-2 focus:ring-emerald-500"
+          >
+            {TUHFA_RECITERS.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+
           {isCached ? (
-            <div className="flex items-center gap-2">
-              <span className="bg-emerald-500/30 border border-emerald-300/40 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm">
-                <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-                <span>محمل ويعمل بلا إنترنت</span>
-              </span>
-              <button
+            <div className="flex items-center gap-1.5 bg-emerald-100 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-2xl text-xs font-bold">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>محمل</span>
+              <button 
                 onClick={handleDeleteAudio}
-                className="p-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-300/30 rounded-xl text-xs font-bold flex items-center gap-1 transition-all"
-                title="حذف الصوت المحمل لهذا القارئ وتوفير المساحة"
+                className="p-0.5 hover:bg-emerald-200 rounded-lg mr-1 text-red-600"
+                title="حذف الصوت"
               >
-                <Trash2 className="w-3.5 h-3.5 text-red-300" />
-                <span>حذف الصوت</span>
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           ) : (
             <button
-              onClick={handleDownload}
+              onClick={handleDownloadAudio}
               disabled={downloading}
-              className="bg-white/15 hover:bg-white/25 active:scale-95 border border-white/30 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-sm disabled:opacity-50"
-              title="تحميل صوت المتن كاملاً على جهازك ليعمل بلا إنترنت"
+              className="p-2.5 bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-800 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50"
             >
-              <Download className="w-4 h-4 text-amber-300" />
-              <span>{downloading ? t('جاري التحميل...') : t('تحميل الصوت بلا إنترنت')}</span>
+              <Download className="w-4 h-4" />
+              <span>{downloading ? 'تحميل...' : 'تحميل المتن'}</span>
             </button>
           )}
-        </div>
-      </div>
 
-      {/* Reciter & Scope Selection Bar */}
-      <div className="p-4 bg-emerald-50/50 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs">
-        {/* Reciter selector */}
-        <div className="flex items-center gap-2">
-          <Headphones className="w-4 h-4 text-emerald-700" />
-          <span className="font-bold text-gray-700">القارئ:</span>
-          <select
-            value={selectedReciterId}
-            onChange={(e) => setSelectedReciterId(e.target.value)}
-            className="bg-white border border-emerald-200 rounded-xl px-3 py-1.5 font-bold text-emerald-900 outline-none focus:ring-2 focus:ring-emerald-500 text-xs shadow-sm"
+          <button 
+            onClick={() => playSequence()}
+            className={`p-2.5 md:px-5 md:py-2.5 rounded-2xl font-black text-xs flex items-center gap-1.5 shadow-lg transition-all ${
+              isPlaying ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white hover:bg-emerald-700'
+            }`}
           >
-            {TUHFA_RECITERS.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => setShowRecitersModal(true)}
-            className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl text-xs font-bold transition-colors"
-            title="عرض بطاقات القراء المتاحة مع التفاصيل والتحميل"
-          >
-            تفاصيل القراء
+            {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+            <span>{isPlaying ? 'إيقاف' : 'تشغيل الصوت'}</span>
           </button>
         </div>
-
-
-        {/* Scope selector: البيت / مجموعة محددة / الباب / كامل المتن */}
-        <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-emerald-700" />
-          <span className="font-bold text-gray-700">نطاق التلاوة:</span>
-          <div className="flex bg-white rounded-xl border border-emerald-200 p-1 shadow-sm">
-            {[
-              { id: 'verse', label: 'بيت واحد' },
-              { id: 'selection', label: `أبيات محددة (${selectedVerseNumbers.length})` },
-              { id: 'section', label: 'الباب' },
-              { id: 'all', label: 'المتن كاملاً' },
-            ].map((mode) => (
-              <button
-                key={mode.id}
-                onClick={() => setScopeMode(mode.id as any)}
-                className={`px-3 py-1 rounded-lg font-bold transition-all text-xs ${
-                  scopeMode === mode.id
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-gray-600 hover:text-emerald-700'
-                }`}
-              >
-                {mode.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Repeat selector */}
-        <div className="flex items-center gap-2">
-          <Repeat className="w-4 h-4 text-emerald-700" />
-          <span className="font-bold text-gray-700">التكرار:</span>
-          <select
-            value={repeatMode}
-            onChange={(e) => {
-              const val = e.target.value as any
-              setRepeatMode(val)
-              setRepeatCountRemaining(val === 'all' ? 999 : Number(val))
-              localStorage.setItem('thimar_tuhfa_repeat', val)
-            }}
-            className="bg-white border border-emerald-200 rounded-xl px-2.5 py-1.5 font-bold text-emerald-900 outline-none text-xs shadow-sm"
-          >
-            <option value="1">بدون تكرار (١x)</option>
-            <option value="3">٣ مرات (٣x)</option>
-            <option value="5">٥ مرات (٥x)</option>
-            <option value="all">تكرار دائم (∞)</option>
-          </select>
-        </div>
       </div>
 
-      {/* Multi-verse selection notice when in selection mode */}
-      {scopeMode === 'selection' && (
-        <div className="bg-amber-50 border-b border-amber-200/80 px-6 py-2.5 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 text-amber-900">
-            <CheckCircle2 className="w-4 h-4 text-amber-600" />
-            <span className="font-black">وضع التحفيظ الجماعي:</span>
-            <span>انقر على الأبيات لتحديدها (المحدد حالياً الأبيات: {selectedVerseNumbers.join('، ')})</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSelectedVerseNumbers([currentSection.startVerse, currentSection.startVerse + 1, currentSection.startVerse + 2])}
-            className="text-amber-800 underline font-bold hover:text-amber-950"
-          >
-            تحديد أول ٣ أبيات من هذا الباب
-          </button>
-        </div>
-      )}
-
-
-      {/* Main Body */}
-      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
-        {/* Sidebar: All 10 Chapters */}
-        <div className="w-full md:w-80 border-b md:border-b-0 md:border-l border-gray-100 bg-gray-50/70 overflow-y-auto max-h-48 md:max-h-none">
-          <div className="p-3 font-black text-xs text-gray-400 tracking-wider uppercase flex items-center justify-between border-b border-gray-100">
-            <span>أبواب المنظومة (١٠ أبواب)</span>
-            <ListOrdered className="w-4 h-4 text-emerald-600" />
-          </div>
-          {TUHFAT_SECTIONS.map((sec, idx) => {
-            const isCurrent = activeSectionIdx === idx
-            return (
-              <button
-                key={sec.id}
-                onClick={() => {
-                  setActiveSectionIdx(idx)
-                  setActiveVerseIndex(0)
-                }}
-                className={`w-full text-right p-4 transition-all border-b border-gray-100 flex items-center justify-between gap-3 ${
-                  isCurrent
-                    ? 'bg-white text-emerald-700 shadow-sm font-black border-r-4 border-r-emerald-600'
-                    : 'text-gray-600 hover:bg-white/80 hover:text-gray-900'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
-                      isCurrent
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-gray-200/70 text-gray-500'
-                    }`}
-                  >
-                    {idx + 1}
-                  </div>
-                  <div>
-                    <span className="text-xs md:text-sm leading-snug block">{sec.title}</span>
-                    <span className="text-[10px] text-gray-400 block mt-0.5">
-                      الأبيات: {sec.startVerse} - {sec.endVerse}
-                    </span>
-                  </div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Verses Content View */}
-        <div className="flex-1 p-6 md:p-10 flex flex-col justify-between overflow-y-auto bg-[#FDFBF7]">
-          <div className="space-y-8 flex-1">
-            {/* Chapter Heading */}
-            <div className="text-center pb-4 border-b border-emerald-100/60">
-              <span className="text-emerald-700 bg-emerald-50 px-4 py-1.5 rounded-full text-xs font-black inline-flex items-center gap-2 mb-2 border border-emerald-200">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                الباب {activeSectionIdx + 1} من ١٠ • الأبيات {currentSection.startVerse} إلى {currentSection.endVerse}
-              </span>
-              <h4 className="text-2xl md:text-3xl font-black text-gray-900">
-                {currentSection.title}
-              </h4>
-            </div>
-
-            {/* Verses display */}
-            <div className="space-y-6 max-w-2xl mx-auto">
-              {currentSection.verses.map((verse, vIdx) => {
-                const verseNumber = currentSection.startVerse + vIdx
-                const isSelectedVerse = activeVerseIndex === vIdx
-                const isGroupSelected = selectedVerseNumbers.includes(verseNumber)
-                const [firstHalf, secondHalf] = verse.split('**')
-
-                const handleClick = () => {
-                  if (scopeMode === 'selection') {
-                    toggleVerseSelection(verseNumber)
-                  } else {
-                    setActiveVerseIndex(vIdx)
-                  }
-                }
-
-                return (
-                  <motion.div
-                    key={vIdx}
-                    onClick={handleClick}
-                    className={`p-6 rounded-3xl border transition-all duration-300 cursor-pointer text-center relative ${
-                      scopeMode === 'selection'
-                        ? isGroupSelected
-                          ? 'bg-emerald-50/80 border-emerald-500 shadow-md ring-2 ring-emerald-500/40'
-                          : 'bg-white/60 border-gray-100 opacity-70 hover:opacity-100'
-                        : isSelectedVerse
-                        ? 'bg-white border-emerald-400 shadow-lg shadow-emerald-900/5 ring-2 ring-emerald-400/50 scale-[1.02]'
-                        : 'bg-white/60 border-gray-100 hover:bg-white hover:border-emerald-200'
-                    }`}
-                  >
-                    {/* Verse Number Badge & Checkbox in selection mode */}
-                    <div className="absolute top-3 right-4 flex items-center gap-1.5">
-                      <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black flex items-center justify-center">
-                        {verseNumber}
-                      </span>
-                      {scopeMode === 'selection' && isGroupSelected && (
-                        <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                          <Check className="w-3 h-3" />
-                          محدد للتحفيظ
-                        </span>
-                      )}
-                    </div>
-
-
-                    {/* Poetry Verse Line */}
-                    <div 
-                      className="text-xl sm:text-2xl md:text-3xl font-bold leading-loose text-gray-800 space-y-2"
-                      style={{ fontFamily: 'var(--font-amiri)' }}
-                    >
-                      <div className="text-emerald-950 font-black">
-                        {firstHalf?.trim()}
-                      </div>
-                      <div className="text-gray-500 text-xs tracking-widest font-mono">
-                        ~ • ~
-                      </div>
-                      <div className="text-emerald-900 font-black">
-                        {secondHalf?.trim()}
-                      </div>
-                    </div>
-                  </motion.div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Bottom Player Controller */}
-          <div className="mt-8 p-6 bg-white rounded-3xl border border-emerald-100 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center font-black shadow-inner">
-                <Music className="w-6 h-6" />
-              </div>
-              <div className="text-right">
-                <p className="text-[11px] text-gray-400 font-bold">يقرأ الآن:</p>
-                <p className="font-black text-gray-800 text-sm md:text-base">
-                  {currentReciter.name}
-                </p>
-                <p className="text-[10px] text-emerald-600 font-medium">
-                  {currentSection.title} (البيت {currentSection.startVerse + activeVerseIndex})
-                </p>
-              </div>
-            </div>
-
-            {/* Playback Controls */}
-            <div className="flex items-center gap-4">
-              <button
-                onClick={handlePrevVerse}
-                className="p-3 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-2xl transition-colors"
-                title="البيت السابق"
-              >
-                <SkipBack className="w-6 h-6" />
-              </button>
-
-              <button
-                onClick={togglePlay}
-                className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-xl transition-all ${
-                  isPlaying 
-                    ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200 scale-105' 
-                    : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 active:scale-95'
-                }`}
-                title={isPlaying ? 'إيقاف مؤقت' : 'تشغيل المنظومة'}
-              >
-                {isPlaying ? (
-                  <Pause className="w-7 h-7 fill-current" />
-                ) : (
-                  <Play className="w-7 h-7 fill-current mr-0.5" />
-                )}
-              </button>
-
-              <button
-                onClick={handleNextVerse}
-                className="p-3 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-2xl transition-colors"
-                title="البيت التالي"
-              >
-                <SkipForward className="w-6 h-6" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Reciters Profile Modal */}
-      <AnimatePresence>
-        {showRecitersModal && (
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" dir="rtl">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-emerald-100"
-            >
-              {/* Modal Header */}
-              <div className="p-6 bg-gradient-to-l from-emerald-800 to-teal-700 text-white flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                    <Headphones className="w-5 h-5 text-amber-300" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black">أصوات وقراء تحفة الأطفال</h3>
-                    <p className="text-xs text-emerald-100">تسجيلات صوتية متقنة ومجانية للتحفيظ والمدارسة</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowRecitersModal(false)}
-                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Reciters List */}
-              <div className="p-6 space-y-4 overflow-y-auto flex-1">
-                {TUHFA_RECITERS.map((rec) => {
-                  const isSelected = selectedReciterId === rec.id
-                  return (
-                    <div
-                      key={rec.id}
-                      className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
-                        isSelected
-                          ? 'bg-emerald-50/80 border-emerald-400 shadow-sm ring-1 ring-emerald-300'
-                          : 'bg-white border-gray-100 hover:border-emerald-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3.5 flex-1">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white font-black text-sm flex items-center justify-center shadow-sm shrink-0">
-                          {rec.avatarText}
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-black text-gray-900 text-sm md:text-base">
-                              {rec.name}
-                            </h4>
-                            <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-full">
-                              {rec.country}
-                            </span>
-                            <span className="text-[10px] text-gray-400 font-mono">
-                              ({rec.fileSize})
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-500">
-                            {rec.info}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedReciterId(rec.id)
-                            setShowRecitersModal(false)
-                          }}
-                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                            isSelected
-                              ? 'bg-emerald-600 text-white shadow-xs cursor-default'
-                              : 'bg-gray-100 text-gray-700 hover:bg-emerald-600 hover:text-white'
-                          }`}
-                        >
-                          {isSelected ? 'القارئ المختار' : 'اختيار هذا القارئ'}
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Modal Footer */}
-              <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-                <span>جميع التلاوات مرخصة ومتاحة للتحميل والاستماع دون إنترنت</span>
-                <button
-                  type="button"
-                  onClick={() => setShowRecitersModal(false)}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors"
-                >
-                  إغلاق
-                </button>
-              </div>
-            </motion.div>
+      {/* PDF Pages Rendering Area */}
+      <div 
+        ref={containerRef}
+        className="flex-1 overflow-auto bg-[#ECE9E0] flex items-center justify-center p-4 relative"
+      >
+        {loadingPdf && (
+          <div className="absolute inset-0 z-50 bg-[#FDFBF7]/90 flex flex-col items-center justify-center gap-3">
+            <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+            <span className="text-emerald-800 font-bold">جاري تحميل صفحات تحفة الأطفال...</span>
           </div>
         )}
-      </AnimatePresence>
+
+        <div className="relative border border-stone-300 shadow-2xl bg-white select-none overflow-hidden">
+          <canvas ref={canvasRef} className="block" />
+
+          {/* Interactive Text layer of child.pdf */}
+          <div className="absolute inset-0 z-10">
+            {mappedItems.map((item, idx) => {
+              const isSelected = selectedVerseNum && item.verse && selectedVerseNum === item.verse.num
+              const isCurrentlyPlaying = currentlyPlayingVerse && item.verse && currentlyPlayingVerse === item.verse.num
+
+              return (
+                <div
+                  key={idx}
+                  onClick={(e) => {
+                    if (item.verse) {
+                      setSelectedVerseNum(item.verse.num)
+                      setClickCoords({ x: item.left, y: item.top })
+                      setShowFloatingMenu(true)
+                    }
+                  }}
+                  className={`absolute cursor-pointer transition-all ${
+                    isSelected 
+                      ? 'bg-blue-500/25 border-b-2 border-blue-500/50' 
+                      : isCurrentlyPlaying
+                      ? 'bg-amber-500/30'
+                      : 'bg-transparent hover:bg-emerald-500/10'
+                  }`}
+                  style={{
+                    left: `${item.left}px`,
+                    top: `${item.top}px`,
+                    width: `${item.width}px`,
+                    height: `${item.height}px`
+                  }}
+                  title={item.verse ? `البيت رقم ${item.verse.num}` : undefined}
+                />
+              )
+            })}
+          </div>
+        </div>
+
+        {/* RADIAL FLOATING CIRCULAR CONTROLS */}
+        <AnimatePresence>
+          {showCircularMenu && selectedVerseNum && currentSelectedVerse && clickCoords && (
+            <div 
+              className="absolute z-50 pointer-events-none"
+              style={{
+                left: `${clickCoords.x}px`,
+                top: `${clickCoords.y - 120}px`,
+              }}
+            >
+              <motion.div 
+                initial={{ scale: 0, opacity: 0, rotate: -45 }}
+                animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                exit={{ scale: 0, opacity: 0, rotate: 45 }}
+                className="pointer-events-auto bg-white/95 dark:bg-gray-900/95 border border-emerald-100 rounded-3xl p-4 shadow-2xl flex flex-col items-center gap-3 backdrop-blur-md max-w-sm"
+              >
+                <div className="text-center pb-2 border-b border-gray-100 dark:border-gray-800 w-full">
+                  <h4 className="font-black text-xs text-emerald-800 dark:text-emerald-400">
+                    البيت رقم {selectedVerseNum}
+                  </h4>
+                  <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-1 font-amiri">
+                    « {currentSelectedVerse.text} »
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-4 gap-3">
+                  {/* 1. Play Verse */}
+                  <button
+                    onClick={() => {
+                      stopAudio()
+                      playSequence(selectedVerseNum)
+                    }}
+                    className="w-12 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105"
+                    title="تشغيل البيت الحالي"
+                  >
+                    <Play className="w-5 h-5 fill-current" />
+                  </button>
+
+                  {/* 2. Continuous recitation */}
+                  <button
+                    onClick={() => setContinuousRecitation(prev => !prev)}
+                    className={`w-12 h-12 rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-105 border ${
+                      continuousRecitation 
+                        ? 'bg-blue-600 text-white border-blue-600' 
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                    }`}
+                    title="التلاوة المستمرة للأبيات"
+                  >
+                    <Repeat className="w-5 h-5" />
+                  </button>
+
+                  {/* 3. Repeat Mode */}
+                  <button
+                    onClick={() => {
+                      setRepeatMode(prev => {
+                        if (prev === '1') return '3'
+                        if (prev === '3') return '5'
+                        if (prev === '5') return 'all'
+                        return '1'
+                      })
+                    }}
+                    className="w-12 h-12 bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 rounded-full flex flex-col items-center justify-center shadow-md transition-transform hover:scale-105 border border-sky-200 dark:border-sky-800"
+                    title="تكرار البيت"
+                  >
+                    <Repeat className="w-4 h-4" />
+                    <span className="text-[9px] font-black">{repeatMode === 'all' ? '∞' : `${repeatMode}x`}</span>
+                  </button>
+
+                  {/* 4. Copy */}
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentSelectedVerse.text)
+                      alert('✅ تم نسخ البيت بنجاح')
+                    }}
+                    className="w-12 h-12 bg-stone-100 dark:bg-stone-800 text-stone-800 dark:text-stone-300 rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-105 border border-stone-200 dark:border-stone-700"
+                    title="نسخ البيت"
+                  >
+                    <Copy className="w-5 h-5" />
+                  </button>
+
+                  {/* 5. Previous Verse */}
+                  <button
+                    onClick={() => {
+                      if (selectedVerseNum > 1) {
+                        setSelectedVerseNum(prev => prev! - 1)
+                      }
+                    }}
+                    className="w-12 h-12 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-105"
+                    title="البيت السابق"
+                  >
+                    <SkipBack className="w-5 h-5" />
+                  </button>
+
+                  {/* 6. Next Verse */}
+                  <button
+                    onClick={() => {
+                      if (selectedVerseNum < 61) {
+                        setSelectedVerseNum(prev => prev! + 1)
+                      }
+                    }}
+                    className="w-12 h-12 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-105"
+                    title="البيت التالي"
+                  >
+                    <SkipForward className="w-5 h-5" />
+                  </button>
+
+                  {/* 7. Share */}
+                  <button
+                    onClick={() => alert(`مشاركة البيت: ${currentSelectedVerse.text}`)}
+                    className="w-12 h-12 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-105 border border-purple-200 dark:border-purple-800"
+                    title="مشاركة البيت"
+                  >
+                    <Share2 className="w-5 h-5" />
+                  </button>
+
+                  {/* 8. Close Selection */}
+                  <button
+                    onClick={() => {
+                      setSelectedVerseNum(null)
+                      setShowFloatingMenu(false)
+                    }}
+                    className="w-12 h-12 bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-105 border border-red-200 dark:border-red-800"
+                    title="إغلاق التحديد"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Page Footer Navigation */}
+      <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs font-bold text-gray-500">
+        <button
+          onClick={handlePrevPage}
+          disabled={pageNumber <= 1}
+          className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 disabled:opacity-40"
+        >
+          الصفحة السابقة
+        </button>
+
+        <span className="text-emerald-800 font-black">
+          متن تحفة الأطفال • صفحة {pageNumber} من ١١
+        </span>
+
+        <button
+          onClick={handleNextPage}
+          disabled={pageNumber >= 11}
+          className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 disabled:opacity-40"
+        >
+          الصفحة التالية
+        </button>
+      </div>
     </div>
   )
 }
-

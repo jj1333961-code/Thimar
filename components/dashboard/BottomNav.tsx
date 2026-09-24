@@ -106,6 +106,46 @@ export function BottomNav({ role, unreadNotificationsCount = 0, unreadMessagesCo
     router.push(`?${params.toString()}`, { scroll: false })
   }
 
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handleResize = () => {
+      const isKeyboardActive = window.screen.height - window.innerHeight > 150
+      setIsKeyboardVisible(isKeyboardActive)
+    }
+
+    const handleFocus = (e: FocusEvent) => {
+      const target = e.target as HTMLElement
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true')) {
+        setIsKeyboardVisible(true)
+      }
+    }
+
+    const handleBlur = (e: FocusEvent) => {
+      const target = e.target as HTMLElement
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true')) {
+        setTimeout(() => {
+          const active = document.activeElement as HTMLElement
+          if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA' && active.contentEditable !== 'true')) {
+            setIsKeyboardVisible(false)
+          }
+        }, 100)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    document.addEventListener('focusin', handleFocus)
+    document.addEventListener('focusout', handleBlur)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      document.removeEventListener('focusin', handleFocus)
+      document.removeEventListener('focusout', handleBlur)
+    }
+  }, [])
+
   const getBadge = (itemId: string) => {
     if (itemId === 'notifications' && unreadNotifs > 0) {
       return unreadNotifs > 99 ? '99+' : unreadNotifs
@@ -115,6 +155,8 @@ export function BottomNav({ role, unreadNotificationsCount = 0, unreadMessagesCo
     }
     return null
   }
+
+  if (isKeyboardVisible) return null
 
   return (
     <nav 

@@ -76,3 +76,52 @@ export async function getSurahAyahs(surahNumber: number): Promise<AyahItem[]> {
     { number: 2, text: 'الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ' }
   ]
 }
+
+export interface PageAyah {
+  surahNumber: number
+  surahName: string
+  ayahNumber: number // in surah
+  text: string
+}
+
+export async function getPageAyahs(pageNumber: number): Promise<PageAyah[]> {
+  const cacheKey = `page_text_v2_${pageNumber}`
+  try {
+    const cached = await getOfflineData<PageAyah[]>(cacheKey)
+    if (cached && cached.length > 0) {
+      return cached
+    }
+  } catch {}
+
+  // Fetch page ayahs from Quran Cloud API
+  try {
+    const res = await fetch(`https://api.alquran.cloud/v1/page/${pageNumber}/quran-uthmani`)
+    if (res.ok) {
+      const data = await res.json()
+      if (data?.data?.ayahs) {
+        const ayahs: PageAyah[] = data.data.ayahs.map((a: any) => ({
+          surahNumber: a.surah.number,
+          surahName: a.surah.name,
+          ayahNumber: a.numberInSurah,
+          text: a.text,
+        }))
+        await saveOfflineData(cacheKey, ayahs)
+        return ayahs
+      }
+    }
+  } catch (err) {
+    console.error(`[QuranAPI] Error fetching page ${pageNumber}:`, err)
+  }
+
+  // Fallback if offline and not cached
+  if (pageNumber === 1) {
+    return DEFAULT_FATIHA_AYAHS.map(a => ({
+      surahNumber: 1,
+      surahName: 'الفاتحة',
+      ayahNumber: a.number,
+      text: a.text
+    }))
+  }
+  return []
+}
+
