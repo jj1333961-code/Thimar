@@ -3,7 +3,7 @@ import Image from 'next/image'
 
 export default function SignupPage() {
   return (
-    <main className="min-h-screen bg-[#FDFBF7] relative flex items-center justify-center p-4 md:p-8 overflow-hidden">
+    <main className="min-h-screen bg-background text-foreground relative flex items-center justify-center p-4 md:p-8 overflow-hidden">
       {/* Decorative Islamic Pattern Background */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
         <Image 

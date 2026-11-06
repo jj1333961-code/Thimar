@@ -2,6 +2,7 @@ const Analytics = () => null
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { LanguageRuntime } from '@/components/language-runtime'
+import { ThemeRuntime } from '@/components/theme-runtime'
 import { LanguageToggle } from '@/components/language-toggle'
 import { ConnectivityBanner } from '@/components/connectivity-banner'
 import { QueryProvider } from '@/lib/query-provider'
@@ -40,8 +41,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   colorScheme: 'light dark',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'white' },
-    { media: '(prefers-color-scheme: dark)', color: 'black' },
+    { media: '(prefers-color-scheme: light)', color: '#FDFBF7' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
   ],
 }
 
@@ -51,14 +52,41 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ar" dir="rtl" className="bg-background">
-      <body className="antialiased">
+    <html lang="ar" dir="rtl" suppressHydrationWarning className="bg-background text-foreground">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('thimar_theme') || localStorage.getItem('theme');
+                  var isDark = theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches) || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                  if (isDark) {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.style.colorScheme = 'dark';
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.style.colorScheme = 'light';
+                  }
+                  var lang = localStorage.getItem('thimar_lang') || localStorage.getItem('lang') || 'ar';
+                  document.documentElement.lang = lang;
+                  document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className="antialiased min-h-screen bg-background text-foreground transition-colors duration-150">
         <QueryProvider>
           <ConnectivityBanner />
           {children}
         </QueryProvider>
-        <div className="fixed left-4 top-4 z-50"><LanguageToggle /></div>
+        <div className="fixed start-4 top-4 z-50">
+          <LanguageToggle />
+        </div>
         <LanguageRuntime />
+        <ThemeRuntime />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

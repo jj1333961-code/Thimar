@@ -18,7 +18,8 @@ import {
   XCircle,
   AlertCircle,
   Send,
-  Sparkles
+  Sparkles,
+  MessageSquare
 } from 'lucide-react'
 import { auth, googleProvider, facebookProvider, setGoogleAccessToken } from '@/lib/firebase'
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
@@ -512,8 +513,42 @@ export function SignupForm() {
           )}
         </div>
 
+        {/* Two Circular Action Buttons: Phone Dialer & Internal Thimar Message */}
+        <div className="bg-card text-card-foreground rounded-3xl p-4 sm:p-5 border border-border shadow-xs flex items-center justify-between gap-4">
+          <div className="text-start space-y-0.5">
+            <h4 className="text-sm font-bold text-foreground">تواصل مباشر مع إدارة ثمار</h4>
+            <p className="text-xs text-muted-foreground">اتصال هاتفي مباشر أو محادثة فورية داخل المنصة</p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            {/* 1. Circular Phone Button */}
+            <a
+              href="tel:+201012345678"
+              className="w-12 h-12 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-md shadow-emerald-600/25 active:scale-90 transition-all cursor-pointer"
+              title="الاتصال بالمسؤول هاتفياً"
+              aria-label="الاتصال بالمسؤول هاتفياً"
+            >
+              <Phone className="w-5 h-5" />
+            </a>
+
+            {/* 2. Circular Internal Thimar Message Button */}
+            <button
+              type="button"
+              onClick={() => {
+                const inputEl = document.getElementById('admin-chat-input')
+                inputEl?.focus()
+                inputEl?.scrollIntoView({ behavior: 'smooth' })
+              }}
+              className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-md shadow-blue-600/25 active:scale-90 transition-all cursor-pointer"
+              title="مراسلة المسؤول داخل ثمار"
+              aria-label="مراسلة المسؤول داخل ثمار"
+            >
+              <MessageSquare className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
         {/* Live Admin Chat Window */}
-        <div className="bg-white rounded-3xl border border-emerald-200 shadow-lg overflow-hidden flex flex-col h-[400px]">
+        <div id="admin-chat-section" className="bg-card text-card-foreground rounded-3xl border border-emerald-500/20 shadow-lg overflow-hidden flex flex-col h-[400px]">
           {/* Chat Header */}
           <div className="p-4 bg-gradient-to-r from-emerald-800 to-teal-900 text-white flex items-center justify-between">
             <div className="flex items-center gap-3">

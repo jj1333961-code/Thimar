@@ -113,8 +113,10 @@ async function extractText(buffer: Buffer, extension: string) {
 async function readMetadata(pathname: string): Promise<ExamFileMeta | null> {
   try {
     const result = await get(pathname, { access: "private" })
-    if (!result || result.statusCode !== 200) return null
-    const text = await new Response(result.stream).text()
+    if (!result || result.statusCode !== 200 || !result.stream) return null
+    const text = Buffer.isBuffer(result.stream)
+      ? result.stream.toString('utf-8')
+      : await new Response(result.stream as any).text()
     if (!text.trim()) return null
     const parsed = JSON.parse(text) as Partial<ExamFileMeta>
     if (!parsed.id || !parsed.pathname || !parsed.metadataPathname) return null

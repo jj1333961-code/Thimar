@@ -17,12 +17,12 @@ export default function TeacherDashboard() {
   const [activeView, setActiveView] = useState<'students' | 'tasks' | 'evaluations'>('students')
 
   return (
-    <main className="min-h-screen bg-[#FDFBF7] flex" dir="rtl">
+    <main className="min-h-screen bg-background text-foreground flex">
       {/* Sidebar */}
-      <aside className="w-20 lg:w-72 bg-white border-l border-gray-100 flex flex-col p-4 lg:p-8 space-y-8">
+      <aside className="w-20 lg:w-72 bg-card border-inline-end border-border flex flex-col p-4 lg:p-8 space-y-8">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shrink-0">ث</div>
-          <h1 className="text-2xl font-black text-gray-900 hidden lg:block">ثمار المعلم</h1>
+          <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shrink-0 shadow-sm">ث</div>
+          <h1 className="text-2xl font-black text-foreground hidden lg:block">ثمار المعلم</h1>
         </div>
 
         <nav className="flex-1 space-y-4">
