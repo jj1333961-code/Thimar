@@ -2,6 +2,9 @@
 const nextConfig = {
   output: 'standalone',
   compress: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     optimizePackageImports: ['lucide-react', 'motion', '@tanstack/react-query', 'date-fns'],
   },

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-export function isValidGoogleClientId(id?: string): boolean {
+function isValidGoogleClientId(id?: string): boolean {
   if (!id) return false
   const trimmed = id.trim()
   if (

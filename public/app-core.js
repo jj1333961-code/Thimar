@@ -1067,8 +1067,10 @@ function roleShellPath(role) {
   }
   
   if(currentId && currentId !== id && currentId !== 'homePage' && !options.fromBrowser) {
-    pageHistory.push(currentId);
-    if(pageHistory.length > 20) pageHistory.shift();
+    if (!currentUser || (currentId !== 'lockScreen' && currentId !== 'accountRecoveryPage' && currentId !== 'signupStep1')) {
+      pageHistory.push(currentId);
+      if(pageHistory.length > 20) pageHistory.shift();
+    }
   }
 
   let el = document.getElementById(id);
@@ -1129,39 +1131,43 @@ function goBack() {
   const currentVisible = document.querySelector('.page:not(.hidden), .home-page:not(.hidden), .chart-page:not(.hidden)');
   const currentId = currentVisible ? currentVisible.id : '';
 
-  if(pageHistory.length > 0) {
+  // 1. Pop from in-app visited history if available
+  while (pageHistory.length > 0) {
     const prevPage = pageHistory.pop();
-    if(prevPage && prevPage !== currentId && document.getElementById(prevPage)) {
+    if (prevPage && prevPage !== currentId && document.getElementById(prevPage) && pageAllowedForUser(prevPage)) {
+      if (currentUser && (prevPage === 'lockScreen' || prevPage === 'login' || prevPage === 'accountRecoveryPage' || prevPage === 'signupStep1')) {
+        continue;
+      }
       showPage(prevPage, { fromBrowser: true });
       return;
     }
   }
 
-  // If inside subpages, go back to main role dashboard
+  // 2. If inside a subpage and history is exhausted, return to user's main role dashboard
   if (currentType === 'student') {
     if (currentId && currentId !== 'studentDashboard') {
-      showPage('studentDashboard');
+      showPage('studentDashboard', { fromBrowser: true });
       return;
     }
+    return;
   } else if (currentType === 'parent') {
     if (currentId && currentId !== 'parentDashboard') {
-      showPage('parentDashboard');
+      showPage('parentDashboard', { fromBrowser: true });
       return;
     }
+    return;
   } else if (currentType === 'admin') {
     if (currentId && currentId !== 'adminDashboard') {
-      showPage('adminDashboard');
+      showPage('adminDashboard', { fromBrowser: true });
       return;
     }
-  }
-
-  if (window.history.length > 1) {
-    window.history.back();
     return;
   }
 
-  // Ultimate fallback to lockScreen / home
-  showPage('lockScreen');
+  // 3. If unauthenticated, return to lockScreen
+  if (!currentUser) {
+    showPage('lockScreen');
+  }
 }
 window.goBack = goBack;
 
@@ -1346,12 +1352,14 @@ function checkAndFinalizeDrafts(force) {
 function togglePassVisibility(inputId, iconEl) {
   const input = document.getElementById(inputId);
   if(!input) return;
-  if(input.type === 'password') {
-    input.type = 'text';
-    iconEl.textContent = '🙈';
-  } else {
-    input.type = 'password';
-    iconEl.textContent = '👁️';
+  const showing = input.type === 'password';
+  input.type = showing ? 'text' : 'password';
+  if(iconEl) {
+    if(iconEl.classList.contains('thimar-circle-eye-btn')) {
+      iconEl.classList.toggle('is-revealed', showing);
+    } else {
+      iconEl.textContent = showing ? '🙈' : '👁️';
+    }
   }
 }
 
@@ -7003,12 +7011,20 @@ function syncSettingsThemeButtons(mode) {
 }
 
 function setAppLang(lang) {
+  currentLang = lang;
   localStorage.setItem('thimar_lang', lang);
   localStorage.setItem('lang', lang);
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
   syncSettingsLangButtons(lang);
-  if (typeof window.applyLangToDom === 'function') {
-    window.applyLangToDom();
+  if (window.ThimarI18n && typeof window.ThimarI18n.setLocale === 'function') {
+    window.ThimarI18n.setLocale(lang);
   }
+  if (typeof window.applyLangToDom === 'function') {
+    window.applyLangToDom(true);
+  }
+  window.dispatchEvent(new Event('languagechange'));
+  showToast(lang === 'en' ? 'Language switched to English' : 'تم تغيير اللغة إلى العربية', 'success');
 }
 
 function syncSettingsLangButtons(lang) {
@@ -7059,13 +7075,28 @@ function setAppMessageFilter(val) {
 }
 
 function confirmAppLogout() {
-  if (confirm('هل أنت متأكد من رغبتك في تسجيل الخروج من الحساب؟')) {
+  try {
+    sessionStorage.removeItem('thimar_auth_token');
+    localStorage.removeItem('thimar_auth_token');
+    sessionStorage.clear();
+  } catch (e) {}
+  currentUser = null;
+  currentType = null;
+  currentAdminId = null;
+  adminVisitState = null;
+  pageHistory = [];
+  try {
     if (typeof logout === 'function') {
-      logout();
+      logout().catch(function() {
+        showPage('lockScreen');
+      });
     } else {
       showPage('lockScreen');
     }
+  } catch (e) {
+    showPage('lockScreen');
   }
+  showToast(document.documentElement.lang === 'en' ? 'Logged out successfully' : 'تم تسجيل الخروج بنجاح', 'info');
 }
 
 function loadParentSettings() {
