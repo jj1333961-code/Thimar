@@ -117,30 +117,30 @@ function StudentContent() {
       {/* Top Navbar */}
       <nav className="bg-white/80 backdrop-blur-lg border-b border-gray-100 px-6 py-4 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold shadow-sm">ث</div>
-            <h1 className="text-xl font-black text-foreground italic">ثمار الطالب</h1>
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold">ث</div>
+            <h1 className="text-xl font-black text-gray-900 italic">ثمار الطالب</h1>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => setShowWalkthrough(true)}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-bold border border-emerald-500/20 transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold border border-emerald-200 transition-colors"
               title="عرض دليل المنصة وجولة الاستخدام"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               <span>جولة المنصة</span>
             </button>
             <PWAInstallButton />
-            <div className="flex items-center gap-2 bg-muted p-1 pr-3 rounded-full border border-border">
-              <span className="text-xs sm:text-sm font-bold text-foreground">ياسين عمر</span>
-              <div className="w-9 h-9 bg-emerald-100 dark:bg-emerald-950/60 rounded-full flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold">ي</div>
+            <div className="flex items-center gap-3 bg-gray-50 p-1 pr-4 rounded-full border border-gray-100">
+              <span className="text-sm font-bold text-gray-700">ياسين عمر</span>
+              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold">ي</div>
             </div>
           </div>
         </div>
       </nav>
 
-      <section className="w-full max-w-6xl mx-auto px-3 sm:px-6 pb-28 pt-4 md:pb-32 md:pt-8">
+      <section className="max-w-7xl mx-auto px-6 pb-28 pt-6 md:px-12 md:pb-32 md:pt-12">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -171,7 +171,7 @@ function StudentContent() {
 
 export default function StudentDashboard() {
   return (
-    <main id="studentDashboard" className="min-h-screen bg-background text-foreground">
+    <main id="studentDashboard" className="min-h-screen bg-[#FDFBF7]" dir="rtl">
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-emerald-600" /></div>}>
         <StudentContent />
       </Suspense>

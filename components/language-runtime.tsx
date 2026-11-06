@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { translate, isQuranicText, type Locale, getAppLanguage } from '@/lib/i18n'
+import { translate, isQuranicText, type Locale } from '@/lib/i18n'
 
 const TRANSLATABLE_ATTRIBUTES = ['placeholder', 'title', 'aria-label', 'aria-description', 'alt', 'value'] as const
 const PROTECTED_SELECTOR = [
@@ -17,7 +17,8 @@ const PROTECTED_SELECTOR = [
 
 export function LanguageRuntime() {
   useEffect(() => {
-    let locale = getAppLanguage()
+    const readLocale = (): Locale => (localStorage.getItem('lang') === 'en' ? 'en' : 'ar')
+    let locale = readLocale()
     const originals = new WeakMap<Text, string>()
     let applying = false
     let frame = 0
@@ -32,14 +33,8 @@ export function LanguageRuntime() {
     const apply = (root: ParentNode = document.body, full = false) => {
       if (applying) return
       applying = true
-
       document.documentElement.lang = locale
       document.documentElement.dir = locale === 'en' ? 'ltr' : 'rtl'
-
-      // Also ensure any <main> tags adjust their dir
-      document.querySelectorAll('main').forEach(el => {
-        el.setAttribute('dir', locale === 'en' ? 'ltr' : 'rtl')
-      })
 
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
       let node: Node | null
@@ -50,6 +45,7 @@ export function LanguageRuntime() {
         const orig = originals.get(text) ?? text.nodeValue
 
         if (locale === 'ar') {
+          // If original text was Arabic, restore it directly for 100% precision
           if (/[\u0600-\u06FF]/.test(orig)) {
             text.nodeValue = orig
           } else {
@@ -65,7 +61,6 @@ export function LanguageRuntime() {
         : root instanceof Element
           ? [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))]
           : []
-
       elements.forEach((element) => {
         if (isProtected(element)) return
         TRANSLATABLE_ATTRIBUTES.forEach((attribute) => {
@@ -98,7 +93,7 @@ export function LanguageRuntime() {
     }
 
     const syncLanguage = () => {
-      locale = getAppLanguage()
+      locale = readLocale()
       schedule(document.body, true)
     }
 
@@ -111,7 +106,6 @@ export function LanguageRuntime() {
     })
 
     window.addEventListener('languagechange', syncLanguage)
-    window.addEventListener('thimar:language-changed', syncLanguage)
     observer.observe(document.body, { childList: true, subtree: true })
     schedule(document.body, true)
 
@@ -119,7 +113,6 @@ export function LanguageRuntime() {
       cancelAnimationFrame(frame)
       observer.disconnect()
       window.removeEventListener('languagechange', syncLanguage)
-      window.removeEventListener('thimar:language-changed', syncLanguage)
     }
   }, [])
 
