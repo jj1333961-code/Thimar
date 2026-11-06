@@ -49,7 +49,17 @@ export interface JoinRequestItem {
   role: string
   country: string
   identity_code: string
+  doc_type?: string
+  dob?: string
   age?: number
+  parent_name?: string
+  parent_phone?: string
+  specialization?: string
+  experience_years?: number
+  qualifications?: string
+  notes?: string
+  voice_sample_url?: string
+  children?: { name: string; age?: number; identity_code?: string; identityCode?: string }[]
   provider?: string
   status: 'pending' | 'approved' | 'rejected' | 'banned'
   created_at: string
@@ -359,8 +369,57 @@ export function NotificationsView() {
                         <span>الهاتف: {req.phone}</span>
                         <span>الدولة: {req.country}</span>
                         <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                          كود الهوية: {req.identity_code}
+                          {req.doc_type === 'passport' ? 'جواز السفر' : 'الهوية الوطنية'}: {req.identity_code}
                         </span>
+                        {req.age && <span>العمر: {req.age} سنة</span>}
+                        {req.dob && <span>الميلاد: {req.dob}</span>}
+                      </div>
+
+                      {/* Extended Role Details Box */}
+                      <div className="pt-2 text-xs space-y-1.5 text-gray-700 bg-gray-50/80 p-3 rounded-xl border border-gray-100 mt-2">
+                        {req.voice_sample_url && (
+                          <div className="flex items-center gap-2">
+                            <Mic className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span className="font-bold text-emerald-900">عينة التلاوة الصوتية:</span>
+                            <audio controls src={req.voice_sample_url} className="h-8 max-w-[220px]" />
+                          </div>
+                        )}
+                        {req.qualifications && (
+                          <div>
+                            <span className="font-bold text-emerald-900">المؤهلات / الإجازات: </span>
+                            <span>{req.qualifications}</span>
+                          </div>
+                        )}
+                        {req.specialization && (
+                          <div>
+                            <span className="font-bold text-emerald-900">التخصص / الخبرة: </span>
+                            <span>{req.specialization} ({req.experience_years || 0} سنوات)</span>
+                          </div>
+                        )}
+                        {req.parent_name && (
+                          <div>
+                            <span className="font-bold text-emerald-900">ولي الأمر: </span>
+                            <span>{req.parent_name} ({req.parent_phone})</span>
+                          </div>
+                        )}
+                        {req.children && req.children.length > 0 && (
+                          <div>
+                            <span className="font-bold text-emerald-900">الأبناء المضافون ({req.children.length}): </span>
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                              {req.children.map((child, idx) => (
+                                <span key={idx} className="bg-white px-2 py-0.5 rounded border border-gray-200 text-[11px]">
+                                  👶 {child.name} {child.age ? `(${child.age} سنة)` : ''}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {req.notes && (
+                          <div>
+                            <span className="font-bold text-emerald-900">ملاحظات: </span>
+                            <span className="italic text-gray-600">{req.notes}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -7,10 +7,11 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, phone, uid } = body
+    const { email, phone, uid, identityCode, identity_code } = body
 
     const cleanEmail = email ? String(email).trim().toLowerCase() : ''
     const cleanPhone = phone ? String(phone).replace(/\D/g, '') : ''
+    const cleanIdentity = (identityCode || identity_code) ? String(identityCode || identity_code).trim() : ''
 
     // 0. Check in studentsDb
     try {
@@ -19,8 +20,10 @@ export async function POST(request: NextRequest) {
         const sEmail = (s.email || s.googleEmail || s.facebookEmail || '').trim().toLowerCase()
         const sPhone = (s.phone || '').replace(/\D/g, '')
         const pEmail = (s.parentEmail || s.parentGoogleEmail || '').trim().toLowerCase()
+        const sNid = ((s as any).nid || (s as any).identity_code || '').trim()
         return (cleanEmail && (sEmail === cleanEmail || pEmail === cleanEmail)) ||
-               (cleanPhone && sPhone === cleanPhone)
+               (cleanPhone && sPhone === cleanPhone) ||
+               (cleanIdentity && sNid === cleanIdentity)
       })
 
       if (studentMatch) {
@@ -73,8 +76,10 @@ export async function POST(request: NextRequest) {
       const match = allRequests.find((r: JoinRequest) => {
         const reqEmail = r.email ? r.email.trim().toLowerCase() : ''
         const reqPhone = r.phone ? r.phone.replace(/\D/g, '') : ''
+        const reqIdCode = r.identity_code ? r.identity_code.trim() : ''
         return (cleanEmail && reqEmail === cleanEmail) || 
                (cleanPhone && reqPhone === cleanPhone) ||
+               (cleanIdentity && reqIdCode === cleanIdentity) ||
                (uid && r.email?.includes(uid))
       })
 

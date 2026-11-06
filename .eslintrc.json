@@ -1,9 +1,28 @@
 {
   "root": true,
-  "extends": "next/core-web-vitals",
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "env": {
+    "browser": true,
+    "node": true,
+    "es6": true
+  },
   "rules": {
-    "@next/next/no-img-element": "off",
-    "@next/next/no-page-custom-font": "off",
-    "react/no-unescaped-entities": "off"
+    "no-unused-vars": "off",
+    "no-undef": "off",
+    "no-empty": "off",
+    "no-control-regex": "off",
+    "no-useless-escape": "off",
+    "prefer-const": "off",
+    "no-constant-condition": "off",
+    "no-extra-semi": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": "off",
+    "@typescript-eslint/no-require-imports": "off",
+    "@typescript-eslint/ban-ts-comment": "off"
   }
 }

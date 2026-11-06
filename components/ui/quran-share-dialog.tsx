@@ -247,7 +247,6 @@ export function QuranShareDialog({
           {/* Image Preview */}
           <div className="flex-1 p-6 overflow-y-auto bg-gray-50 flex items-center justify-center">
             {imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={imageUrl}
                 alt="بطاقة الآية"

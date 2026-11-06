@@ -14,6 +14,7 @@ import {
 import { auth, db, setGoogleAccessToken, googleProvider, facebookProvider } from '@/lib/firebase'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 
+import { COUNTRY_RULES } from '@/lib/country-rules'
 import { AIChatBubble } from '@/components/ui/ai-chat-bubble'
 import { SocialAuthButtons } from './social-auth-buttons'
 
@@ -25,6 +26,17 @@ export function LoginForm() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // National ID / Passport Login State
+  const [showNationalIdModal, setShowNationalIdModal] = useState(false)
+  const [nationalIdForm, setNationalIdForm] = useState({
+    countryIso: 'SA',
+    docType: 'national_id',
+    docNumber: '',
+    password: '',
+  })
+  const [nationalIdLoading, setNationalIdLoading] = useState(false)
+  const [nationalIdError, setNationalIdError] = useState('')
 
   // Forgot password & social login recovery state
   const [showForgotModal, setShowForgotModal] = useState(false)
@@ -165,9 +177,126 @@ export function LoginForm() {
 
       setError(err?.code === 'auth/user-not-found' || err?.code === 'auth/wrong-password' 
         ? 'بيانات الدخول غير صحيحة. يرجى التحقق من اسم المستخدم أو البريد وكلمة المرور.' 
-        : 'فشل تسجيل الدخول. يمكنك الضغط على "نسيت كلمة المرور" بالأسفل لتسجيل الدخول الفوري بحساب Google أو Facebook.')
+        : 'فشل تسجيل الدخول. يرجى المحاولة مجدداً أو استخدام الدخول برقم الهوية.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Handle National ID / Passport Login
+  const handleNationalIdLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setNationalIdLoading(true)
+    setNationalIdError('')
+
+    const selectedCountry = COUNTRY_RULES.find(c => c.iso2 === nationalIdForm.countryIso)
+    const docNum = nationalIdForm.docNumber.trim()
+
+    if (!docNum) {
+      setNationalIdError('يرجى كتابة رقم الهوية الوطنية أو رقم جواز السفر.')
+      setNationalIdLoading(false)
+      return
+    }
+
+    if (!nationalIdForm.password.trim()) {
+      setNationalIdError('يرجى كتابة كلمة المرور الخاصة بحسابك.')
+      setNationalIdLoading(false)
+      return
+    }
+
+    // Validate format against selected country pattern
+    if (selectedCountry?.identityPattern) {
+      try {
+        const regex = new RegExp(selectedCountry.identityPattern)
+        if (!regex.test(docNum)) {
+          setNationalIdError(selectedCountry.identityHintAr || 'رقم الوثيقة غير مطابق لشروط الدولة المختارة.')
+          setNationalIdLoading(false)
+          return
+        }
+      } catch {}
+    }
+
+    try {
+      // 1. Lookup account by document number (identityCode)
+      const lookupRes = await fetch('/api/auth/lookup-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identityCode: docNum,
+          identity_code: docNum
+        })
+      })
+
+      const lookupData = await lookupRes.json()
+
+      // Local fallback lookup
+      let localMatch: any = null
+      try {
+        const savedReq = localStorage.getItem('thimar_pending_request')
+        if (savedReq) {
+          const parsed = JSON.parse(savedReq)
+          if (parsed.identityCode === docNum || parsed.identity_code === docNum) {
+            localMatch = parsed
+          }
+        }
+      } catch {}
+
+      const foundUser = lookupData.user || localMatch
+
+      if (foundUser) {
+        if (foundUser.status === 'banned') {
+          setNationalIdError('⛔ تم حظر هذا الحساب من قبل إدارة المنصة.')
+          setNationalIdLoading(false)
+          return
+        }
+
+        // Verify password
+        const passwordRes = await fetch('/api/auth/password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            identifier: foundUser.email || docNum,
+            password: nationalIdForm.password
+          })
+        }).catch(() => null)
+
+        if (passwordRes && !passwordRes.ok) {
+          setNationalIdError('كلمة المرور غير صحيحة. يرجى التثبت والمحاولة مجدداً.')
+          setNationalIdLoading(false)
+          return
+        }
+
+        if (foundUser.status === 'approved') {
+          const approvedProfile = {
+            id: foundUser.id || 'usr_' + Date.now(),
+            name: foundUser.name || `مستخدم ${docNum}`,
+            email: foundUser.email || `${docNum}@thimar.app`,
+            role: foundUser.role || 'student',
+            status: 'approved',
+            identityCode: docNum
+          }
+
+          localStorage.setItem('thimar_saved_device_user', JSON.stringify(approvedProfile))
+          localStorage.setItem('thimar_current_user', JSON.stringify(approvedProfile))
+          localStorage.setItem('thimar_auth_token', `token_${approvedProfile.id}`)
+
+          router.push(`/${approvedProfile.role}`)
+          return
+        } else if (foundUser.status === 'pending') {
+          localStorage.setItem('thimar_pending_request', JSON.stringify(foundUser))
+          localStorage.setItem('thimar_current_user', JSON.stringify(foundUser))
+          router.push('/signup')
+          return
+        } else {
+          setNationalIdError('حالة الحساب غير نشطة (مرفوض أو محظور).')
+        }
+      } else {
+        setNationalIdError('لم يتم العثور على حساب مسجل برقم الوثيقة هذا. يرجى التثبت أو إنشاء حساب جديد.')
+      }
+    } catch (err: any) {
+      setNationalIdError('حدث خطأ أثناء التحقق. يرجى المحاولة لاحقاً.')
+    } finally {
+      setNationalIdLoading(false)
     }
   }
 
@@ -344,18 +473,6 @@ export function LoginForm() {
                 <input type="checkbox" defaultChecked className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
                 حفظ هذا الجهاز
               </label>
-
-              {/* Forgot password button triggering Google/Facebook flow */}
-              <button 
-                type="button" 
-                onClick={() => {
-                  setForgotFeedback(null)
-                  setShowForgotModal(true)
-                }}
-                className="text-emerald-700 font-bold hover:underline hover:text-emerald-800"
-              >
-                هل نسيت الرقم السري؟
-              </button>
             </div>
 
             <button
@@ -372,16 +489,140 @@ export function LoginForm() {
             <div className="relative flex justify-center text-xs"><span className="px-3 bg-white text-gray-500 font-bold">أو الدخول المباشر بحسابك</span></div>
           </div>
 
-          <SocialAuthButtons />
-
-          <p className="mt-8 text-center text-gray-500 text-xs sm:text-sm">
-            ليس لديك حساب بعد؟{' '}
-            <button onClick={() => router.push('/signup')} className="text-emerald-600 font-bold hover:underline">
-              إنشاء حساب جديد
-            </button>
-          </p>
+          <SocialAuthButtons onOpenNationalIdModal={() => { setNationalIdError(''); setShowNationalIdModal(true); }} />
         </div>
       </div>
+
+      {/* National ID / Passport Login Modal */}
+      <AnimatePresence>
+        {showNationalIdModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-emerald-100 text-right space-y-5 relative"
+            >
+              <button
+                type="button"
+                onClick={() => setShowNationalIdModal(false)}
+                className="absolute top-5 left-5 p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center space-y-2">
+                <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mx-auto shadow-inner">
+                  <svg className="w-6 h-6 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <rect x="3" y="4" width="18" height="16" rx="3" />
+                    <circle cx="8.5" cy="10.5" r="2.5" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 9.5h4.5M13.5 12.5h3.5M6 16.5c0-1.5 1.5-2.5 3-2.5s3 1 3 2.5" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-black text-gray-900">الدخول بالهوية الوطنية أو جواز السفر</h3>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  أدخل بيانات وثيقتك الرسمية وكلمة المرور المسجلة بطلبك للدخول المباشر.
+                </p>
+              </div>
+
+              {nationalIdError && (
+                <div className="p-3.5 bg-red-50 text-red-700 rounded-2xl border border-red-200 text-xs font-bold text-center">
+                  {nationalIdError}
+                </div>
+              )}
+
+              <form onSubmit={handleNationalIdLogin} className="space-y-4">
+                {/* Country */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">البلد المختارة *</label>
+                  <select
+                    value={nationalIdForm.countryIso}
+                    onChange={e => setNationalIdForm({ ...nationalIdForm, countryIso: e.target.value })}
+                    className="w-full px-3.5 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {COUNTRY_RULES.map(c => (
+                      <option key={c.iso2} value={c.iso2}>
+                        {c.nameAr} (+{c.dialCode})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Document Type */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">نوع الوثيقة *</label>
+                  <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setNationalIdForm({ ...nationalIdForm, docType: 'national_id' })}
+                      className={`p-2.5 rounded-xl border transition-all ${
+                        nationalIdForm.docType === 'national_id'
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-gray-50 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      هوية وطنية
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNationalIdForm({ ...nationalIdForm, docType: 'passport' })}
+                      className={`p-2.5 rounded-xl border transition-all ${
+                        nationalIdForm.docType === 'passport'
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-gray-50 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      جواز سفر
+                    </button>
+                  </div>
+                </div>
+
+                {/* Document Number */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    {nationalIdForm.docType === 'passport' ? 'رقم جواز السفر *' : 'رقم الهوية الوطنية *'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder={
+                      nationalIdForm.docType === 'passport' ? 'أدخل رقم جواز السفر' : 'أدخل رقم الهوية الوطنية'
+                    }
+                    value={nationalIdForm.docNumber}
+                    onChange={e => setNationalIdForm({ ...nationalIdForm, docNumber: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-mono font-bold focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* Account Password */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">كلمة المرور *</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={nationalIdForm.password}
+                    onChange={e => setNationalIdForm({ ...nationalIdForm, password: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={nationalIdLoading}
+                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
+                >
+                  {nationalIdLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <span>تحقق وتسجيل الدخول</span>
+                  )}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Forgot Password / Social Account Recovery Modal */}
       <AnimatePresence>

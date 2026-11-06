@@ -271,10 +271,20 @@ export interface JoinRequest {
   role: string
   country: string
   identity_code: string
+  doc_type?: 'national_id' | 'passport' | string
   age?: number
+  dob?: string
   target_juz?: number
   target_surah?: string
   student_name?: string
+  parent_name?: string
+  parent_phone?: string
+  specialization?: string
+  experience_years?: number
+  qualifications?: string
+  notes?: string
+  voice_sample_url?: string
+  children?: Array<{ name: string; target_juz?: number; target_surah?: string }>
   provider?: 'google' | 'facebook' | 'whatsapp' | 'direct' | string
   status: 'pending' | 'approved' | 'rejected' | 'banned'
   reviewed_by?: string

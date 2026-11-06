@@ -46,15 +46,25 @@ export async function POST(request: NextRequest) {
       role, 
       country, 
       identity_code, 
+      doc_type = 'national_id',
       age, 
+      dob,
       provider = 'direct',
       target_juz,
       target_surah,
-      student_name
+      student_name,
+      parent_name,
+      parent_phone,
+      specialization,
+      experience_years,
+      qualifications,
+      notes,
+      voice_sample_url,
+      children
     } = body
 
     if (!name || !phone || !role || !country || !identity_code) {
-      return json({ error: 'الاسم، رقم الهاتف، نوع الحساب، البلد وكود الهوية مطلوبة' }, 400)
+      return json({ error: 'الاسم، رقم الهاتف، نوع الحساب، البلد ورقم الهوية مطلوبان' }, 400)
     }
 
     const email = body.email?.trim() || `${provider}_${identity_code.replace(/[^a-zA-Z0-9]/g, '') || Date.now()}@thimar.app`
@@ -66,33 +76,44 @@ export async function POST(request: NextRequest) {
       role,
       country,
       identity_code,
+      doc_type,
       age: age ? parseInt(String(age)) : undefined,
+      dob,
       target_juz: target_juz ? parseInt(String(target_juz)) : undefined,
       target_surah: target_surah ? String(target_surah) : undefined,
       student_name: student_name ? String(student_name) : undefined,
+      parent_name,
+      parent_phone,
+      specialization,
+      experience_years: experience_years ? parseInt(String(experience_years)) : undefined,
+      qualifications,
+      notes,
+      voice_sample_url,
+      children,
       provider,
     })
 
     // Also automatically create a notification for admin
     try {
       const { notificationsDb, messagesDb } = await import('@/lib/supabase/database')
-      const roleLabel = role === 'teacher' ? 'معلم' : role === 'student' ? 'طالب' : 'ولي أمر'
+      const roleLabel = role === 'teacher' ? 'معلم' : role === 'student' ? 'طالب' : role === 'parent' ? 'ولي أمر' : 'زائر'
       const providerLabel = provider === 'google' ? 'Google' : provider === 'facebook' ? 'Facebook' : 'التسجيل المباشر'
+      const docLabel = doc_type === 'passport' ? 'جواز سفر' : 'هوية وطنية'
       
-      const parentDetails = role === 'parent' && (student_name || target_juz || target_surah)
-        ? ` • (الابن: ${student_name || 'طالب'} - الجزء: ${target_juz || '—'} - سورة: ${target_surah || '—'})`
+      const parentDetails = role === 'parent' && (student_name || children?.length)
+        ? ` • (الأبناء: ${children?.map((c: { name: string }) => c.name).join(', ') || student_name})`
         : ''
 
       await notificationsDb.create({
         user_id: 'admin',
         title: `طلب انضمام جديد (${providerLabel}): ${name}`,
-        message: `سجل ${name} عبر (${providerLabel}) كـ (${roleLabel})${parentDetails} بكود هوية: ${identity_code}. الحساب بانتظار الاعتماد.`,
+        message: `سجل ${name} كـ (${roleLabel})${parentDetails} وثيقة (${docLabel}: ${identity_code}). الحساب بانتظار الاعتماد.`,
         type: 'signup',
         category: 'students'
       }).catch(() => {})
 
       // Automated pre-sent message to Admin
-      const starterBody = `السلام عليكم ورحمة الله، أنا ${name} قمت بالتسجيل عبر (${providerLabel}) كـ (${roleLabel})${parentDetails} بكود الهوية [${identity_code}]. أرجو مراجعة حسابي واعتماده.`
+      const starterBody = `السلام عليكم ورحمة الله، أنا ${name} قمت بالتسجيل كـ (${roleLabel})${parentDetails} برقم (${docLabel}: ${identity_code}). أرجو مراجعة حسابي واعتماده.`
       await messagesDb.create({
         sender_id: email,
         sender_name: name,
