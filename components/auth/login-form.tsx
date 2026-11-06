@@ -96,14 +96,7 @@ export function LoginForm() {
     setError('')
 
     // Special Admin Logic
-    const cleanId = formData.identifier.trim().toLowerCase()
-    const cleanPass = formData.password.trim()
-    const isMasterAdmin =
-      (cleanId === 'thimar' && (cleanPass === '0101' || cleanPass === '010')) ||
-      (cleanId === 'admin' && (cleanPass === '0101' || cleanPass === 'admin123' || cleanPass === '010')) ||
-      (cleanId === '12340' && (cleanPass === '010' || cleanPass === '0101'))
-
-    if (isMasterAdmin) {
+    if (formData.identifier === 'thimar' && formData.password === '0101') {
       const adminUser = {
         id: 'admin_master',
         name: 'المسؤول العام',
