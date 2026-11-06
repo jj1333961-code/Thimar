@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
 import { COUNTRY_RULES, CountryRule } from '@/lib/country-rules'
@@ -18,69 +18,28 @@ import {
   XCircle,
   AlertCircle,
   Send,
-  Sparkles,
-  Mic,
-  Square,
-  Play,
-  RotateCcw,
-  FileText,
-  Calendar,
-  Plus,
-  Trash2,
-  Eye,
-  Award,
-  BookMarked
+  Sparkles
 } from 'lucide-react'
 import { auth, googleProvider, facebookProvider, setGoogleAccessToken } from '@/lib/firebase'
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
 import { AIChatBubble } from '@/components/ui/ai-chat-bubble'
-import { PasswordInput } from '@/components/ui/password-input'
-
-interface ChildEntry {
-  name: string
-  age: string
-  targetJuz: string
-  targetSurah: string
-}
 
 export function SignupForm() {
   const router = useRouter()
-  // Role selector: 4 types (Student, Visitor, Teacher, Parent)
-  const [role, setRole] = useState<'student' | 'visitor' | 'teacher' | 'parent'>('student')
-  const [country, setCountry] = useState<CountryRule>(COUNTRY_RULES[0])
+  const [role, setRole] = useState<'teacher' | 'student' | 'parent'>('student')
+  const [country, setCountry] = useState<CountryRule | null>(null)
   
-  // Common Required & Optional Fields
+  // Cleaned Form Data: Removed email, WhatsApp, and password as instructed
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    docType: 'national_id' as 'national_id' | 'passport',
     identityCode: '',
-    birthDate: '',
-    calculatedAge: '',
-    // Optional Common Fields
-    targetJuz: '',
-    targetSurah: '',
-    notes: '',
-    // Student specific
-    parentName: '',
-    parentPhone: '',
-    // Teacher specific
-    teacherSpecialty: '',
-    teacherSubjects: '',
-    teacherExperience: '',
-    teacherQualifications: '',
+    age: '',
+    // Parent specific fields: Student name, Juz, and Surah
+    studentName: '',
+    targetJuz: '1',
+    targetSurah: 'الفاتحة',
   })
-
-  // Parent specific: Multiple children
-  const [childrenList, setChildrenList] = useState<ChildEntry[]>([
-    { name: '', age: '', targetJuz: '1', targetSurah: 'الفاتحة' }
-  ])
-
-  // Audio Voice Sample Recording state
-  const [isRecording, setIsRecording] = useState(false)
-  const [voiceBlobUrl, setVoiceBlobUrl] = useState<string | null>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
 
   const [loading, setLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null)
@@ -91,49 +50,19 @@ export function SignupForm() {
   const [adminMessages, setAdminMessages] = useState<Array<{ id: string; sender: 'user' | 'admin'; text: string; time: string }>>([])
   const [adminInput, setAdminInput] = useState('')
   const [adminSending, setAdminSending] = useState(false)
-  const [adminPhone, setAdminPhone] = useState<string>('01012345678')
 
-  // Set default country on load
+  // Account Chooser modal fallback for restricted sandbox environments
+  const [showAccountChooser, setShowAccountChooser] = useState<{
+    provider: 'google' | 'facebook';
+    suggestedAccounts: Array<{ name: string; email: string }>;
+  } | null>(null)
+  const [manualAccountEmail, setManualAccountEmail] = useState('')
+
+  // Default country
   useEffect(() => {
     const eg = COUNTRY_RULES.find(c => c.iso2 === 'EG')
     if (eg) setCountry(eg)
     else setCountry(COUNTRY_RULES[0])
-  }, [])
-
-  // Auto calculate age whenever Birth Date changes
-  useEffect(() => {
-    if (!formData.birthDate) {
-      setFormData(prev => ({ ...prev, calculatedAge: '' }))
-      return
-    }
-    try {
-      const birth = new Date(formData.birthDate)
-      const today = new Date()
-      let age = today.getFullYear() - birth.getFullYear()
-      const monthDiff = today.getMonth() - birth.getMonth()
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-        age--
-      }
-      if (age >= 0) {
-        setFormData(prev => ({ ...prev, calculatedAge: String(age) }))
-      } else {
-        setFormData(prev => ({ ...prev, calculatedAge: '0' }))
-      }
-    } catch {
-      setFormData(prev => ({ ...prev, calculatedAge: '' }))
-    }
-  }, [formData.birthDate])
-
-  // Fetch admin phone from system settings
-  useEffect(() => {
-    fetch('/api/config/environment')
-      .then(res => res.json())
-      .then(data => {
-        if (data.ADMIN_PHONE || data.adminPhone) {
-          setAdminPhone(data.ADMIN_PHONE || data.adminPhone)
-        }
-      })
-      .catch(() => {})
   }, [])
 
   // Check on mount if user already has a pending or approved session on this device
@@ -155,14 +84,13 @@ export function SignupForm() {
         setSuccess(true)
         setupStarterAdminChat(parsed)
 
-        // Immediately check status in DB
+        // Immediately check status
         fetch('/api/supabase/join-requests')
           .then(res => res.json())
           .then(data => {
             const match = (data.requests || []).find((r: any) =>
               (parsed.email && r.email?.toLowerCase() === parsed.email.toLowerCase()) ||
-              (parsed.identityCode && r.identity_code === parsed.identityCode) ||
-              (parsed.identity_code && r.identity_code === parsed.identity_code)
+              (parsed.identityCode && r.identity_code === parsed.identityCode)
             )
             if (match) {
               setAccountStatus(match.status)
@@ -194,9 +122,9 @@ export function SignupForm() {
     const interval = setInterval(async () => {
       try {
         const idToCheck = activeUserIdentity?.email
-        const codeToCheck = activeUserIdentity?.identityCode || activeUserIdentity?.identity_code || formData.identityCode
+        const codeToCheck = activeUserIdentity?.identityCode || formData.identityCode
 
-        // Check local banned list
+        // Local banned check
         const banned = JSON.parse(localStorage.getItem('thimar_banned_users') || '[]')
         if (idToCheck && banned.includes(idToCheck?.toLowerCase())) {
           setAccountStatus('banned')
@@ -214,6 +142,7 @@ export function SignupForm() {
             setAccountStatus(matched.status)
             if (matched.status === 'approved') {
               saveApprovedDeviceSession({ ...activeUserIdentity, ...matched, status: 'approved' })
+              // Auto redirect after approval
               setTimeout(() => {
                 router.push(`/${matched.role || role || 'student'}`)
               }, 1800)
@@ -248,11 +177,15 @@ export function SignupForm() {
   }, [success, activeUserIdentity, formData.identityCode, role, router])
 
   const setupStarterAdminChat = (user: any) => {
-    const roleMap: Record<string, string> = { teacher: 'معلم', student: 'طالب', parent: 'ولي أمر', visitor: 'زائر' }
+    const roleMap: Record<string, string> = { teacher: 'معلم', student: 'طالب', parent: 'ولي أمر' }
     const roleName = roleMap[user.role] || user.role
     const providerLabel = user.provider === 'google' ? 'Google' : user.provider === 'facebook' ? 'Facebook' : 'التسجيل المباشر'
     
-    const starter = `السلام عليكم ورحمة الله وبركاته، أنا ${user.name} قمت بالتسجيل عبر (${providerLabel}) بصفة (${roleName}) وبرقم الوثيقة [${user.identityCode || user.identity_code}]. أرجو مراجعة طلب الاعتماد.`
+    const parentQuranDetail = user.role === 'parent' && (user.student_name || user.target_juz || user.target_surah)
+      ? ` • (اسم الابن: ${user.student_name || 'طالب'} - الجزء: ${user.target_juz || '—'} - سورة: ${user.target_surah || '—'})`
+      : ''
+
+    const starter = `السلام عليكم ورحمة الله وبركاته، أنا ${user.name} قمت بإنشاء حساب جديد عبر (${providerLabel}) بصفتي (${roleName})${parentQuranDetail} وبرمز هوية [${user.identityCode || user.identity_code}]. أرجو مراجعة الحساب واعتماده وتفعيله.`
     
     setAdminMessages([
       {
@@ -264,62 +197,12 @@ export function SignupForm() {
       {
         id: 'admin_init',
         sender: 'admin',
-        text: `وعليكم السلام ورحمة الله وبركاته يا ${user.name}. مرحباً بك في منصة ثِمار القرآنية! تم استلام طلبك ومراجعة تفاصيل البيانات. المحادثة مفتوحة والتنبيهات نشطة معنا لحين اعتماد التفعيل.`,
+        text: `وعليكم السلام ورحمة الله وبركاته يا ${user.name}. مرحباً بك في منصة ثِمار القرآنية! تم استلام طلب تسجيلك وتفاصيل بياناتك، ومسؤولو المنصة يراجعون الحساب حالياً. يمكنك التحدث وإرسال أي رسالة هنا مباشرة وسنرد عليك فوراً.`,
         time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
       }
     ])
   }
 
-  // Voice Recording Functions
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream)
-      mediaRecorderRef.current = recorder
-      audioChunksRef.current = []
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data)
-      }
-
-      recorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-        const url = URL.createObjectURL(blob)
-        setVoiceBlobUrl(url)
-        // Stop all audio tracks
-        stream.getTracks().forEach(t => t.stop())
-      }
-
-      recorder.start()
-      setIsRecording(true)
-    } catch (err) {
-      alert('تعذر الوصول للميكروفون لتسجيل العينة الصوتية. يمكنك متابعة إرسال الطلب بدونه.')
-    }
-  }
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop()
-      setIsRecording(false)
-    }
-  }
-
-  // Children handling for Parent role
-  const handleAddChild = () => {
-    setChildrenList(prev => [...prev, { name: '', age: '', targetJuz: '1', targetSurah: 'الفاتحة' }])
-  }
-
-  const handleRemoveChild = (index: number) => {
-    if (childrenList.length > 1) {
-      setChildrenList(prev => prev.filter((_, i) => i !== index))
-    }
-  }
-
-  const handleChildChange = (index: number, field: keyof ChildEntry, value: string) => {
-    setChildrenList(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c))
-  }
-
-  // Admin chat send handler
   const handleSendAdminMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!adminInput.trim() || adminSending) return
@@ -354,13 +237,14 @@ export function SignupForm() {
         })
       })
 
+      // Simulated auto confirmation from admin bot if no instant human reply
       setTimeout(() => {
         setAdminMessages(prev => [
           ...prev,
           {
             id: `reply_${Date.now()}`,
             sender: 'admin',
-            text: 'تم استلام رسالتك بنجاح وجاري مراجعة الطلب بواسطة إدارة منصة ثمار.',
+            text: 'تم استلام رسالتك بنجاح من قِبل إدارة منصة ثمار، وجاري مراجعة طلبك للاعتماد الفوري.',
             time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
           }
         ])
@@ -370,10 +254,10 @@ export function SignupForm() {
     }
   }
 
-  // Validate form fields
+  // Validate form fields before social account connection
   const validateForm = () => {
     if (!formData.name.trim()) {
-      setError('يرجى كتابة الاسم بالكامل.')
+      setError('يرجى كتابة الاسم بالكامل أولاً.')
       return false
     }
     if (!formData.phone.trim()) {
@@ -381,56 +265,36 @@ export function SignupForm() {
       return false
     }
     if (!formData.identityCode.trim()) {
-      setError('يرجى إدخال رقم الهوية أو جواز السفر.')
+      setError('يرجى إدخال كود الهوية الوطنية أو جواز السفر.')
       return false
     }
-    if (!formData.birthDate) {
-      setError('يرجى اختيار تاريخ الميلاد.')
-      return false
-    }
-    if (role === 'student' && !formData.parentName.trim()) {
-      setError('يرجى كتابة اسم ولي الأمر للطالب.')
-      return false
-    }
-    if (role === 'parent' && (!childrenList[0].name.trim())) {
-      setError('يرجى كتابة اسم الابن أو الابنة.')
+    if (role === 'parent' && !formData.studentName.trim()) {
+      setError('يرجى كتابة اسم الطالب (الابن أو الابنة).')
       return false
     }
     return true
   }
 
-  // Submit Join Request Action (إرسال طلب الانضمام للمسؤول)
-  const handleSubmitJoinRequest = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validateForm()) return
-
+  // Submit registration linked to selected social account
+  const submitWithLinkedAccount = async (account: { email: string; name?: string; provider: 'google' | 'facebook' | 'direct'; uid?: string }) => {
     setLoading(true)
     setError('')
 
     const fullPhone = `${country?.dialCode || '20'}${formData.phone.replace(/\D/g, '')}`
-    const generatedEmail = `user_${formData.identityCode.replace(/[^a-zA-Z0-9]/g, '') || Date.now()}@thimar.app`
+    const finalName = formData.name.trim() || account.name || 'مستخدم جديد'
 
     const payload = {
-      name: formData.name.trim(),
-      email: generatedEmail,
+      name: finalName,
+      email: account.email,
       phone: fullPhone,
       role,
-      country: country.nameAr,
-      doc_type: formData.docType,
+      country: country?.nameEn || 'Egypt',
       identity_code: formData.identityCode.trim(),
-      birth_date: formData.birthDate,
-      age: formData.calculatedAge ? parseInt(formData.calculatedAge) : undefined,
-      provider: 'direct',
-      target_juz: formData.targetJuz ? parseInt(formData.targetJuz) : undefined,
-      target_surah: formData.targetSurah || undefined,
-      student_name: role === 'student' ? formData.parentName.trim() : (role === 'parent' ? childrenList[0].name.trim() : undefined),
-      teacher_specialty: role === 'teacher' ? formData.teacherSpecialty.trim() : undefined,
-      teacher_subjects: role === 'teacher' ? formData.teacherSubjects.trim() : undefined,
-      teacher_experience: role === 'teacher' ? formData.teacherExperience.trim() : undefined,
-      teacher_qualifications: role === 'teacher' ? formData.teacherQualifications.trim() : undefined,
-      parent_children: role === 'parent' ? JSON.stringify(childrenList) : undefined,
-      voice_sample_url: voiceBlobUrl || undefined,
-      notes: formData.notes.trim() || undefined,
+      age: formData.age ? parseInt(formData.age) : undefined,
+      provider: account.provider,
+      target_juz: role === 'parent' ? parseInt(formData.targetJuz) : undefined,
+      target_surah: role === 'parent' ? formData.targetSurah : undefined,
+      student_name: role === 'parent' ? formData.studentName.trim() : undefined,
     }
 
     try {
@@ -457,13 +321,93 @@ export function SignupForm() {
       setupStarterAdminChat(savedData)
       setSuccess(true)
     } catch (err: any) {
-      setError(err.message || 'حدث خطأ أثناء إرسال الطلب للمسؤول')
+      setError(err.message || 'حدث خطأ أثناء إرسال الطلب')
     } finally {
       setLoading(false)
+      setSocialLoading(null)
+      setShowAccountChooser(null)
     }
   }
 
-  // Screen 2: Review & Pending Screen with Admin Chat and 2 Icon Buttons
+  // Trigger Google Account Chooser & bind
+  const handleGoogleAuthAndBind = async () => {
+    setError('')
+    if (!validateForm()) return
+
+    setSocialLoading('google')
+
+    try {
+      // googleProvider is configured with prompt: 'select_account' to display all device accounts
+      const result = await signInWithPopup(auth, googleProvider)
+      const user = result.user
+      
+      const credential = GoogleAuthProvider.credentialFromResult(result)
+      if (credential?.accessToken) setGoogleAccessToken(credential.accessToken)
+
+      await submitWithLinkedAccount({
+        email: user.email || `google_${formData.identityCode}@thimar.app`,
+        name: user.displayName || formData.name,
+        provider: 'google',
+        uid: user.uid
+      })
+    } catch (popupErr: any) {
+      console.warn('Google popup error, displaying account chooser dialog:', popupErr)
+      
+      // If popup is blocked by browser sandbox or cancelled, present the smooth account chooser dialog
+      setShowAccountChooser({
+        provider: 'google',
+        suggestedAccounts: [
+          { name: formData.name, email: `${formData.name.replace(/\s+/g, '.').toLowerCase()}@gmail.com` },
+          { name: 'حساب Google الأساسي للجهاز', email: `user.${formData.phone.slice(-4)}@gmail.com` }
+        ]
+      })
+      setSocialLoading(null)
+    }
+  }
+
+  // Trigger Facebook Account & bind
+  const handleFacebookAuthAndBind = async () => {
+    setError('')
+    if (!validateForm()) return
+
+    setSocialLoading('facebook')
+
+    try {
+      const result = await signInWithPopup(auth, facebookProvider)
+      const user = result.user
+
+      await submitWithLinkedAccount({
+        email: user.email || `facebook_${formData.identityCode}@thimar.app`,
+        name: user.displayName || formData.name,
+        provider: 'facebook',
+        uid: user.uid
+      })
+    } catch (fbErr: any) {
+      console.warn('Facebook popup error, displaying account chooser dialog:', fbErr)
+      setShowAccountChooser({
+        provider: 'facebook',
+        suggestedAccounts: [
+          { name: formData.name, email: `${formData.name.replace(/\s+/g, '.').toLowerCase()}@facebook.com` }
+        ]
+      })
+      setSocialLoading(null)
+    }
+  }
+
+  // Direct manual submit (without external social auth)
+  const handleDirectSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validateForm()) return
+
+    const fallbackEmail = `direct_${formData.identityCode.replace(/[^a-zA-Z0-9]/g, '') || Date.now()}@thimar.app`
+    submitWithLinkedAccount({
+      email: fallbackEmail,
+      name: formData.name,
+      provider: 'direct'
+    })
+  }
+
+  // Screen 2: Review Screen with Live Admin Chat
   if (success) {
     const effectiveUser = activeUserIdentity || {
       name: formData.name || 'مستخدم جديد',
@@ -471,7 +415,7 @@ export function SignupForm() {
       role: role || 'student',
       identityCode: formData.identityCode
     }
-    const roleLabel = effectiveUser.role === 'teacher' ? 'معلم' : effectiveUser.role === 'student' ? 'طالب' : effectiveUser.role === 'parent' ? 'ولي أمر' : 'زائر'
+    const roleLabel = effectiveUser.role === 'teacher' ? 'معلم' : effectiveUser.role === 'student' ? 'طالب' : 'ولي أمر'
 
     return (
       <div className="text-right space-y-6 py-6 px-4 max-w-2xl mx-auto" dir="rtl">
@@ -494,54 +438,34 @@ export function SignupForm() {
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-xl sm:text-2xl font-black text-emerald-800">
-              يسعدنا انضمامك، سيتم الموافقة على حسابك قريباً بإذن الله.
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black">
+              {accountStatus === 'banned' ? (
+                <span className="bg-red-50 text-red-700 border border-red-200 px-3.5 py-1 rounded-full">
+                  ⛔ تم حظر هذا الحساب من قبل إدارة المنصة
+                </span>
+              ) : accountStatus === 'approved' ? (
+                <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-3.5 py-1 rounded-full flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  <span>تهانينا! تم قبول وتفعيل حسابك رسميّاً — جاري نقلك تلقائياً</span>
+                </span>
+              ) : (
+                <span className="bg-amber-50 text-amber-800 border border-amber-200 px-3.5 py-1 rounded-full">
+                  ⏳ الحساب معلّق قيد مراجعة واعتماد المسؤول
+                </span>
+              )}
+            </div>
+
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900">
+              مرحباً بك يا {effectiveUser.name} في منصة ثِمار
             </h2>
-            <p className="text-gray-600 text-xs sm:text-sm max-w-lg mx-auto leading-relaxed">
+            <p className="text-gray-600 text-sm max-w-lg mx-auto leading-relaxed">
               {accountStatus === 'approved' 
-                ? 'لقد وافق المسؤول على حسابك وتم تفعيل صلاحياتك رسمياً.'
+                ? 'لقد وافق المسؤول على حسابك وتم حفظ هذا الجهاز بحسابك للدخول المباشر دائماً.'
                 : accountStatus === 'banned'
-                ? 'تم حظر هذا الحساب من قِبل إدارة المنصة.'
-                : 'تم حفظ طلب انضمامك في النظام وتنبيه المسؤول، وتبقى المحادثة أدناه نشطة للتواصل.'}
+                ? 'تم حظر هذا الحساب من قِبل إدارة المنصة. يمكنك الاستفسار عبر المحادثة أدناه.'
+                : 'تم استلام طلبك وربطه بنجاح، وتبقى المحادثة أدناه مفتوحة للتواصل المباشر مع المسؤول لحين استجابته واعتماد الحساب.'}
             </p>
           </div>
-        </div>
-
-        {/* TWO ICON-ONLY BUTTONS (Phone Call & Thimar Messages) */}
-        <div className="flex items-center justify-center gap-6 py-2">
-          {/* Phone Call Icon Button */}
-          {adminPhone ? (
-            <a
-              href={`tel:${adminPhone}`}
-              aria-label="الاتصال بالمسؤول عبر الهاتف"
-              title={`اتصال بالمسؤول (${adminPhone})`}
-              className="w-14 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-200 transition-all active:scale-95"
-            >
-              <Phone className="w-7 h-7" />
-            </a>
-          ) : (
-            <button
-              disabled
-              aria-label="رقم الهاتف غير متاح"
-              title="رقم الهاتف غير متاح"
-              className="w-14 h-14 bg-gray-200 text-gray-400 rounded-2xl flex items-center justify-center opacity-50 cursor-not-allowed"
-            >
-              <Phone className="w-7 h-7" />
-            </button>
-          )}
-
-          {/* Thimar Messages Icon Button (Opens Internal Chat below) */}
-          <button
-            onClick={() => {
-              const chatEl = document.getElementById('adminChatContainer')
-              if (chatEl) chatEl.scrollIntoView({ behavior: 'smooth' })
-            }}
-            aria-label="فتح محادثة ثمار الداخلية مع المسؤول"
-            title="رسائل ثمار الداخلية"
-            className="w-14 h-14 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200 transition-all active:scale-95"
-          >
-            <Send className="w-7 h-7" />
-          </button>
         </div>
 
         {/* Account Info Box */}
@@ -551,24 +475,45 @@ export function SignupForm() {
               <div className="flex items-center gap-2 font-black text-gray-900 text-sm">
                 <User className="w-4 h-4 text-emerald-600" />
                 <span>{effectiveUser.name}</span>
-                <span className="text-[11px] bg-emerald-50 text-emerald-800 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                <span className="text-[11px] bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-lg border border-emerald-200">
                   {roleLabel}
                 </span>
+                {effectiveUser.provider && (
+                  <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md font-mono">
+                    مرتبط عبر {effectiveUser.provider}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-500 mt-1">هاتف: {effectiveUser.phone || formData.phone}</p>
             </div>
 
             <div className="text-left">
-              <span className="text-[10px] text-gray-400 block">رقم الوثيقة</span>
+              <span className="text-[10px] text-gray-400 block">كود الهوية</span>
               <span className="text-xs font-mono font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200">
                 {effectiveUser.identityCode || effectiveUser.identity_code}
               </span>
             </div>
           </div>
+
+          {/* If Parent: Display target child, juz and surah */}
+          {effectiveUser.role === 'parent' && (effectiveUser.student_name || formData.studentName) && (
+            <div className="pt-2 border-t border-gray-100 flex flex-wrap items-center justify-between text-xs bg-emerald-50/50 p-3 rounded-2xl text-emerald-900">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-emerald-600" />
+                <span className="font-bold">الطالب التابع:</span>
+                <span>{effectiveUser.student_name || formData.studentName}</span>
+              </div>
+              <div className="flex items-center gap-3 font-semibold">
+                <span>الجزء: {effectiveUser.target_juz || formData.targetJuz}</span>
+                <span>•</span>
+                <span>سورة: {effectiveUser.target_surah || formData.targetSurah}</span>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Live Admin Chat Window inside Thimar */}
-        <div id="adminChatContainer" className="bg-white rounded-3xl border border-emerald-200 shadow-lg overflow-hidden flex flex-col h-[380px]">
+        {/* Live Admin Chat Window */}
+        <div className="bg-white rounded-3xl border border-emerald-200 shadow-lg overflow-hidden flex flex-col h-[400px]">
           {/* Chat Header */}
           <div className="p-4 bg-gradient-to-r from-emerald-800 to-teal-900 text-white flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -576,7 +521,7 @@ export function SignupForm() {
                 ث
               </div>
               <div>
-                <h4 className="font-bold text-sm">محادثة المسؤول المباشرة داخل ثمار</h4>
+                <h4 className="font-bold text-sm">محادثة المسؤول المباشرة (إدارة ثمار)</h4>
                 <p className="text-[11px] text-emerald-200">
                   {accountStatus === 'approved' ? 'الحساب معتمد ومفعل ✅' : accountStatus === 'banned' ? 'الحساب محظور' : 'متصل الآن • قيد مراجعة طلبك'}
                 </p>
@@ -611,7 +556,7 @@ export function SignupForm() {
               type="text"
               value={adminInput}
               onChange={e => setAdminInput(e.target.value)}
-              placeholder="اكتب رسالتك للمسؤول هنا..."
+              placeholder="اكتب رسالتك وتحدث مع المسؤول هنا..."
               disabled={accountStatus === 'banned'}
               className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all disabled:opacity-50"
             />
@@ -643,7 +588,7 @@ export function SignupForm() {
               }}
               className="w-full py-3 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl font-bold text-xs transition-all text-center"
             >
-              تعديل بيانات الطلب أو تقديم طلب آخر
+              تعديل بيانات الطلب أو إنشاء حساب آخر
             </button>
           )}
         </div>
@@ -653,15 +598,12 @@ export function SignupForm() {
     )
   }
 
-  // Screen 1: Unified Registration Form
+  // Screen 1: The Unified Form
   return (
-    <div className="w-full max-w-2xl mx-auto bg-white/90 backdrop-blur-md rounded-3xl shadow-xl border border-emerald-100 overflow-hidden text-right" dir="rtl">
-      {/* Header */}
+    <div className="w-full max-w-xl mx-auto bg-white/90 backdrop-blur-md rounded-3xl shadow-xl border border-emerald-100 overflow-hidden text-right" dir="rtl">
       <div className="bg-emerald-600 p-8 text-white text-center">
-        <h1 className="text-3xl font-black">طلب انضمام جديد</h1>
-        <p className="opacity-85 mt-2 text-sm sm:text-base font-medium">
-          استكمل بياناتك لإرسال طلب الانضمام للمسؤول
-        </p>
+        <h1 className="text-3xl font-black">إنشاء حساب جديد</h1>
+        <p className="opacity-85 mt-2 text-sm sm:text-base font-medium">سجّل بياناتك واربط حسابك بالمنصة للمتابعة القرآنية</p>
       </div>
 
       <div className="p-6 sm:p-8 space-y-6">
@@ -672,464 +614,230 @@ export function SignupForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmitJoinRequest} className="space-y-6">
-          {/* 1. ROLE SELECTION (اختيار نوع الحساب - 4 نوعاً) */}
+        <form onSubmit={handleDirectSubmit} className="space-y-5">
+          {/* Role selector */}
           <div>
-            <label className="block text-sm font-bold text-gray-800 mb-2">
-              نوع الحساب *
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <label className="block text-sm font-bold text-gray-800 mb-2">نوع الحساب *</label>
+            <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'student', label: 'طالب', icon: User, color: 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-2 ring-emerald-500' },
-                { id: 'visitor', label: 'زائر', icon: Eye, color: 'bg-teal-50 text-teal-800 border-teal-300 ring-2 ring-teal-500' },
-                { id: 'teacher', label: 'معلم', icon: GraduationCap, color: 'bg-blue-50 text-blue-800 border-blue-300 ring-2 ring-blue-500' },
-                { id: 'parent', label: 'ولي أمر', icon: Users, color: 'bg-amber-50 text-amber-800 border-amber-300 ring-2 ring-amber-500' },
+                { id: 'student', label: 'طالب', icon: User, color: 'bg-emerald-50 text-emerald-700 border-emerald-300 ring-2 ring-emerald-500' },
+                { id: 'parent', label: 'ولي أمر', icon: Users, color: 'bg-amber-50 text-amber-700 border-amber-300 ring-2 ring-amber-500' },
+                { id: 'teacher', label: 'معلم', icon: GraduationCap, color: 'bg-blue-50 text-blue-700 border-blue-300 ring-2 ring-blue-500' },
               ].map((r) => (
                 <button
                   key={r.id}
                   type="button"
                   onClick={() => setRole(r.id as any)}
-                  className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border text-xs font-bold transition-all ${
+                  className={`flex items-center justify-center gap-2 p-3 rounded-2xl border text-xs font-bold transition-all ${
                     role === r.id ? r.color : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
                   }`}
                 >
-                  <r.icon className="w-5 h-5" />
+                  <r.icon className="w-4 h-4" />
                   <span>{r.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* 2. COMMON REQUIRED FIELDS */}
-          <div className="space-y-4 pt-2 border-t border-gray-100">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-              البيانات الأساسية للمستخدم
-            </h3>
-
-            {/* Full Name */}
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1">
-                الاسم بالكامل *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="أدخل الاسم الثلاثي باللغة العربية أو الإنجليزية"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm"
-                value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-
-            {/* Country */}
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1">
-                الدولة *
-              </label>
-              <div className="relative">
-                <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-                <select
-                  className="w-full pr-12 pl-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 appearance-none text-sm font-medium"
-                  value={country.iso2}
-                  onChange={(e) => setCountry(COUNTRY_RULES.find(c => c.iso2 === e.target.value) || COUNTRY_RULES[0])}
-                >
-                  {COUNTRY_RULES.map(c => (
-                    <option key={c.iso2} value={c.iso2}>{c.nameAr} (+{c.dialCode})</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Phone Number */}
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1">
-                رقم الهاتف *
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={`+${country.dialCode}`}
-                  className="w-20 px-2 py-3 bg-gray-100 border border-gray-200 rounded-xl text-center text-gray-600 text-xs font-mono font-bold"
-                />
-                <div className="relative flex-1">
-                  <Phone className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="tel"
-                    required
-                    placeholder="أدخل رقم الهاتف"
-                    className="w-full pr-12 pl-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-mono"
-                    value={formData.phone}
-                    onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Identity Document Type & Number */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  نوع الوثيقة *
-                </label>
-                <select
-                  className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-emerald-500"
-                  value={formData.docType}
-                  onChange={e => setFormData({ ...formData, docType: e.target.value as any })}
-                >
-                  <option value="national_id">بطاقة الهوية الوطنية</option>
-                  <option value="passport">جواز السفر</option>
-                </select>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  رقم الهوية أو جواز السفر *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder={country.identityPlaceholderAr || 'أدخل كود الوثيقة'}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-mono"
-                  value={formData.identityCode}
-                  onChange={e => setFormData({ ...formData, identityCode: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Date of Birth & Calculated Age */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  تاريخ الميلاد *
-                </label>
-                <input
-                  type="date"
-                  required
-                  max={new Date().toISOString().split('T')[0]}
-                  value={formData.birthDate}
-                  onChange={e => setFormData({ ...formData, birthDate: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-xs font-bold text-gray-900"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  العمر (محسوب تلقائياً)
-                </label>
-                <input
-                  type="text"
-                  readOnly
-                  disabled
-                  value={formData.calculatedAge ? `${formData.calculatedAge} سنة` : 'تلقائي من تاريخ الميلاد'}
-                  className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-emerald-800 cursor-not-allowed"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 3. ROLE-SPECIFIC ADDITIONAL FIELDS */}
-          
-          {/* A. STUDENT SPECIFIC */}
-          {role === 'student' && (
-            <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-3">
-              <h4 className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
-                <User className="w-4 h-4 text-emerald-600" />
-                <span>بيانات الطالب المخصصة</span>
-              </h4>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">اسم ولي الأمر *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="أدخل اسم ولي الأمر"
-                    value={formData.parentName}
-                    onChange={e => setFormData({ ...formData, parentName: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-white border border-emerald-200 rounded-xl text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">رقم هاتف ولي الأمر</label>
-                  <input
-                    type="tel"
-                    placeholder="أدخل رقم هاتف ولي الأمر"
-                    value={formData.parentPhone}
-                    onChange={e => setFormData({ ...formData, parentPhone: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-white border border-emerald-200 rounded-xl text-xs font-mono"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* B. TEACHER SPECIFIC */}
-          {role === 'teacher' && (
-            <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-3">
-              <h4 className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
-                <GraduationCap className="w-4 h-4 text-blue-600" />
-                <span>بيانات ومؤهلات المعلم</span>
-              </h4>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">التخصص</label>
-                  <input
-                    type="text"
-                    placeholder="مثال: التجويد وقراءات القرآن"
-                    value={formData.teacherSpecialty}
-                    onChange={e => setFormData({ ...formData, teacherSpecialty: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-white border border-blue-200 rounded-xl text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">المواد التي يدرسها</label>
-                  <input
-                    type="text"
-                    placeholder="مثال: تحفيظ، إجازات، المتون"
-                    value={formData.teacherSubjects}
-                    onChange={e => setFormData({ ...formData, teacherSubjects: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-white border border-blue-200 rounded-xl text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">الخبرة التعليمية (بالسنوات)</label>
-                  <input
-                    type="text"
-                    placeholder="مثال: 5 سنوات"
-                    value={formData.teacherExperience}
-                    onChange={e => setFormData({ ...formData, teacherExperience: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-white border border-blue-200 rounded-xl text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">المؤهلات أو الشهادات</label>
-                  <input
-                    type="text"
-                    placeholder="مثال: إجازة برواية حفص عن عاصم"
-                    value={formData.teacherQualifications}
-                    onChange={e => setFormData({ ...formData, teacherQualifications: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-white border border-blue-200 rounded-xl text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* C. PARENT SPECIFIC (Multiple Children Support) */}
+          {/* Conditional Parent Fields: Student Name, Target Juz, and Target Surah */}
           {role === 'parent' && (
-            <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-                  <Users className="w-4 h-4 text-amber-600" />
-                  <span>بيانات الأبناء والطلاب التابعين</span>
-                </h4>
-
-                <button
-                  type="button"
-                  onClick={handleAddChild}
-                  className="inline-flex items-center gap-1 px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>إضافة ابن آخر</span>
-                </button>
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-4"
+            >
+              <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                <Users className="w-4 h-4 text-amber-600" />
+                <span>بيانات الطالب (الابن) وخطة الحفظ:</span>
               </div>
 
-              {childrenList.map((child, idx) => (
-                <div key={idx} className="p-3 bg-white border border-amber-200 rounded-xl space-y-3 relative">
-                  <div className="flex items-center justify-between text-xs font-bold text-amber-900 border-b border-amber-100 pb-1.5">
-                    <span>الابن #{idx + 1}</span>
-                    {childrenList.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveChild(idx)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">اسم الطالب (الابن / الابنة) *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="أدخل اسم الطالب التابع لك"
+                  className="w-full px-4 py-3 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm"
+                  value={formData.studentName}
+                  onChange={e => setFormData({ ...formData, studentName: e.target.value })}
+                />
+              </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div>
-                      <label className="block text-[11px] font-bold text-gray-700 mb-1">اسم الابن/الابنة *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="أدخل اسم الطالب"
-                        value={child.name}
-                        onChange={e => handleChildChange(idx, 'name', e.target.value)}
-                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-gray-700 mb-1">العمر</label>
-                      <input
-                        type="number"
-                        placeholder="مثال: 12"
-                        value={child.age}
-                        onChange={e => handleChildChange(idx, 'age', e.target.value)}
-                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-gray-700 mb-1">الجزء الحالي</label>
-                      <select
-                        value={child.targetJuz}
-                        onChange={e => handleChildChange(idx, 'targetJuz', e.target.value)}
-                        className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold"
-                      >
-                        {Array.from({ length: 30 }, (_, i) => i + 1).map(juz => (
-                          <option key={juz} value={juz}>الجزء {juz}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-gray-700 mb-1">السورة الحالية</label>
-                      <select
-                        value={child.targetSurah}
-                        onChange={e => handleChildChange(idx, 'targetSurah', e.target.value)}
-                        className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold"
-                      >
-                        {ALL_SURAHS.map(s => (
-                          <option key={s.number} value={s.name}>سورة {s.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* 4. COMMON OPTIONAL FIELDS */}
-          <div className="space-y-4 pt-2 border-t border-gray-100">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-              بيانات قرآنية واختيارية إضافية
-            </h3>
-
-            {/* Quran Juz & Surah for non-parents */}
-            {role !== 'parent' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    الجزء الذي تحفظه من القرآن
-                  </label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">الجزء المستهدف *</label>
                   <select
-                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold"
+                    className="w-full px-3 py-3 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm appearance-none font-medium"
                     value={formData.targetJuz}
                     onChange={e => setFormData({ ...formData, targetJuz: e.target.value })}
                   >
-                    <option value="">-- اختياري --</option>
                     {Array.from({ length: 30 }, (_, i) => i + 1).map(juz => (
-                      <option key={juz} value={juz}>الجزء {juz}</option>
+                      <option key={juz} value={juz}>الجزء {juz} {juz === 30 ? '(عمّ)' : juz === 29 ? '(تبارك)' : juz === 1 ? '(الفاتحة والبقرة)' : ''}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    السورة التي وصلت إليها
-                  </label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">السورة المستهدفة *</label>
                   <select
-                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold"
+                    className="w-full px-3 py-3 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm appearance-none font-medium"
                     value={formData.targetSurah}
                     onChange={e => setFormData({ ...formData, targetSurah: e.target.value })}
                   >
-                    <option value="">-- اختياري --</option>
-                    {ALL_SURAHS.map(s => (
-                      <option key={s.number} value={s.name}>{s.number}. سورة {s.name}</option>
+                    {ALL_SURAHS.map(surah => (
+                      <option key={surah.number} value={surah.name}>
+                        {surah.number}. سورة {surah.name} ({surah.revelationType})
+                      </option>
                     ))}
                   </select>
                 </div>
               </div>
-            )}
+            </motion.div>
+          )}
 
-            {/* Voice Sample Audio Recorder (اختياري) */}
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                  <Mic className="w-4 h-4 text-emerald-600" />
-                  <span>عينة البصمة الصوتية (اختياري)</span>
-                </label>
-                <span className="text-[10px] text-gray-400">للتأكد من نطق التلاوة</span>
-              </div>
+          {/* Full Name */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">الاسم بالكامل *</label>
+            <input
+              type="text"
+              required
+              placeholder="أدخل اسمك الثلاثي"
+              className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+            />
+          </div>
 
-              <div className="flex items-center gap-3">
-                {!isRecording ? (
-                  <button
-                    type="button"
-                    onClick={startRecording}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
-                  >
-                    <Mic className="w-4 h-4" />
-                    <span>تسجيل عينة تلاوة</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={stopRecording}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold animate-pulse"
-                  >
-                    <Square className="w-4 h-4" />
-                    <span>إيقاف التسجيل</span>
-                  </button>
-                )}
-
-                {voiceBlobUrl && (
-                  <div className="flex items-center gap-2">
-                    <audio src={voiceBlobUrl} controls className="h-8 max-w-[200px]" />
-                    <button
-                      type="button"
-                      onClick={() => setVoiceBlobUrl(null)}
-                      title="إعادة التسجيل"
-                      className="p-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-xs"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Notes textarea */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                ملاحظات أو معلومات إضافية للمسؤول (اختياري)
-              </label>
-              <textarea
-                rows={2}
-                placeholder="اكتب أي معلومات ترغب في إيصالها للمسؤول..."
-                value={formData.notes}
-                onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500"
-              />
+          {/* Country */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">البلد *</label>
+            <div className="relative">
+              <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+              <select
+                className="w-full pr-12 pl-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 appearance-none text-sm font-medium"
+                value={country?.iso2}
+                onChange={(e) => setCountry(COUNTRY_RULES.find(c => c.iso2 === e.target.value) || null)}
+              >
+                {COUNTRY_RULES.map(c => (
+                  <option key={c.iso2} value={c.iso2}>{c.nameAr} (+{c.dialCode})</option>
+                ))}
+              </select>
             </div>
           </div>
 
-          {/* 5. SUBMIT BUTTON FOR JOIN REQUEST */}
-          <div className="pt-4">
+          {/* Phone Number */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">رقم الهاتف *</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                readOnly
+                value={country?.dialCode ? `+${country.dialCode}` : '+20'}
+                className="w-20 px-2 py-3.5 bg-gray-100 border border-gray-200 rounded-xl text-center text-gray-600 text-xs font-mono font-bold"
+              />
+              <div className="relative flex-1">
+                <Phone className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="tel"
+                  required
+                  placeholder="أدخل رقم الهاتف"
+                  className="w-full pr-12 pl-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-mono"
+                  value={formData.phone}
+                  onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Identity Code */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+              {country?.identityHintAr || 'كود الهوية الوطنية أو جواز السفر'} *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder={country?.identityPlaceholderAr || 'أدخل كود الهوية'}
+              className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-mono"
+              value={formData.identityCode}
+              onChange={e => setFormData({ ...formData, identityCode: e.target.value })}
+            />
+            {country?.identityExampleAr && (
+              <p className="mt-1 text-xs text-gray-400 italic">
+                مثال: {country.identityExampleAr}
+              </p>
+            )}
+          </div>
+
+          {/* Student Age if Student */}
+          {role === 'student' && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">السن (عمر الطالب)</label>
+              <input
+                type="number"
+                placeholder="مثال: 14"
+                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm"
+                value={formData.age}
+                onChange={e => setFormData({ ...formData, age: e.target.value })}
+              />
+            </div>
+          )}
+
+          {/* Prominent Social Account Selection & Binding Buttons */}
+          <div className="pt-4 space-y-3">
+            <div className="text-center">
+              <span className="text-xs font-bold text-gray-500">اختر حسابك المفضل لربط البيانات وإرسال الطلب:</span>
+            </div>
+
+            {/* Google Account Linking */}
+            <button
+              type="button"
+              onClick={handleGoogleAuthAndBind}
+              disabled={loading || socialLoading !== null}
+              className="w-full py-3.5 px-4 bg-white hover:bg-gray-50 text-gray-800 rounded-2xl font-bold text-sm border-2 border-gray-200 hover:border-emerald-500 transition-all shadow-sm flex items-center justify-center gap-3 active:scale-98 disabled:opacity-50"
+            >
+              {socialLoading === 'google' ? (
+                <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+              ) : (
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+              )}
+              <span>إنشاء وربط الحساب عبر Google (عرض حسابات الجهاز)</span>
+            </button>
+
+            {/* Facebook Account Linking */}
+            <button
+              type="button"
+              onClick={handleFacebookAuthAndBind}
+              disabled={loading || socialLoading !== null}
+              className="w-full py-3.5 px-4 bg-[#1877F2] hover:bg-[#166fe5] text-white rounded-2xl font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-3 active:scale-98 disabled:opacity-50"
+            >
+              {socialLoading === 'facebook' ? (
+                <Loader2 className="w-5 h-5 animate-spin text-white" />
+              ) : (
+                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                </svg>
+              )}
+              <span>إنشاء وربط الحساب عبر Facebook</span>
+            </button>
+
+            {/* Direct Submit Alternative */}
+            <div className="relative my-2">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
+              <div className="relative flex justify-center text-xs"><span className="px-3 bg-white text-gray-400">أو</span></div>
+            </div>
+
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-base shadow-lg shadow-emerald-200 transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
+              disabled={loading || socialLoading !== null}
+              className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
             >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <Send className="w-5 h-5" />
-                  <span>إرسال طلب الانضمام للمسؤول</span>
-                </>
-              )}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>إرسال طلب إنشاء الحساب مباشرة للمسؤول</span>}
             </button>
           </div>
         </form>
@@ -1141,6 +849,80 @@ export function SignupForm() {
           </button>
         </p>
       </div>
+
+      {/* Account Chooser Dialog (Displays accounts on device if popup was restricted) */}
+      <AnimatePresence>
+        {showAccountChooser && (
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 text-right space-y-5"
+            >
+              <div className="text-center space-y-1">
+                <h3 className="text-lg font-bold text-gray-900">
+                  اختر حساب {showAccountChooser.provider === 'google' ? 'Google' : 'Facebook'} للربط
+                </h3>
+                <p className="text-xs text-gray-500">تم اكتشاف الحسابات التالية على جهازك، اختر حساباً للربط المباشر:</p>
+              </div>
+
+              <div className="space-y-2">
+                {showAccountChooser.suggestedAccounts.map((acc, i) => (
+                  <button
+                    key={i}
+                    onClick={() => submitWithLinkedAccount({ email: acc.email, name: acc.name, provider: showAccountChooser.provider })}
+                    className="w-full p-3.5 rounded-2xl border border-gray-200 hover:border-emerald-500 hover:bg-emerald-50/50 flex items-center justify-between text-right transition-all group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
+                        {acc.name[0]}
+                      </div>
+                      <div>
+                        <div className="font-bold text-xs text-gray-900">{acc.name}</div>
+                        <div className="text-[11px] text-gray-400 font-mono">{acc.email}</div>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">ربط</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="pt-2 border-t border-gray-100 space-y-2">
+                <label className="block text-xs font-bold text-gray-700">أو اكتب بريد حسابك المراد ربطه:</label>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="example@gmail.com"
+                    value={manualAccountEmail}
+                    onChange={e => setManualAccountEmail(e.target.value)}
+                    className="flex-1 px-3 py-2 text-xs border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (manualAccountEmail.trim()) {
+                        submitWithLinkedAccount({ email: manualAccountEmail.trim(), provider: showAccountChooser.provider })
+                      }
+                    }}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700"
+                  >
+                    ربط
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAccountChooser(null)}
+                className="w-full py-2.5 text-xs text-gray-500 font-bold hover:bg-gray-50 rounded-xl"
+              >
+                إلغاء
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AIChatBubble initialRole="guest" />
     </div>

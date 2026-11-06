@@ -46,20 +46,11 @@ export async function POST(request: NextRequest) {
       role, 
       country, 
       identity_code, 
-      doc_type,
-      birth_date,
       age, 
       provider = 'direct',
       target_juz,
       target_surah,
-      student_name,
-      teacher_specialty,
-      teacher_subjects,
-      teacher_experience,
-      teacher_qualifications,
-      parent_children,
-      voice_sample_url,
-      notes,
+      student_name
     } = body
 
     if (!name || !phone || !role || !country || !identity_code) {
@@ -75,19 +66,10 @@ export async function POST(request: NextRequest) {
       role,
       country,
       identity_code,
-      doc_type: doc_type ? String(doc_type) : undefined,
-      birth_date: birth_date ? String(birth_date) : undefined,
       age: age ? parseInt(String(age)) : undefined,
       target_juz: target_juz ? parseInt(String(target_juz)) : undefined,
       target_surah: target_surah ? String(target_surah) : undefined,
       student_name: student_name ? String(student_name) : undefined,
-      teacher_specialty: teacher_specialty ? String(teacher_specialty) : undefined,
-      teacher_subjects: teacher_subjects ? String(teacher_subjects) : undefined,
-      teacher_experience: teacher_experience ? String(teacher_experience) : undefined,
-      teacher_qualifications: teacher_qualifications ? String(teacher_qualifications) : undefined,
-      parent_children: parent_children ? (typeof parent_children === 'string' ? parent_children : JSON.stringify(parent_children)) : undefined,
-      voice_sample_url: voice_sample_url ? String(voice_sample_url) : undefined,
-      notes: notes ? String(notes) : undefined,
       provider,
     })
 

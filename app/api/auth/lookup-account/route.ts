@@ -7,11 +7,10 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, phone, uid, identityCode, identity_code } = body
+    const { email, phone, uid } = body
 
     const cleanEmail = email ? String(email).trim().toLowerCase() : ''
     const cleanPhone = phone ? String(phone).replace(/\D/g, '') : ''
-    const cleanIdCode = (identityCode || identity_code) ? String(identityCode || identity_code).trim().toLowerCase() : ''
 
     // 0. Check in studentsDb
     try {
@@ -20,10 +19,8 @@ export async function POST(request: NextRequest) {
         const sEmail = (s.email || s.googleEmail || s.facebookEmail || '').trim().toLowerCase()
         const sPhone = (s.phone || '').replace(/\D/g, '')
         const pEmail = (s.parentEmail || s.parentGoogleEmail || '').trim().toLowerCase()
-        const sId = String((s as any).nid || (s as any).identity_code || s.id || '').trim().toLowerCase()
         return (cleanEmail && (sEmail === cleanEmail || pEmail === cleanEmail)) ||
-               (cleanPhone && sPhone === cleanPhone) ||
-               (cleanIdCode && sId === cleanIdCode)
+               (cleanPhone && sPhone === cleanPhone)
       })
 
       if (studentMatch) {
@@ -50,8 +47,7 @@ export async function POST(request: NextRequest) {
       const allAdmins = await adminsDb.getAll()
       const adminMatch = allAdmins.find((a: any) => {
         const aEmail = (a.email || a.googleEmail || '').trim().toLowerCase()
-        const aId = String(a.id || '').trim().toLowerCase()
-        return (cleanEmail && aEmail === cleanEmail) || (cleanIdCode && aId === cleanIdCode)
+        return (cleanEmail && aEmail === cleanEmail)
       })
 
       if (adminMatch) {
@@ -77,10 +73,8 @@ export async function POST(request: NextRequest) {
       const match = allRequests.find((r: JoinRequest) => {
         const reqEmail = r.email ? r.email.trim().toLowerCase() : ''
         const reqPhone = r.phone ? r.phone.replace(/\D/g, '') : ''
-        const reqIdCode = r.identity_code ? r.identity_code.trim().toLowerCase() : ''
         return (cleanEmail && reqEmail === cleanEmail) || 
                (cleanPhone && reqPhone === cleanPhone) ||
-               (cleanIdCode && reqIdCode === cleanIdCode) ||
                (uid && r.email?.includes(uid))
       })
 

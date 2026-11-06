@@ -91,105 +91,49 @@ export function AdminHome({ requests, notifications, loading, handleAction, setL
             {requests.length === 0 ? (
               <p className="text-gray-400 italic text-center py-10">{t('لا توجد طلبات حالياً')}</p>
             ) : (
-              requests.slice(0, 15).map((req: any) => (
-                <div key={req.id} className="p-5 bg-gray-50 rounded-3xl flex flex-col gap-3 border border-gray-100 text-right">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center font-black text-lg shrink-0">
-                        {req.name?.[0] || 'ح'}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-black text-gray-900 text-base">{req.name}</span>
-                          <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            {req.role === 'student' ? 'طالب' : req.role === 'teacher' ? 'معلم' : req.role === 'parent' ? 'ولي أمر' : 'زائر'}
+              requests.slice(0, 10).map((req: any) => (
+                <div key={req.id} className="p-4 bg-gray-50 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-gray-100">
+                  <div className="flex items-center gap-3 text-right">
+                    <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold">{req.name?.[0] || 'ح'}</div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-gray-900 text-sm">{req.name}</span>
+                        {req.provider && (
+                          <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-white text-gray-600 border border-gray-200">
+                            {req.provider === 'google' ? 'Google' : req.provider === 'facebook' ? 'Facebook' : req.provider === 'whatsapp' ? 'واتساب' : 'مباشر'}
                           </span>
-                          {req.provider && (
-                            <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-white text-gray-600 border border-gray-200">
-                              {req.provider === 'google' ? 'Google' : req.provider === 'facebook' ? 'Facebook' : req.provider === 'identity' ? 'الهوية' : 'مباشر'}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-600 font-medium mt-0.5">
-                          <span>الدولة: {req.country || 'مصر'}</span>
-                          {req.birth_date && <span> • تاريخ الميلاد: {req.birth_date} (العمر: {req.age ?? '—'} سنة)</span>}
-                        </div>
+                        )}
                       </div>
-                    </div>
-
-                    {/* Three Action Buttons: Approve, Reject, Block */}
-                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                      <button 
-                        onClick={() => handleAction(req.id, 'approved')} 
-                        className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1 transition-colors"
-                        title="قبول الحساب وتفعيله"
-                      >
-                        <UserCheck className="w-3.5 h-3.5" />
-                        <span>موافقة</span>
-                      </button>
-
-                      <button 
-                        onClick={() => handleAction(req.id, 'rejected')} 
-                        className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs font-bold border border-gray-300 flex items-center gap-1 transition-colors"
-                        title="رفض الطلب"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                        <span>رفض</span>
-                      </button>
-
-                      <button 
-                        onClick={() => handleAction(req.id, 'banned')} 
-                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1 transition-colors"
-                        title="حظر المستخدم ومنع الوصول"
-                      >
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>حظر</span>
-                      </button>
+                      <div className="text-[11px] text-gray-600 font-medium">
+                        <span>{req.role === 'student' ? t('طالب') : req.role === 'teacher' ? t('معلم') : t('ولي أمر')}</span>
+                        {req.role === 'parent' && (req.student_name || req.target_juz || req.target_surah) && (
+                          <span className="text-emerald-700 font-bold mr-1">
+                            • الطالب: {req.student_name || 'طالب'} (جزء {req.target_juz || '—'} - سورة {req.target_surah || '—'})
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-gray-400 font-mono mt-0.5">
+                        هاتف: {req.phone} | هوية: {req.identity_code}
+                      </div>
                     </div>
                   </div>
-
-                  {/* Document & Phone info */}
-                  <div className="p-3 bg-white rounded-2xl border border-gray-200/60 text-xs space-y-1.5">
-                    <div className="flex flex-wrap items-center justify-between text-gray-700 gap-2">
-                      <span><strong>هاتف:</strong> {req.phone}</span>
-                      <span><strong>الوثيقة:</strong> {req.doc_type === 'passport' ? 'جواز سفر' : 'هوية وطنية'} ({req.identity_code})</span>
-                    </div>
-
-                    {/* Teacher specific */}
-                    {req.role === 'teacher' && (req.teacher_specialty || req.teacher_subjects || req.teacher_experience) && (
-                      <div className="pt-1.5 border-t border-gray-100 text-blue-900 bg-blue-50/50 p-2 rounded-xl">
-                        <strong>بيانات المعلم:</strong> التخصص: {req.teacher_specialty || '—'} | المواد: {req.teacher_subjects || '—'} | الخبرة: {req.teacher_experience || '—'} | المؤهلات: {req.teacher_qualifications || '—'}
-                      </div>
-                    )}
-
-                    {/* Parent specific */}
-                    {req.role === 'parent' && (req.parent_children || req.student_name) && (
-                      <div className="pt-1.5 border-t border-gray-100 text-amber-900 bg-amber-50/50 p-2 rounded-xl">
-                        <strong>الأبناء:</strong> {req.parent_children || req.student_name}
-                      </div>
-                    )}
-
-                    {/* Student / Juz / Surah */}
-                    {(req.target_juz || req.target_surah) && (
-                      <div className="pt-1.5 border-t border-gray-100 text-emerald-900 bg-emerald-50/50 p-2 rounded-xl">
-                        <strong>مستوى القرآن:</strong> الجزء: {req.target_juz || '—'} | السورة: {req.target_surah || '—'}
-                      </div>
-                    )}
-
-                    {/* Voice Sample Audio Player */}
-                    {req.voice_sample_url && (
-                      <div className="pt-1.5 border-t border-gray-100 flex items-center gap-2">
-                        <span className="font-bold text-gray-700">البصمة الصوتية:</span>
-                        <audio src={req.voice_sample_url} controls className="h-7 max-w-[220px]" />
-                      </div>
-                    )}
-
-                    {/* Notes */}
-                    {req.notes && (
-                      <div className="pt-1.5 border-t border-gray-100 text-gray-600 italic">
-                        <strong>ملاحظات المتقدم:</strong> {req.notes}
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <button 
+                      onClick={() => handleAction(req.id, 'rejected')} 
+                      className="px-2.5 py-1.5 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold border border-red-200 flex items-center gap-1 transition-colors"
+                      title="رفض الطلب"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>رفض</span>
+                    </button>
+                    <button 
+                      onClick={() => handleAction(req.id, 'approved')} 
+                      className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1 transition-colors"
+                      title="قبول الحساب وتفعيله"
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      <span>قبول وتفعيل</span>
+                    </button>
                   </div>
                 </div>
               ))
