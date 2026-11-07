@@ -1358,20 +1358,6 @@
       return value;
     }
 
-    function stripArabicDiacritics(str) {
-      if (!str) return '';
-      return str.replace(/[\u064B-\u065F\u0670\u0640]/g, '');
-    }
-
-    function normalizeArabic(str) {
-      if (!str) return '';
-      return stripArabicDiacritics(str)
-        .replace(/[أإآٱ]/g, 'ا')
-        .replace(/ة/g, 'ه')
-        .replace(/ى/g, 'ي')
-        .trim();
-    }
-
     // 1. Direct O(1) exact match
     if (dict[trimmed]) {
       var exactRes = text.replace(trimmed, dict[trimmed]);
@@ -1390,7 +1376,7 @@
       }
     }
 
-    // 3. Normalized phrase matching (handling varying Arabic diacritics / alef forms)
+    // 3. Selective phrase search (only check keys present in string)
     var result = text;
     var keys = getSortedKeys(targetLocale);
     for (var i = 0; i < keys.length; i++) {
@@ -1398,108 +1384,17 @@
       if (key.length <= 1) continue;
       if (result.indexOf(key) !== -1) {
         var repl = dict[key];
-        result = result.split(key).join(repl);
-      }
-    }
-
-    // 4. Token-by-token morphological decomposition for compound Arabic sentences
-    if (targetLocale === 'en' && /[\u0600-\u06FF]/.test(result)) {
-      var words = result.split(/(\s+|[*:•\-().،,–—\[\]]+)/);
-      var prefixes = [
-        { p: 'وال', en: 'and the ' },
-        { p: 'بال', en: 'by the ' },
-        { p: 'كال', en: 'like the ' },
-        { p: 'فال', en: 'so the ' },
-        { p: 'ولل', en: 'and for the ' },
-        { p: 'لل', en: 'for the ' },
-        { p: 'ال', en: '' },
-        { p: 'وب', en: 'and with ' },
-        { p: 'ول', en: 'and for ' },
-        { p: 'و', en: 'and ' },
-        { p: 'ب', en: 'with ' },
-        { p: 'ل', en: 'for ' },
-        { p: 'ف', en: 'then ' },
-        { p: 'ك', en: 'as ' }
-      ];
-      var suffixes = [
-        { s: 'كم', en: 'your ' },
-        { s: 'ك', en: 'your ' },
-        { s: 'نا', en: 'our ' },
-        { s: 'ها', en: 'her ' },
-        { s: 'هم', en: 'their ' },
-        { s: 'ه', en: 'his ' },
-        { s: 'ي', en: 'my ' }
-      ];
-
-      for (var w = 0; w < words.length; w++) {
-        var word = words[w];
-        if (!word || !/[\u0600-\u06FF]/.test(word)) continue;
-        var cleanW = stripArabicDiacritics(word.trim());
-        var matched = false;
-
-        // Exact clean
-        if (dict[cleanW]) {
-          words[w] = word.replace(cleanW, dict[cleanW]);
-          continue;
-        }
-
-        // Try normalized lookup
-        var normW = normalizeArabic(cleanW);
-        for (var k in dict) {
-          if (normalizeArabic(k) === normW) {
-            words[w] = word.replace(cleanW, dict[k]);
-            matched = true;
-            break;
-          }
-        }
-        if (matched) continue;
-
-        // Try prefixes
-        for (var pi = 0; pi < prefixes.length; pi++) {
-          var pref = prefixes[pi];
-          if (cleanW.startsWith(pref.p) && cleanW.length > pref.p.length + 1) {
-            var rem = cleanW.slice(pref.p.length);
-            if (dict[rem]) {
-              words[w] = word.replace(cleanW, (pref.en + dict[rem]).trim());
-              matched = true;
-              break;
-            }
-            var normRem = normalizeArabic(rem);
-            for (var dk in dict) {
-              if (normalizeArabic(dk) === normRem) {
-                words[w] = word.replace(cleanW, (pref.en + dict[dk]).trim());
-                matched = true;
-                break;
-              }
-            }
-            if (matched) break;
-          }
-        }
-        if (matched) continue;
-
-        // Try suffixes (e.g. possessive pronoun "ـك" -> "your ...")
-        for (var si = 0; si < suffixes.length; si++) {
-          var suff = suffixes[si];
-          if (cleanW.endsWith(suff.s) && cleanW.length > suff.s.length + 2) {
-            var base = cleanW.slice(0, -suff.s.length);
-            if (dict[base]) {
-              words[w] = word.replace(cleanW, (suff.en + dict[base]).trim());
-              matched = true;
-              break;
-            }
-            var normBase = normalizeArabic(base);
-            for (var sk in dict) {
-              if (normalizeArabic(sk) === normBase) {
-                words[w] = word.replace(cleanW, (suff.en + dict[sk]).trim());
-                matched = true;
-                break;
-              }
-            }
-            if (matched) break;
+        if (key.indexOf(' ') !== -1 || key.length > 5) {
+          result = result.split(key).join(repl);
+        } else {
+          try {
+            var re = new RegExp('(^|[^a-zA-Z0-9_؀-ۿ])' + escapeRegex(key) + '(?=[^a-zA-Z0-9_؀-ۿ]|$)', 'g');
+            result = result.replace(re, '$1' + repl);
+          } catch (e) {
+            result = result.split(key).join(repl);
           }
         }
       }
-      result = words.join('');
     }
 
     translationCache[cacheKey] = result;
@@ -1512,9 +1407,7 @@
     var node;
     while ((node = walker.nextNode())) {
       if (!node.nodeValue || !node.nodeValue.trim() || isProtected(node)) continue;
-      if (!originals.has(node)) {
-        originals.set(node, node.nodeValue);
-      }
+      if (!originals.has(node)) originals.set(node, node.nodeValue);
       var source = originals.get(node);
       if (locale === 'ar') {
         if (/[\u0600-\u06FF]/.test(source)) {
