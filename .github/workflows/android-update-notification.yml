@@ -1,0 +1,105 @@
+name: Android update notification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'public/updates/android.json'
+  workflow_dispatch:
+
+concurrency:
+  group: thimar-android-update-notification
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate release metadata in repository
+        run: |
+          python3 - <<'PY'
+          import json,sys
+          data=json.load(open('public/updates/android.json'))
+          required=['available','versionName','versionCode','downloadUrl','fileSize','sha256','packageName']
+          missing=[k for k in required if k not in data or data.get(k) in (None,'')]
+          if missing or data.get('available') is not True:
+              print('Invalid or unpublished release metadata:', missing, file=sys.stderr)
+              sys.exit(1)
+          print('Valid release:', data['versionName'], data['versionCode'])
+          PY
+      - name: Wait for production metadata and APK publication
+        env:
+          METADATA_URL: https://thimar.freebuff.page/updates/android.json
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, time, urllib.request, sys
+
+          expected = json.load(open('public/updates/android.json'))
+          metadata_url = 'https://thimar.freebuff.page/updates/android.json'
+          apk_url = expected['downloadUrl']
+
+          for attempt in range(1, 31):
+              try:
+                  with urllib.request.urlopen(metadata_url, timeout=20) as response:
+                      live = json.load(response)
+                  if live != expected:
+                      print(f'Attempt {attempt}: production metadata differs from repository')
+                      time.sleep(10)
+                      continue
+                  if not live.get('available'):
+                      print(f'Attempt {attempt}: release not marked available')
+                      time.sleep(10)
+                      continue
+
+                  request = urllib.request.Request(apk_url, method='HEAD')
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      size = int(response.headers.get('Content-Length', '0'))
+                      content_type = response.headers.get('Content-Type', '')
+                  if size != int(expected['fileSize']):
+                      print(f'Attempt {attempt}: APK size mismatch ({size} != {expected["fileSize"]})')
+                      time.sleep(10)
+                      continue
+                  if 'android.package-archive' not in content_type:
+                      print(f'Attempt {attempt}: unexpected APK content type ({content_type})')
+                      time.sleep(10)
+                      continue
+
+                  with urllib.request.urlopen(apk_url, timeout=120) as response:
+                      sha256 = hashlib.sha256(response.read()).hexdigest()
+                  if sha256 != expected['sha256']:
+                      print(f'Attempt {attempt}: APK SHA-256 mismatch')
+                      time.sleep(10)
+                      continue
+
+                  print('Production metadata and APK verified:', live['versionName'], live['versionCode'])
+                  sys.exit(0)
+              except Exception as error:
+                  print(f'Attempt {attempt}: {error}')
+                  time.sleep(10)
+
+          print('Production release did not become available in time', file=sys.stderr)
+          sys.exit(1)
+          PY
+      - name: Remove obsolete production APKs
+        run: bash scripts/cleanup-old-android-releases.sh downloads-site/assets public/updates/android.json
+      - name: Commit cleanup changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No obsolete APKs to remove."
+          else
+            git commit -m "chore: remove obsolete Android release APKs [skip ci]"
+            git push
+          fi
+      - name: Trigger update notification
+        env:
+          THIMAR_PUSH_SECRET: ${{ secrets.THIMAR_PUSH_SECRET }}
+          SUPABASE_FUNCTION_URL: https://jbsvmpiwdwowizzfzlqr.supabase.co/functions/v1/send-update-notification
+          METADATA_URL: https://thimar.freebuff.page/updates/android.json
+        run: bash scripts/publish-android-update.sh
